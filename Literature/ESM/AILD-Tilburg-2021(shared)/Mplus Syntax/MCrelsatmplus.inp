@@ -1,0 +1,27 @@
+MONTECARLO:	
+        NAMES ARE mrelsat1 mtrust1 ftrust1; 
+		NOBSERVATIONS = 245;
+		SEED = 5859;
+		NREPS = 1000;
+ANALYSIS:  
+        MODEL POPULATION:
+        mrelsat1 ON mtrust1@2.132;
+        mrelsat1 ON ftrust1@0.958;
+        ftrust1 WITH mtrust1*0.112;
+        [ mrelsat1*30.852 ];
+        [ mtrust1*0 ];
+        [ ftrust1*0 ];
+        mrelsat1*15.664;
+        mtrust1*0.610;
+        ftrust1*0.575;
+MODEL:		
+        mrelsat1 ON mtrust1*2.132;
+        mrelsat1 ON ftrust1*0.958;
+        ftrust1 WITH mtrust1*0.112;
+        [ mrelsat1*30.852 ];
+        [ mtrust1*0 ];
+        [ ftrust1*0 ];
+        mrelsat1*15.664;
+        mtrust1*0.610;
+        ftrust1*0.575;
+OUTPUT:	SAMPSTAT TECH9;

@@ -1,0 +1,12 @@
+TITLE:    Cross-sectional Regression Model; 
+DATA:     FILE = relsatdata.txt; !Note that can also include path to data
+VARIABLE: NAMES = mrelsat1 frelsat1 mrelsat2 frelsat2 mtrust1 ftrust1;
+          USEVAR = mrelsat1 mtrust1 ftrust1;
+DEFINE:   CENTER mtrust1 ftrust1 (grandmean);
+ANALYSIS: TYPE = GENERAL;
+MODEL:    mrelsat1 ON mtrust1 ftrust1;
+          mtrust1 with ftrust1;
+OUTPUT:   SAMPSTAT CINTERVAL stdyx;! svalues; ! TECH1;
+PLOT:     TYPE=PLOT1; !For basic histograms and scatterplots
+
+!Exclamation point indicates a comment

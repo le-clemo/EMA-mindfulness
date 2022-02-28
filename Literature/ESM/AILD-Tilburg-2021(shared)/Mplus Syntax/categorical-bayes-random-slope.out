@@ -1,0 +1,616 @@
+Mplus VERSION 8.7
+MUTHEN & MUTHEN
+12/15/2021   9:48 AM
+
+INPUT INSTRUCTIONS
+
+  TITLE:    AILD Workshop Ch. 6 Categorical (Grad Couples Example);
+  DATA:     FILE IS categorical.dat;
+  VARIABLE: NAMES ARE id time time7c pconf lpconf lpconfc amang
+                      amangc amangcb amangcw;
+            USEVAR ARE pconf amangcw amangcb time7c lpconfc;
+            CATEGORICAL = pconf;
+            WITHIN = time7c amangcw lpconfc;
+            BETWEEN = amangcb;
+            CLUSTER = id;
+  DEFINE:   center amangcw (GROUPMEAN);
+  ANALYSIS: TYPE = twolevel random;
+            ESTIMATOR=Bayes; LINK=LOGIT;
+            FBITERATIONS=(10000); CHAINS=4;
+  MODEL:    %WITHIN%
+            slope | pconf on amangcw;
+            pconf on lpconfc time7c;
+            %BETWEEN%
+            pconf on amangcb;
+            slope with pconf;
+  Output:   sampstat cinterval TECH8;
+  PLOT:     TYPE=PLOT3;
+
+
+
+*** WARNING in OUTPUT command
+  SAMPSTAT option is not available for ESTIMATOR=BAYES.  Use TYPE=BASIC.
+  Request for SAMPSTAT is ignored.
+   1 WARNING(S) FOUND IN THE INPUT INSTRUCTIONS
+
+
+
+AILD Workshop Ch. 6 Categorical (Grad Couples Example);
+
+SUMMARY OF ANALYSIS
+
+Number of groups                                                 1
+Number of observations                                        1345
+
+Number of dependent variables                                    1
+Number of independent variables                                  4
+Number of continuous latent variables                            1
+
+Observed dependent variables
+
+  Binary and ordered categorical (ordinal)
+   PCONF
+
+Observed independent variables
+   AMANGCW     AMANGCB     TIME7C      LPCONFC
+
+Continuous latent variables
+   SLOPE
+
+Variables with special functions
+
+  Cluster variable      ID
+
+  Within variables
+   AMANGCW     TIME7C      LPCONFC
+
+  Between variables
+   AMANGCB
+
+  Centering (GROUPMEAN)
+   AMANGCW
+
+
+Estimator                                                    BAYES
+Specifications for Bayesian Estimation
+  Point estimate                                            MEDIAN
+  Number of Markov chain Monte Carlo (MCMC) chains               4
+  Random seed for the first chain                                0
+  Starting value information                           UNPERTURBED
+  Algorithm used for Markov chain Monte Carlo           GIBBS(PX1)
+  Fixed number of iterations                                 10000
+  K-th iteration used for thinning                               1
+Link                                                         LOGIT
+
+Input data file(s)
+  categorical.dat
+Input data format  FREE
+
+
+SUMMARY OF DATA
+
+     Number of clusters                         61
+
+       Size (s)    Cluster ID with Size s
+
+          5        43 93
+          6        14 45 24
+         11        72
+         12        76
+         13        48 46
+         14        31
+         15        20
+         17        92
+         19        13 55
+         20        57
+         21        69 91
+         22        79 74
+         23        33 75 37 12 11 70 32
+         24        87 6
+         25        36 17 78 27 80 18 71 5 23 100
+         26        15 44
+         27        65 10 34 21 22 38 42 1 16 26 3 81 83 30 89 9 19 59 95
+                   60 102
+
+
+
+UNIVARIATE PROPORTIONS AND COUNTS FOR CATEGORICAL VARIABLES
+
+    PCONF
+      Category 1    0.856         1151.000
+      Category 2    0.144          194.000
+
+
+
+UNIVARIATE SAMPLE STATISTICS
+
+
+     UNIVARIATE HIGHER-ORDER MOMENT DESCRIPTIVE STATISTICS
+
+         Variable/         Mean/     Skewness/   Minimum/ % with                Percentiles
+        Sample Size      Variance    Kurtosis    Maximum  Min/Max      20%/60%    40%/80%    Median
+
+     AMANGCW               0.000       3.784      -2.100    0.15%      -0.478     -0.247     -0.167
+            1345.000       0.997      22.548       9.402    0.07%      -0.109      0.201
+     TIME7C                0.000       0.055      -1.876    4.01%      -1.135     -0.394     -0.098
+            1345.000       1.320      -1.182       1.976    3.49%       0.347      1.235
+     LPCONFC               0.000       1.887      -0.157   84.31%      -0.157     -0.157     -0.157
+            1345.000       0.132       1.560       0.843   15.69%      -0.157     -0.157
+     AMANGCB               0.009       1.603      -0.471    1.64%      -0.370     -0.224     -0.162
+              61.000       0.244       1.919       1.614    1.64%      -0.070      0.247
+
+
+THE MODEL ESTIMATION TERMINATED NORMALLY
+
+     USE THE FBITERATIONS OPTION TO INCREASE THE NUMBER OF ITERATIONS BY A FACTOR
+     OF AT LEAST TWO TO CHECK CONVERGENCE AND THAT THE PSR VALUE DOES NOT INCREASE.
+
+
+
+MODEL FIT INFORMATION
+
+Number of Free Parameters                               8
+
+
+
+MODEL RESULTS
+
+                                Posterior  One-Tailed         95% C.I.
+                    Estimate       S.D.      P-Value   Lower 2.5%  Upper 2.5%  Significance
+
+Within Level
+
+ PCONF      ON
+    LPCONFC            0.235       0.218      0.141      -0.206       0.662
+    TIME7C            -0.202       0.074      0.003      -0.349      -0.061      *
+
+Between Level
+
+ PCONF      ON
+    AMANGCB           -0.249       0.243      0.144      -0.739       0.222
+
+ SLOPE    WITH
+    PCONF              0.144       0.112      0.031      -0.006       0.428
+
+ Means
+    SLOPE              0.106       0.140      0.230      -0.197       0.357
+
+ Thresholds
+    PCONF$1            1.953       0.121      0.000       1.724       2.207      *
+
+ Variances
+    SLOPE              0.269       0.162      0.000       0.105       0.727      *
+
+ Residual Variances
+    PCONF              0.353       0.144      0.000       0.160       0.717      *
+
+
+LOGISTIC REGRESSION ODDS RATIO RESULTS
+
+                                      95% C.I.
+                    Estimate   Lower 2.5% Upper 2.5%
+
+Within Level
+
+ PCONF      ON
+    LPCONFC            1.265       0.814      1.938
+    TIME7C             0.817       0.706      0.941
+
+
+CREDIBILITY INTERVALS OF MODEL RESULTS
+
+                  Lower .5%  Lower 2.5%    Lower 5%    Estimate    Upper 5%  Upper 2.5%   Upper .5%
+
+Within Level
+
+ PCONF    ON
+    LPCONFC         -0.348      -0.206      -0.128       0.235       0.590       0.662       0.782
+    TIME7C          -0.395      -0.349      -0.325      -0.202      -0.082      -0.061      -0.016
+
+ Thresholds
+    PCONF$1          1.655       1.724       1.762       1.953       2.163       2.207       2.284
+
+Between Level
+
+ PCONF    ON
+    AMANGCB         -0.902      -0.739      -0.657      -0.249       0.144       0.222       0.372
+
+ SLOPE    WITH
+    PCONF           -0.054      -0.006       0.015       0.144       0.371       0.428       0.565
+
+ Means
+    SLOPE           -0.302      -0.197      -0.141       0.106       0.318       0.357       0.433
+
+ Thresholds
+    PCONF$1          1.655       1.724       1.762       1.953       2.163       2.207       2.284
+
+ Variances
+    SLOPE            0.080       0.105       0.121       0.269       0.621       0.727       0.933
+
+ Residual Variances
+    PCONF            0.123       0.160       0.183       0.353       0.640       0.717       0.886
+
+
+TECHNICAL 1 OUTPUT
+
+
+     PARAMETER SPECIFICATION FOR WITHIN
+
+
+           TAU
+              PCONF$1
+              ________
+                    0
+
+
+           NU
+              PCONF         AMANGCW       TIME7C        LPCONFC
+              ________      ________      ________      ________
+                    0             0             0             0
+
+
+           LAMBDA
+              PCONF         AMANGCW       TIME7C        LPCONFC
+              ________      ________      ________      ________
+ PCONF              0             0             0             0
+ AMANGCW            0             0             0             0
+ TIME7C             0             0             0             0
+ LPCONFC            0             0             0             0
+
+
+           THETA
+              PCONF         AMANGCW       TIME7C        LPCONFC
+              ________      ________      ________      ________
+ PCONF              0
+ AMANGCW            0             0
+ TIME7C             0             0             0
+ LPCONFC            0             0             0             0
+
+
+           ALPHA
+              PCONF         AMANGCW       TIME7C        LPCONFC
+              ________      ________      ________      ________
+                    0             0             0             0
+
+
+           BETA
+              PCONF         AMANGCW       TIME7C        LPCONFC
+              ________      ________      ________      ________
+ PCONF              0             0             1             2
+ AMANGCW            0             0             0             0
+ TIME7C             0             0             0             0
+ LPCONFC            0             0             0             0
+
+
+           PSI
+              PCONF         AMANGCW       TIME7C        LPCONFC
+              ________      ________      ________      ________
+ PCONF              0
+ AMANGCW            0             0
+ TIME7C             0             0             0
+ LPCONFC            0             0             0             0
+
+
+     PARAMETER SPECIFICATION FOR BETWEEN
+
+
+           TAU
+              PCONF$1
+              ________
+                    8
+
+
+           NU
+              PCONF         AMANGCB
+              ________      ________
+                    0             0
+
+
+           LAMBDA
+              SLOPE         PCONF         AMANGCB
+              ________      ________      ________
+ PCONF              0             0             0
+ AMANGCB            0             0             0
+
+
+           THETA
+              PCONF         AMANGCB
+              ________      ________
+ PCONF              0
+ AMANGCB            0             0
+
+
+           ALPHA
+              SLOPE         PCONF         AMANGCB
+              ________      ________      ________
+                    3             0             0
+
+
+           BETA
+              SLOPE         PCONF         AMANGCB
+              ________      ________      ________
+ SLOPE              0             0             0
+ PCONF              0             0             4
+ AMANGCB            0             0             0
+
+
+           PSI
+              SLOPE         PCONF         AMANGCB
+              ________      ________      ________
+ SLOPE              5
+ PCONF              6             7
+ AMANGCB            0             0             0
+
+
+     STARTING VALUES FOR WITHIN
+
+
+           TAU
+              PCONF$1
+              ________
+                0.000
+
+
+           NU
+              PCONF         AMANGCW       TIME7C        LPCONFC
+              ________      ________      ________      ________
+                0.000         0.000         0.000         0.000
+
+
+           LAMBDA
+              PCONF         AMANGCW       TIME7C        LPCONFC
+              ________      ________      ________      ________
+ PCONF          1.000         0.000         0.000         0.000
+ AMANGCW        0.000         1.000         0.000         0.000
+ TIME7C         0.000         0.000         1.000         0.000
+ LPCONFC        0.000         0.000         0.000         1.000
+
+
+           THETA
+              PCONF         AMANGCW       TIME7C        LPCONFC
+              ________      ________      ________      ________
+ PCONF          0.000
+ AMANGCW        0.000         0.000
+ TIME7C         0.000         0.000         0.000
+ LPCONFC        0.000         0.000         0.000         0.000
+
+
+           ALPHA
+              PCONF         AMANGCW       TIME7C        LPCONFC
+              ________      ________      ________      ________
+                0.000         0.000         0.000         0.000
+
+
+           BETA
+              PCONF         AMANGCW       TIME7C        LPCONFC
+              ________      ________      ________      ________
+ PCONF          0.000         0.000         0.000         0.000
+ AMANGCW        0.000         0.000         0.000         0.000
+ TIME7C         0.000         0.000         0.000         0.000
+ LPCONFC        0.000         0.000         0.000         0.000
+
+
+           PSI
+              PCONF         AMANGCW       TIME7C        LPCONFC
+              ________      ________      ________      ________
+ PCONF          1.000
+ AMANGCW        0.000         0.498
+ TIME7C         0.000         0.000         0.660
+ LPCONFC        0.000         0.000         0.000         0.066
+
+
+     STARTING VALUES FOR BETWEEN
+
+
+           TAU
+              PCONF$1
+              ________
+                1.781
+
+
+           NU
+              PCONF         AMANGCB
+              ________      ________
+                0.000         0.000
+
+
+           LAMBDA
+              SLOPE         PCONF         AMANGCB
+              ________      ________      ________
+ PCONF          0.000         1.000         0.000
+ AMANGCB        0.000         0.000         1.000
+
+
+           THETA
+              PCONF         AMANGCB
+              ________      ________
+ PCONF          0.000
+ AMANGCB        0.000         0.000
+
+
+           ALPHA
+              SLOPE         PCONF         AMANGCB
+              ________      ________      ________
+                0.000         0.000         0.000
+
+
+           BETA
+              SLOPE         PCONF         AMANGCB
+              ________      ________      ________
+ SLOPE          0.000         0.000         0.000
+ PCONF          0.000         0.000         0.000
+ AMANGCB        0.000         0.000         0.000
+
+
+           PSI
+              SLOPE         PCONF         AMANGCB
+              ________      ________      ________
+ SLOPE          1.000
+ PCONF          0.000         1.000
+ AMANGCB        0.000         0.000         0.122
+
+
+
+     PRIORS FOR ALL PARAMETERS            PRIOR MEAN      PRIOR VARIANCE     PRIOR STD. DEV.
+
+     Parameter 1~N(0.000,5.000)              0.0000              5.0000              2.2361
+     Parameter 2~N(0.000,5.000)              0.0000              5.0000              2.2361
+     Parameter 3~N(0.000,infinity)           0.0000            infinity            infinity
+     Parameter 4~N(0.000,5.000)              0.0000              5.0000              2.2361
+     Parameter 5~IW(1.000,3)               infinity            infinity            infinity
+     Parameter 6~IW(0.000,3)               infinity            infinity            infinity
+     Parameter 7~IW(1.000,3)               infinity            infinity            infinity
+     Parameter 8~N(0.000,5.000)              0.0000              5.0000              2.2361
+
+
+TECHNICAL 8 OUTPUT
+
+
+   TECHNICAL 8 OUTPUT FOR BAYES ESTIMATION
+
+     CHAIN    BSEED
+     1        0
+     2        285380
+     3        253358
+     4        93468
+
+                     POTENTIAL       PARAMETER WITH
+     ITERATION    SCALE REDUCTION      HIGHEST PSR
+     100              1.163               7
+     200              1.043               4
+     300              1.076               5
+     400              1.036               5
+     500              1.019               5
+     600              1.026               5
+     700              1.013               3
+     800              1.024               5
+     900              1.015               5
+     1000             1.023               5
+     1100             1.016               5
+     1200             1.016               5
+     1300             1.008               3
+     1400             1.006               4
+     1500             1.008               3
+     1600             1.007               3
+     1700             1.009               5
+     1800             1.008               5
+     1900             1.012               5
+     2000             1.014               5
+     2100             1.019               5
+     2200             1.015               5
+     2300             1.014               5
+     2400             1.014               5
+     2500             1.012               5
+     2600             1.012               5
+     2700             1.012               5
+     2800             1.012               5
+     2900             1.016               5
+     3000             1.011               5
+     3100             1.010               5
+     3200             1.007               5
+     3300             1.005               5
+     3400             1.005               5
+     3500             1.002               5
+     3600             1.001               2
+     3700             1.001               4
+     3800             1.001               2
+     3900             1.001               4
+     4000             1.001               2
+     4100             1.001               2
+     4200             1.001               3
+     4300             1.001               7
+     4400             1.001               6
+     4500             1.001               6
+     4600             1.002               6
+     4700             1.001               6
+     4800             1.002               6
+     4900             1.002               6
+     5000             1.002               6
+     5100             1.002               6
+     5200             1.002               6
+     5300             1.001               6
+     5400             1.001               6
+     5500             1.001               7
+     5600             1.001               7
+     5700             1.001               6
+     5800             1.001               6
+     5900             1.002               6
+     6000             1.002               6
+     6100             1.002               6
+     6200             1.001               6
+     6300             1.002               6
+     6400             1.002               6
+     6500             1.002               6
+     6600             1.001               6
+     6700             1.001               7
+     6800             1.001               7
+     6900             1.001               6
+     7000             1.001               7
+     7100             1.001               3
+     7200             1.001               3
+     7300             1.001               3
+     7400             1.001               4
+     7500             1.001               4
+     7600             1.001               4
+     7700             1.001               4
+     7800             1.001               5
+     7900             1.001               5
+     8000             1.001               7
+     8100             1.001               7
+     8200             1.001               7
+     8300             1.001               7
+     8400             1.001               5
+     8500             1.001               7
+     8600             1.001               7
+     8700             1.001               7
+     8800             1.001               7
+     8900             1.001               7
+     9000             1.001               7
+     9100             1.001               7
+     9200             1.002               6
+     9300             1.002               6
+     9400             1.002               6
+     9500             1.001               7
+     9600             1.001               6
+     9700             1.001               6
+     9800             1.001               6
+     9900             1.001               7
+     10000            1.001               6
+
+
+PLOT INFORMATION
+
+The following plots are available:
+
+  Histograms (sample values)
+  Scatterplots (sample values)
+  Between-level histograms (sample values, sample means/variances)
+  Between-level scatterplots (sample values, sample means/variances)
+  Sample proportions
+  Bayesian posterior parameter distributions
+  Bayesian posterior parameter trace plots
+  Bayesian autocorrelation plots
+  Bayesian prior parameter distributions
+
+DIAGRAM INFORMATION
+
+  Mplus diagrams are currently not available for multilevel analysis.
+  No diagram output was produced.
+
+
+     Beginning Time:  09:48:58
+        Ending Time:  09:50:00
+       Elapsed Time:  00:01:02
+
+
+
+MUTHEN & MUTHEN
+3463 Stoner Ave.
+Los Angeles, CA  90066
+
+Tel: (310) 391-9971
+Fax: (310) 391-8971
+Web: www.StatModel.com
+Support: Support@StatModel.com
+
+Copyright (c) 1998-2021 Muthen & Muthen

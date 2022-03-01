@@ -1,0 +1,527 @@
+Mplus VERSION 8.6
+MUTHEN & MUTHEN
+06/16/2021  12:21 PM
+
+INPUT INSTRUCTIONS
+
+  TITLE:    Extension of Categorical: Grad Couples example;
+  DATA:     FILE IS categorical.dat;
+  VARIABLE: NAMES ARE id time time7c pconf lpconf lpconfc amang
+                      amangc amangcb amangcw;
+            USEVAR ARE pconf amang time7c;
+            CATEGORICAL = pconf;
+            WITHIN = time7c ;
+            CLUSTER = id;
+            LAGGED = pconf (1);
+  DEFINE:   center amang (GRANDMEAN);
+  ANALYSIS: TYPE = TWOLEVEL RANDOM;
+            ESTIMATOR=bayes; BITERATIONS = (5000);
+  MODEL:    %WITHIN%
+            slope | pconf on amang; !Latent separation of amang
+            pconf ON pconf&1; !Specifies lagged effect for outcome
+            pconf on time7c;
+            %BETWEEN%
+            pconf on amang;  !Latent separation of amang
+            slope with pconf;
+  Output:   tech8;
+
+
+
+*** WARNING in MODEL command
+  In the MODEL command, the x variable on the WITHIN level has been turned into a
+  y variable to enable latent variable decomposition.  This variable will be treated
+  as a y-variable on both levels:  AMANG
+   1 WARNING(S) FOUND IN THE INPUT INSTRUCTIONS
+
+
+
+Extension of Categorical: Grad Couples example;
+
+SUMMARY OF ANALYSIS
+
+Number of groups                                                 1
+Number of observations                                        1345
+
+Number of dependent variables                                    2
+Number of independent variables                                  2
+Number of continuous latent variables                            1
+
+Observed dependent variables
+
+  Continuous
+   AMANG
+
+  Binary and ordered categorical (ordinal)
+   PCONF
+
+Observed independent variables
+   TIME7C      PCONF&1
+
+Continuous latent variables
+   SLOPE
+
+Variables with special functions
+
+  Cluster variable      ID
+
+  Within variables
+   TIME7C      PCONF&1
+
+  Centering (GRANDMEAN)
+   AMANG
+
+
+Estimator                                                    BAYES
+Specifications for Bayesian Estimation
+  Point estimate                                            MEDIAN
+  Number of Markov chain Monte Carlo (MCMC) chains               2
+  Random seed for the first chain                                0
+  Starting value information                           UNPERTURBED
+  Algorithm used for Markov chain Monte Carlo           GIBBS(PX1)
+  Convergence criterion                                  0.500D-01
+  Maximum number of iterations                               50000
+  K-th iteration used for thinning                               1
+Link                                                        PROBIT
+
+Input data file(s)
+  categorical.dat
+Input data format  FREE
+
+
+SUMMARY OF DATA
+
+     Number of clusters                         61
+
+       Size (s)    Cluster ID with Size s
+
+          5        43 93
+          6        14 45 24
+         11        72
+         12        76
+         13        48 46
+         14        31
+         15        20
+         17        92
+         19        13 55
+         20        57
+         21        69 91
+         22        79 74
+         23        33 75 37 12 11 70 32
+         24        87 6
+         25        36 17 78 27 80 18 71 5 23 100
+         26        15 44
+         27        65 10 34 21 22 38 42 1 16 26 3 81 83 30 89 9 19 59 95
+                   60 102
+
+
+
+COVARIANCE COVERAGE OF DATA
+
+Minimum covariance coverage value   0.100
+
+     Number of missing data patterns             2
+
+
+     PROPORTION OF DATA PRESENT
+
+
+           Covariance Coverage
+              PCONF         AMANG         TIME7C
+              ________      ________      ________
+ PCONF          1.000
+ AMANG          1.000         1.000
+ TIME7C         1.000         1.000         1.000
+
+
+UNIVARIATE PROPORTIONS AND COUNTS FOR CATEGORICAL VARIABLES
+
+    PCONF
+      Category 1    0.856         1151.000
+      Category 2    0.144          194.000
+
+
+
+UNIVARIATE SAMPLE STATISTICS
+
+
+     UNIVARIATE HIGHER-ORDER MOMENT DESCRIPTIVE STATISTICS
+
+         Variable/         Mean/     Skewness/   Minimum/ % with                Percentiles
+        Sample Size      Variance    Kurtosis    Maximum  Min/Max      20%/60%    40%/80%    Median
+
+     AMANG                 0.000       3.961      -0.486   69.22%      -0.486     -0.486     -0.486
+            1345.000       1.240      21.084       9.514    0.15%      -0.486      0.347
+     TIME7C                0.000       0.055      -1.876    4.01%      -1.135     -0.394     -0.098
+            1345.000       1.320      -1.182       1.976    3.49%       0.347      1.235
+
+
+THE MODEL ESTIMATION TERMINATED NORMALLY
+
+     USE THE FBITERATIONS OPTION TO INCREASE THE NUMBER OF ITERATIONS BY A FACTOR
+     OF AT LEAST TWO TO CHECK CONVERGENCE AND THAT THE PSR VALUE DOES NOT INCREASE.
+
+
+
+MODEL FIT INFORMATION
+
+Number of Free Parameters                              11
+
+
+
+MODEL RESULTS
+
+                                Posterior  One-Tailed         95% C.I.
+                    Estimate       S.D.      P-Value   Lower 2.5%  Upper 2.5%  Significance
+
+Within Level
+
+ PCONF      ON
+    PCONF&1           -0.051       0.070      0.232      -0.188       0.087
+    TIME7C            -0.118       0.042      0.001      -0.202      -0.040      *
+
+ Variances
+    AMANG              1.046       0.042      0.000       0.968       1.132      *
+
+Between Level
+
+ PCONF      ON
+    AMANG             -0.189       0.182      0.144      -0.546       0.163
+
+ SLOPE    WITH
+    PCONF              0.058       0.043      0.040      -0.007       0.162
+
+ Means
+    AMANG              0.003       0.066      0.477      -0.125       0.136
+    SLOPE              0.052       0.088      0.283      -0.124       0.221
+
+ Thresholds
+    PCONF$1            1.156       0.074      0.000       1.014       1.307      *
+
+ Variances
+    AMANG              0.207       0.051      0.000       0.132       0.328      *
+    SLOPE              0.167       0.076      0.000       0.076       0.368      *
+
+ Residual Variances
+    PCONF              0.149       0.049      0.000       0.082       0.271      *
+
+
+TECHNICAL 1 OUTPUT
+
+
+     PARAMETER SPECIFICATION FOR WITHIN
+
+
+           TAU
+              PCONF$1
+              ________
+                    0
+
+
+           NU
+              PCONF         AMANG         TIME7C        PCONF&1
+              ________      ________      ________      ________
+                    0             0             0             0
+
+
+           LAMBDA
+              PCONF         AMANG         TIME7C        PCONF&1
+              ________      ________      ________      ________
+ PCONF              0             0             0             0
+ AMANG              0             0             0             0
+ TIME7C             0             0             0             0
+ PCONF&1            0             0             0             0
+
+
+           THETA
+              PCONF         AMANG         TIME7C        PCONF&1
+              ________      ________      ________      ________
+ PCONF              0
+ AMANG              0             0
+ TIME7C             0             0             0
+ PCONF&1            0             0             0             0
+
+
+           ALPHA
+              PCONF         AMANG         TIME7C        PCONF&1
+              ________      ________      ________      ________
+                    0             0             0             0
+
+
+           BETA
+              PCONF         AMANG         TIME7C        PCONF&1
+              ________      ________      ________      ________
+ PCONF              0             0             1             2
+ AMANG              0             0             0             0
+ TIME7C             0             0             0             0
+ PCONF&1            0             0             0             0
+
+
+           PSI
+              PCONF         AMANG         TIME7C        PCONF&1
+              ________      ________      ________      ________
+ PCONF              0
+ AMANG              0             3
+ TIME7C             0             0             0
+ PCONF&1            0             0             0             0
+
+
+     PARAMETER SPECIFICATION FOR BETWEEN
+
+
+           TAU
+              PCONF$1
+              ________
+                   11
+
+
+           NU
+              PCONF         AMANG
+              ________      ________
+                    0             0
+
+
+           LAMBDA
+              SLOPE         PCONF         AMANG
+              ________      ________      ________
+ PCONF              0             0             0
+ AMANG              0             0             0
+
+
+           THETA
+              PCONF         AMANG
+              ________      ________
+ PCONF              0
+ AMANG              0             0
+
+
+           ALPHA
+              SLOPE         PCONF         AMANG
+              ________      ________      ________
+                    4             0             5
+
+
+           BETA
+              SLOPE         PCONF         AMANG
+              ________      ________      ________
+ SLOPE              0             0             0
+ PCONF              0             0             6
+ AMANG              0             0             0
+
+
+           PSI
+              SLOPE         PCONF         AMANG
+              ________      ________      ________
+ SLOPE              7
+ PCONF              8             9
+ AMANG              0             0            10
+
+
+     STARTING VALUES FOR WITHIN
+
+
+           TAU
+              PCONF$1
+              ________
+                0.000
+
+
+           NU
+              PCONF         AMANG         TIME7C        PCONF&1
+              ________      ________      ________      ________
+                0.000         0.000         0.000         0.000
+
+
+           LAMBDA
+              PCONF         AMANG         TIME7C        PCONF&1
+              ________      ________      ________      ________
+ PCONF          1.000         0.000         0.000         0.000
+ AMANG          0.000         1.000         0.000         0.000
+ TIME7C         0.000         0.000         1.000         0.000
+ PCONF&1        0.000         0.000         0.000         1.000
+
+
+           THETA
+              PCONF         AMANG         TIME7C        PCONF&1
+              ________      ________      ________      ________
+ PCONF          0.000
+ AMANG          0.000         0.000
+ TIME7C         0.000         0.000         0.000
+ PCONF&1        0.000         0.000         0.000         0.000
+
+
+           ALPHA
+              PCONF         AMANG         TIME7C        PCONF&1
+              ________      ________      ________      ________
+                0.000         0.000         0.000         0.000
+
+
+           BETA
+              PCONF         AMANG         TIME7C        PCONF&1
+              ________      ________      ________      ________
+ PCONF          0.000         0.000         0.000         0.000
+ AMANG          0.000         0.000         0.000         0.000
+ TIME7C         0.000         0.000         0.000         0.000
+ PCONF&1        0.000         0.000         0.000         0.000
+
+
+           PSI
+              PCONF         AMANG         TIME7C        PCONF&1
+              ________      ________      ________      ________
+ PCONF          1.000
+ AMANG          0.000         0.620
+ TIME7C         0.000         0.000         0.660
+ PCONF&1        0.000         0.000         0.000         0.063
+
+
+     STARTING VALUES FOR BETWEEN
+
+
+           TAU
+              PCONF$1
+              ________
+                0.989
+
+
+           NU
+              PCONF         AMANG
+              ________      ________
+                0.000         0.000
+
+
+           LAMBDA
+              SLOPE         PCONF         AMANG
+              ________      ________      ________
+ PCONF          0.000         1.000         0.000
+ AMANG          0.000         0.000         1.000
+
+
+           THETA
+              PCONF         AMANG
+              ________      ________
+ PCONF          0.000
+ AMANG          0.000         0.000
+
+
+           ALPHA
+              SLOPE         PCONF         AMANG
+              ________      ________      ________
+                0.000         0.000         0.000
+
+
+           BETA
+              SLOPE         PCONF         AMANG
+              ________      ________      ________
+ SLOPE          0.000         0.000         0.000
+ PCONF          0.000         0.000         0.000
+ AMANG          0.000         0.000         0.000
+
+
+           PSI
+              SLOPE         PCONF         AMANG
+              ________      ________      ________
+ SLOPE          1.000
+ PCONF          0.000         1.000
+ AMANG          0.000         0.000         0.620
+
+
+
+     PRIORS FOR ALL PARAMETERS            PRIOR MEAN      PRIOR VARIANCE     PRIOR STD. DEV.
+
+     Parameter 1~N(0.000,5.000)              0.0000              5.0000              2.2361
+     Parameter 2~N(0.000,5.000)              0.0000              5.0000              2.2361
+     Parameter 3~IG(-1.000,0.000)          infinity            infinity            infinity
+     Parameter 4~N(0.000,infinity)           0.0000            infinity            infinity
+     Parameter 5~N(0.000,infinity)           0.0000            infinity            infinity
+     Parameter 6~N(0.000,5.000)              0.0000              5.0000              2.2361
+     Parameter 7~IW(1.000,3)               infinity            infinity            infinity
+     Parameter 8~IW(0.000,3)               infinity            infinity            infinity
+     Parameter 9~IW(1.000,3)               infinity            infinity            infinity
+     Parameter 10~IG(-1.000,0.000)         infinity            infinity            infinity
+     Parameter 11~N(0.000,5.000)             0.0000              5.0000              2.2361
+
+
+TECHNICAL 8 OUTPUT
+
+
+   TECHNICAL 8 OUTPUT FOR BAYES ESTIMATION
+
+     CHAIN    BSEED
+     1        0
+     2        285380
+
+                     POTENTIAL       PARAMETER WITH
+     ITERATION    SCALE REDUCTION      HIGHEST PSR
+     100              1.112               9
+     200              1.264               8
+     300              1.136               2
+     400              1.028               7
+     500              1.028               7
+     600              1.043               9
+     700              1.094               8
+     800              1.045               8
+     900              1.036               8
+     1000             1.033               8
+     1100             1.032               8
+     1200             1.015               6
+     1300             1.024               7
+     1400             1.017               7
+     1500             1.011               11
+     1600             1.011               11
+     1700             1.018               7
+     1800             1.048               7
+     1900             1.048               7
+     2000             1.031               7
+     2100             1.029               7
+     2200             1.010               1
+     2300             1.007               2
+     2400             1.008               2
+     2500             1.009               2
+     2600             1.012               4
+     2700             1.011               2
+     2800             1.014               8
+     2900             1.015               8
+     3000             1.013               8
+     3100             1.008               8
+     3200             1.007               8
+     3300             1.007               8
+     3400             1.010               2
+     3500             1.009               8
+     3600             1.009               8
+     3700             1.016               8
+     3800             1.019               8
+     3900             1.020               8
+     4000             1.031               8
+     4100             1.030               8
+     4200             1.027               8
+     4300             1.026               8
+     4400             1.025               8
+     4500             1.025               8
+     4600             1.018               8
+     4700             1.023               8
+     4800             1.022               8
+     4900             1.023               8
+     5000             1.023               8
+
+
+DIAGRAM INFORMATION
+
+  Mplus diagrams are currently not available for multilevel analysis.
+  No diagram output was produced.
+
+
+     Beginning Time:  12:21:19
+        Ending Time:  12:21:43
+       Elapsed Time:  00:00:24
+
+
+
+MUTHEN & MUTHEN
+3463 Stoner Ave.
+Los Angeles, CA  90066
+
+Tel: (310) 391-9971
+Fax: (310) 391-8971
+Web: www.StatModel.com
+Support: Support@StatModel.com
+
+Copyright (c) 1998-2021 Muthen & Muthen

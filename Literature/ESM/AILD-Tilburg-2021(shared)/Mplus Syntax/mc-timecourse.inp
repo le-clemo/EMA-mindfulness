@@ -1,0 +1,34 @@
+TITLE:  MC power estimation based on Mplus results (timecourse.inp); 
+MONTECARLO:	
+        NAMES ARE time01 intim tx; 
+        NOBSERVATIONS = 800; NCSIZES = 1; CSIZES = 50 (16);
+        SEED = 5859; NREPS = 1000;
+        WITHIN = time01; BETWEEN = tx;
+ANALYSIS:
+        TYPE = twolevel random; 
+        ESTIMATOR = ML;
+        PROCESS = 2;
+MODEL POPULATION:
+        %WITHIN%
+        slope | intim ON time01;
+        [time01*0.500];
+        intim*1.693; time01*0.094;
+        %BETWEEN%
+        slope ON tx*0.921;
+        intim ON tx*-0.056;
+        intim WITH slope*-0.462;
+        [tx*0.500]; [intim*2.899]; [slope*0.735];
+        tx*0.250; intim*0.637; slope*1.752;
+ 
+MODEL:
+        %WITHIN%
+        slope | intim ON time01;
+        [time01*0.500];
+        intim*1.693; time01*0.094;
+        %BETWEEN%
+        slope ON tx*0.921;
+        intim ON tx*-0.056;
+        intim WITH slope*-0.462;
+        [tx*0.500]; [intim*2.899]; [slope*0.735];
+        tx*0.250; intim*0.637; slope*1.752;
+OUTPUT:	TECH9;

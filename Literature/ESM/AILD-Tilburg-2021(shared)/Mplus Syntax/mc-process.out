@@ -1,0 +1,706 @@
+Mplus VERSION 8.6
+MUTHEN & MUTHEN
+06/14/2021   2:53 AM
+
+INPUT INSTRUCTIONS
+
+  TITLE: MC power estimation based on SPSS Process analysis results;
+  MONTECARLO:	
+          NAMES ARE day7c intimacy confcw confcb relqual rqconfcb;
+  		NOBSERVATIONS = 1848;
+  		NCSIZES = 1;
+  		CSIZES = 66 (28);
+  		SEED = 5859;
+  		NREPS = 1000;
+  		WITHIN = day7c confcw;
+  		BETWEEN = confcb relqual rqconfcb;
+  ANALYSIS:
+          TYPE = TWOLEVEL RANDOM;
+          PROCESSORS = 4;
+  MODEL POPULATION:
+          %WITHIN%
+          slope | intimacy ON confcw;
+          intimacy ON day7c*-0.028;
+          intimacy*3.589;
+          [confcw*0]; confcw*0.146;
+          [day7c*0]; day7c*1.332
+          %BETWEEN%
+          slope ON relqual*1.032;
+          intimacy ON confcb*-0.840;
+          intimacy ON relqual*0.647;
+          intimacy ON rqconfcb*2.524;
+          intimacy WITH slope*0.383;
+          [relqual*0.610]; relqual*0.239;
+          [confcb*0]; confcb*0.027;
+          [rqconfcb*-0.041]; rqconfcb*0.009;
+          [intimacy*4.532]; intimacy*0.746;
+          [slope*-2.023]; slope*2.577;
+  MODEL:		
+          %WITHIN%
+          slope | intimacy ON confcw;
+          intimacy ON day7c*-0.028;
+          intimacy*3.589;
+          %BETWEEN%
+          slope ON relqual*1.032;
+          intimacy ON confcb*-0.840;
+          intimacy ON relqual*0.647;
+          intimacy ON rqconfcb*2.524;
+          intimacy WITH slope*0.383;
+          [intimacy*4.532]; intimacy*0.746;
+          [slope*-2.023]; slope*2.577;
+
+  OUTPUT:	TECH9;
+
+
+
+INPUT READING TERMINATED NORMALLY
+
+
+
+MC power estimation based on SPSS Process analysis results;
+
+SUMMARY OF ANALYSIS
+
+Number of groups                                                 1
+Number of observations                                        1848
+
+Number of replications
+    Requested                                                 1000
+    Completed                                                 1000
+Value of seed                                                 5859
+
+Number of dependent variables                                    1
+Number of independent variables                                  5
+Number of continuous latent variables                            1
+
+Observed dependent variables
+
+  Continuous
+   INTIMACY
+
+Observed independent variables
+   DAY7C       CONFCW      CONFCB      RELQUAL     RQCONFCB
+
+Continuous latent variables
+   SLOPE
+
+Variables with special functions
+
+  Within variables
+   DAY7C       CONFCW
+
+  Between variables
+   CONFCB      RELQUAL     RQCONFCB
+
+
+Estimator                                                      MLR
+Information matrix                                        OBSERVED
+Maximum number of iterations                                   100
+Convergence criterion                                    0.100D-05
+Maximum number of EM iterations                                500
+Convergence criteria for the EM algorithm
+  Loglikelihood change                                   0.100D-02
+  Relative loglikelihood change                          0.100D-05
+  Derivative                                             0.100D-03
+Minimum variance                                         0.100D-03
+Maximum number of steepest descent iterations                   20
+Maximum number of iterations for H1                           2000
+Convergence criterion for H1                             0.100D-03
+Optimization algorithm                                         EMA
+
+
+SUMMARY OF DATA FOR THE FIRST REPLICATION
+
+     Cluster information
+
+       Size (s)    Number of clusters of Size s
+
+         28            66
+
+     Average cluster size       28.000
+
+     Estimated Intraclass Correlations for the Y Variables
+
+                Intraclass              Intraclass
+     Variable  Correlation   Variable  Correlation
+
+     INTIMACY     0.132
+
+
+SAMPLE STATISTICS FOR THE FIRST REPLICATION
+
+NOTE:  The sample statistics for within and between refer to the
+       maximum-likelihood estimated within and between covariance
+       matrices, respectively.
+
+
+     ESTIMATED SAMPLE STATISTICS FOR WITHIN
+
+
+           Means
+              INTIMACY      DAY7C         CONFCW        CONFCB        RELQUAL
+              ________      ________      ________      ________      ________
+                0.000         0.011        -0.014         0.000         0.000
+
+
+           Means
+              RQCONFCB
+              ________
+                0.000
+
+
+           Covariances
+              INTIMACY      DAY7C         CONFCW        CONFCB        RELQUAL
+              ________      ________      ________      ________      ________
+ INTIMACY       4.255
+ DAY7C          0.026         1.244
+ CONFCW        -0.255        -0.026         0.146
+ CONFCB         0.000         0.000         0.000         0.000
+ RELQUAL        0.000         0.000         0.000         0.000         0.000
+ RQCONFCB       0.000         0.000         0.000         0.000         0.000
+
+
+           Covariances
+              RQCONFCB
+              ________
+ RQCONFCB       0.000
+
+
+           Correlations
+              INTIMACY      DAY7C         CONFCW        CONFCB        RELQUAL
+              ________      ________      ________      ________      ________
+ INTIMACY       1.000
+ DAY7C          0.011         1.000
+ CONFCW        -0.324        -0.062         1.000
+ CONFCB         0.000         0.000         0.000         0.000
+ RELQUAL        0.000         0.000         0.000         0.000         0.000
+ RQCONFCB       0.000         0.000         0.000         0.000         0.000
+
+
+           Correlations
+              RQCONFCB
+              ________
+ RQCONFCB       0.000
+
+
+     ESTIMATED SAMPLE STATISTICS FOR BETWEEN
+
+
+           Means
+              INTIMACY      DAY7C         CONFCW        CONFCB        RELQUAL
+              ________      ________      ________      ________      ________
+                4.721         0.000         0.000         0.021         0.571
+
+
+           Means
+              RQCONFCB
+              ________
+               -0.035
+
+
+           Covariances
+              INTIMACY      DAY7C         CONFCW        CONFCB        RELQUAL
+              ________      ________      ________      ________      ________
+ INTIMACY       0.646
+ DAY7C          0.000         0.000
+ CONFCW         0.000         0.000         0.000
+ CONFCB        -0.011         0.000         0.000         0.019
+ RELQUAL        0.067         0.000         0.000         0.011         0.251
+ RQCONFCB       0.016         0.000         0.000        -0.003        -0.001
+
+
+           Covariances
+              RQCONFCB
+              ________
+ RQCONFCB       0.010
+
+
+           Correlations
+              INTIMACY      DAY7C         CONFCW        CONFCB        RELQUAL
+              ________      ________      ________      ________      ________
+ INTIMACY       1.000
+ DAY7C          0.000         0.000
+ CONFCW         0.000         0.000         0.000
+ CONFCB        -0.100         0.000         0.000         1.000
+ RELQUAL        0.166         0.000         0.000         0.165         1.000
+ RQCONFCB       0.207         0.000         0.000        -0.187        -0.030
+
+
+           Correlations
+              RQCONFCB
+              ________
+ RQCONFCB       1.000
+
+
+
+
+MODEL FIT INFORMATION
+
+Number of Free Parameters                       11
+
+Loglikelihood
+
+    H0 Value
+
+        Mean                             -3902.868
+        Std Dev                             30.469
+        Number of successful computations     1000
+
+             Proportions                   Percentiles
+        Expected    Observed         Expected       Observed
+           0.990       0.993        -3973.747      -3971.307
+           0.980       0.981        -3965.441      -3963.540
+           0.950       0.942        -3952.986      -3954.597
+           0.900       0.889        -3941.916      -3944.038
+           0.800       0.802        -3928.510      -3928.485
+           0.700       0.705        -3918.846      -3918.603
+           0.500       0.500        -3902.868      -3902.879
+           0.300       0.295        -3886.890      -3887.326
+           0.200       0.208        -3877.226      -3876.633
+           0.100       0.100        -3863.819      -3863.996
+           0.050       0.049        -3852.750      -3852.864
+           0.020       0.018        -3840.295      -3842.151
+           0.010       0.009        -3831.989      -3832.227
+
+Information Criteria
+
+    Akaike (AIC)
+
+        Mean                              7827.736
+        Std Dev                             60.937
+        Number of successful computations     1000
+
+             Proportions                   Percentiles
+        Expected    Observed         Expected       Observed
+           0.990       0.991         7685.978       7686.164
+           0.980       0.982         7702.589       7705.060
+           0.950       0.951         7727.500       7727.655
+           0.900       0.900         7749.639       7749.473
+           0.800       0.792         7776.451       7775.101
+           0.700       0.705         7795.780       7796.619
+           0.500       0.500         7827.736       7827.669
+           0.300       0.295         7859.691       7859.032
+           0.200       0.198         7879.021       7878.718
+           0.100       0.111         7905.833       7909.772
+           0.050       0.058         7927.971       7930.416
+           0.020       0.019         7952.882       7946.841
+           0.010       0.007         7969.494       7963.195
+
+    Bayesian (BIC)
+
+        Mean                              7888.476
+        Std Dev                             60.937
+        Number of successful computations     1000
+
+             Proportions                   Percentiles
+        Expected    Observed         Expected       Observed
+           0.990       0.991         7746.718       7746.905
+           0.980       0.982         7763.330       7765.800
+           0.950       0.951         7788.241       7788.395
+           0.900       0.900         7810.379       7810.213
+           0.800       0.792         7837.191       7835.841
+           0.700       0.705         7856.521       7857.359
+           0.500       0.500         7888.476       7888.409
+           0.300       0.295         7920.432       7919.773
+           0.200       0.198         7939.761       7939.459
+           0.100       0.111         7966.573       7970.512
+           0.050       0.058         7988.712       7991.157
+           0.020       0.019         8013.623       8007.582
+           0.010       0.007         8030.234       8023.935
+
+    Sample-Size Adjusted BIC (n* = (n + 2) / 24)
+
+        Mean                              7853.530
+        Std Dev                             60.937
+        Number of successful computations     1000
+
+             Proportions                   Percentiles
+        Expected    Observed         Expected       Observed
+           0.990       0.991         7711.771       7711.958
+           0.980       0.982         7728.383       7730.853
+           0.950       0.951         7753.294       7753.449
+           0.900       0.900         7775.432       7775.267
+           0.800       0.792         7802.245       7800.895
+           0.700       0.705         7821.574       7822.412
+           0.500       0.500         7853.530       7853.463
+           0.300       0.295         7885.485       7884.826
+           0.200       0.198         7904.814       7904.512
+           0.100       0.111         7931.627       7935.565
+           0.050       0.058         7953.765       7956.210
+           0.020       0.019         7978.676       7972.635
+           0.010       0.007         7995.288       7988.989
+
+
+
+MODEL RESULTS
+
+                              ESTIMATES              S. E.     M. S. E.  95%  % Sig
+                 Population   Average   Std. Dev.   Average             Cover Coeff
+
+Within Level
+
+ INTIMACY   ON
+  DAY7C              -0.028    -0.0268     0.0398     0.0390     0.0016 0.936 0.120
+
+ Residual Variances
+  INTIMACY            3.589     3.5864     0.1218     0.1207     0.0148 0.947 1.000
+
+Between Level
+
+ SLOPE      ON
+  RELQUAL             1.032     1.0253     0.5176     0.4611     0.2676 0.914 0.594
+
+ INTIMACY   ON
+  CONFCB             -0.840    -0.8364     0.7268     0.6728     0.5277 0.919 0.275
+  RELQUAL             0.647     0.6535     0.2417     0.2314     0.0584 0.940 0.795
+  RQCONFCB            2.524     2.5540     1.2742     1.1666     1.6230 0.927 0.596
+
+ INTIMACY WITH
+  SLOPE               0.383     0.3813     0.2259     0.2108     0.0510 0.927 0.436
+
+ Intercepts
+  INTIMACY            4.532     4.5270     0.1910     0.1863     0.0365 0.940 1.000
+  SLOPE              -2.023    -2.0047     0.3922     0.3611     0.1540 0.929 0.999
+
+ Residual Variances
+  INTIMACY            0.746     0.6988     0.1531     0.1405     0.0257 0.881 1.000
+  SLOPE               2.577     2.4827     0.6011     0.5798     0.3699 0.900 1.000
+
+
+QUALITY OF NUMERICAL RESULTS
+
+     Average Condition Number for the Information Matrix      0.133E-02
+       (ratio of smallest to largest eigenvalue)
+
+
+TECHNICAL 1 OUTPUT
+
+
+     PARAMETER SPECIFICATION FOR WITHIN
+
+
+           NU
+              INTIMACY      DAY7C         CONFCW
+              ________      ________      ________
+                    0             0             0
+
+
+           LAMBDA
+              INTIMACY      DAY7C         CONFCW
+              ________      ________      ________
+ INTIMACY           0             0             0
+ DAY7C              0             0             0
+ CONFCW             0             0             0
+
+
+           THETA
+              INTIMACY      DAY7C         CONFCW
+              ________      ________      ________
+ INTIMACY           0
+ DAY7C              0             0
+ CONFCW             0             0             0
+
+
+           ALPHA
+              INTIMACY      DAY7C         CONFCW
+              ________      ________      ________
+                    0             0             0
+
+
+           BETA
+              INTIMACY      DAY7C         CONFCW
+              ________      ________      ________
+ INTIMACY           0             1             0
+ DAY7C              0             0             0
+ CONFCW             0             0             0
+
+
+           PSI
+              INTIMACY      DAY7C         CONFCW
+              ________      ________      ________
+ INTIMACY           2
+ DAY7C              0             0
+ CONFCW             0             0             0
+
+
+     PARAMETER SPECIFICATION FOR BETWEEN
+
+
+           NU
+              INTIMACY      CONFCB        RELQUAL       RQCONFCB
+              ________      ________      ________      ________
+                    0             0             0             0
+
+
+           LAMBDA
+              SLOPE         INTIMACY      CONFCB        RELQUAL       RQCONFCB
+              ________      ________      ________      ________      ________
+ INTIMACY           0             0             0             0             0
+ CONFCB             0             0             0             0             0
+ RELQUAL            0             0             0             0             0
+ RQCONFCB           0             0             0             0             0
+
+
+           THETA
+              INTIMACY      CONFCB        RELQUAL       RQCONFCB
+              ________      ________      ________      ________
+ INTIMACY           0
+ CONFCB             0             0
+ RELQUAL            0             0             0
+ RQCONFCB           0             0             0             0
+
+
+           ALPHA
+              SLOPE         INTIMACY      CONFCB        RELQUAL       RQCONFCB
+              ________      ________      ________      ________      ________
+                    3             4             0             0             0
+
+
+           BETA
+              SLOPE         INTIMACY      CONFCB        RELQUAL       RQCONFCB
+              ________      ________      ________      ________      ________
+ SLOPE              0             0             0             5             0
+ INTIMACY           0             0             6             7             8
+ CONFCB             0             0             0             0             0
+ RELQUAL            0             0             0             0             0
+ RQCONFCB           0             0             0             0             0
+
+
+           PSI
+              SLOPE         INTIMACY      CONFCB        RELQUAL       RQCONFCB
+              ________      ________      ________      ________      ________
+ SLOPE              9
+ INTIMACY          10            11
+ CONFCB             0             0             0
+ RELQUAL            0             0             0             0
+ RQCONFCB           0             0             0             0             0
+
+
+     STARTING VALUES FOR WITHIN
+
+
+           NU
+              INTIMACY      DAY7C         CONFCW
+              ________      ________      ________
+                0.000         0.000         0.000
+
+
+           LAMBDA
+              INTIMACY      DAY7C         CONFCW
+              ________      ________      ________
+ INTIMACY       1.000         0.000         0.000
+ DAY7C          0.000         1.000         0.000
+ CONFCW         0.000         0.000         1.000
+
+
+           THETA
+              INTIMACY      DAY7C         CONFCW
+              ________      ________      ________
+ INTIMACY       0.000
+ DAY7C          0.000         0.000
+ CONFCW         0.000         0.000         0.000
+
+
+           ALPHA
+              INTIMACY      DAY7C         CONFCW
+              ________      ________      ________
+                0.000         0.000         0.000
+
+
+           BETA
+              INTIMACY      DAY7C         CONFCW
+              ________      ________      ________
+ INTIMACY       0.000        -0.028         0.000
+ DAY7C          0.000         0.000         0.000
+ CONFCW         0.000         0.000         0.000
+
+
+           PSI
+              INTIMACY      DAY7C         CONFCW
+              ________      ________      ________
+ INTIMACY       3.589
+ DAY7C          0.000         0.500
+ CONFCW         0.000         0.000         0.500
+
+
+     STARTING VALUES FOR BETWEEN
+
+
+           NU
+              INTIMACY      CONFCB        RELQUAL       RQCONFCB
+              ________      ________      ________      ________
+                0.000         0.000         0.000         0.000
+
+
+           LAMBDA
+              SLOPE         INTIMACY      CONFCB        RELQUAL       RQCONFCB
+              ________      ________      ________      ________      ________
+ INTIMACY       0.000         1.000         0.000         0.000         0.000
+ CONFCB         0.000         0.000         1.000         0.000         0.000
+ RELQUAL        0.000         0.000         0.000         1.000         0.000
+ RQCONFCB       0.000         0.000         0.000         0.000         1.000
+
+
+           THETA
+              INTIMACY      CONFCB        RELQUAL       RQCONFCB
+              ________      ________      ________      ________
+ INTIMACY       0.000
+ CONFCB         0.000         0.000
+ RELQUAL        0.000         0.000         0.000
+ RQCONFCB       0.000         0.000         0.000         0.000
+
+
+           ALPHA
+              SLOPE         INTIMACY      CONFCB        RELQUAL       RQCONFCB
+              ________      ________      ________      ________      ________
+               -2.023         4.532         0.000         0.000         0.000
+
+
+           BETA
+              SLOPE         INTIMACY      CONFCB        RELQUAL       RQCONFCB
+              ________      ________      ________      ________      ________
+ SLOPE          0.000         0.000         0.000         1.032         0.000
+ INTIMACY       0.000         0.000        -0.840         0.647         2.524
+ CONFCB         0.000         0.000         0.000         0.000         0.000
+ RELQUAL        0.000         0.000         0.000         0.000         0.000
+ RQCONFCB       0.000         0.000         0.000         0.000         0.000
+
+
+           PSI
+              SLOPE         INTIMACY      CONFCB        RELQUAL       RQCONFCB
+              ________      ________      ________      ________      ________
+ SLOPE          2.577
+ INTIMACY       0.383         0.746
+ CONFCB         0.000         0.000         0.500
+ RELQUAL        0.000         0.000         0.000         0.500
+ RQCONFCB       0.000         0.000         0.000         0.000         0.500
+
+
+     POPULATION VALUES FOR WITHIN
+
+
+           NU
+              INTIMACY      DAY7C         CONFCW
+              ________      ________      ________
+                0.000         0.000         0.000
+
+
+           LAMBDA
+              INTIMACY      DAY7C         CONFCW
+              ________      ________      ________
+ INTIMACY       1.000         0.000         0.000
+ DAY7C          0.000         1.000         0.000
+ CONFCW         0.000         0.000         1.000
+
+
+           THETA
+              INTIMACY      DAY7C         CONFCW
+              ________      ________      ________
+ INTIMACY       0.000
+ DAY7C          0.000         0.000
+ CONFCW         0.000         0.000         0.000
+
+
+           ALPHA
+              INTIMACY      DAY7C         CONFCW
+              ________      ________      ________
+                0.000         0.000         0.000
+
+
+           BETA
+              INTIMACY      DAY7C         CONFCW
+              ________      ________      ________
+ INTIMACY       0.000        -0.028         0.000
+ DAY7C          0.000         0.000         0.000
+ CONFCW         0.000         0.000         0.000
+
+
+           PSI
+              INTIMACY      DAY7C         CONFCW
+              ________      ________      ________
+ INTIMACY       3.589
+ DAY7C          0.000         1.332
+ CONFCW         0.000         0.000         0.146
+
+
+     POPULATION VALUES FOR BETWEEN
+
+
+           NU
+              INTIMACY      CONFCB        RELQUAL       RQCONFCB
+              ________      ________      ________      ________
+                0.000         0.000         0.000         0.000
+
+
+           LAMBDA
+              SLOPE         INTIMACY      CONFCB        RELQUAL       RQCONFCB
+              ________      ________      ________      ________      ________
+ INTIMACY       0.000         1.000         0.000         0.000         0.000
+ CONFCB         0.000         0.000         1.000         0.000         0.000
+ RELQUAL        0.000         0.000         0.000         1.000         0.000
+ RQCONFCB       0.000         0.000         0.000         0.000         1.000
+
+
+           THETA
+              INTIMACY      CONFCB        RELQUAL       RQCONFCB
+              ________      ________      ________      ________
+ INTIMACY       0.000
+ CONFCB         0.000         0.000
+ RELQUAL        0.000         0.000         0.000
+ RQCONFCB       0.000         0.000         0.000         0.000
+
+
+           ALPHA
+              SLOPE         INTIMACY      CONFCB        RELQUAL       RQCONFCB
+              ________      ________      ________      ________      ________
+               -2.023         4.532         0.000         0.610        -0.041
+
+
+           BETA
+              SLOPE         INTIMACY      CONFCB        RELQUAL       RQCONFCB
+              ________      ________      ________      ________      ________
+ SLOPE          0.000         0.000         0.000         1.032         0.000
+ INTIMACY       0.000         0.000        -0.840         0.647         2.524
+ CONFCB         0.000         0.000         0.000         0.000         0.000
+ RELQUAL        0.000         0.000         0.000         0.000         0.000
+ RQCONFCB       0.000         0.000         0.000         0.000         0.000
+
+
+           PSI
+              SLOPE         INTIMACY      CONFCB        RELQUAL       RQCONFCB
+              ________      ________      ________      ________      ________
+ SLOPE          2.577
+ INTIMACY       0.383         0.746
+ CONFCB         0.000         0.000         0.027
+ RELQUAL        0.000         0.000         0.000         0.239
+ RQCONFCB       0.000         0.000         0.000         0.000         0.009
+
+
+TECHNICAL 9 OUTPUT
+
+  Error messages for each replication (if any)
+
+
+
+DIAGRAM INFORMATION
+
+  Mplus diagrams are currently not available for multilevel analysis.
+  No diagram output was produced.
+
+
+     Beginning Time:  02:53:27
+        Ending Time:  02:53:54
+       Elapsed Time:  00:00:27
+
+
+
+MUTHEN & MUTHEN
+3463 Stoner Ave.
+Los Angeles, CA  90066
+
+Tel: (310) 391-9971
+Fax: (310) 391-8971
+Web: www.StatModel.com
+Support: Support@StatModel.com
+
+Copyright (c) 1998-2021 Muthen & Muthen

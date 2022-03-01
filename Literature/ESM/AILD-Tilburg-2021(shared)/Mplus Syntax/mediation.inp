@@ -1,0 +1,29 @@
+TITLE: AILD Workshop Ch. 8 Mediation (Work-to-Home Stress Example); 
+!Need full version of Mplus to run this;
+DATA: FILE IS mediationdata.dat;
+VARIABLE: NAMES ARE id time timec fwkstr fwkdis
+freldis fwkstrc fwkdisc freldisc
+fwkstrcb fwkdiscb freldiscb
+fwkstrcw fwkdiscw freldiscw x m y;
+USEVAR = id timec x m y;
+WITHIN = timec x m y;
+CLUSTER = id;
+ANALYSIS: TYPE = twolevel random; ESTIMATOR=ml;
+MODEL: %WITHIN%
+cp | y ON x; 
+a | m ON x;
+b | y ON m;
+y m ON timec;
+[m@0 y@0];
+%BETWEEN%
+cp WITH a b;
+[a] (ma); a (vara); [b] (mb); b (varb);
+[cp] (mcp);
+a WITH b (covab);
+MODEL CONSTRAINT:
+NEW med te pme corr;
+med=ma*mb+covab;
+te=ma*mb+covab+mcp;
+pme=(ma*mb+covab)/(ma*mb+covab+mcp);
+corr=covab/sqrt(vara*varb);
+OUTPUT: sampstat cinterval; 

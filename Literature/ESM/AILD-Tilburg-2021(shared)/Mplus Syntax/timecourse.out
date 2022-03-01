@@ -1,0 +1,280 @@
+Mplus VERSION 8.6
+MUTHEN & MUTHEN
+06/22/2021   9:09 AM
+
+INPUT INSTRUCTIONS
+
+  TITLE:    AILD Workshop Ch. 2 Time Course (Intimacy Treatment Example);
+  DATA:     FILE IS timecourse.dat;
+  VARIABLE: NAMES ARE id time time01 intimacy treatment;
+            USEVAR ARE intimacy treatment time01;
+            BETWEEN = treatment;
+            WITHIN = time01;
+            CLUSTER = id;
+  ANALYSIS: TYPE = twolevel random;
+            ESTIMATOR=ml;
+  MODEL:    %WITHIN%
+            slope | intimacy ON time01;
+            %BETWEEN%
+            intimacy slope ON treatment;
+            intimacy with slope;
+  OUTPUT:   sampstat cinterval;
+
+
+
+*** WARNING in VARIABLE command
+  Note that only the first 8 characters of variable names are used in the output.
+  Shorten variable names to avoid any confusion.
+   1 WARNING(S) FOUND IN THE INPUT INSTRUCTIONS
+
+
+
+AILD Workshop Ch. 2 Time Course (Intimacy Treatment Example);
+
+SUMMARY OF ANALYSIS
+
+Number of groups                                                 1
+Number of observations                                         800
+
+Number of dependent variables                                    1
+Number of independent variables                                  2
+Number of continuous latent variables                            1
+
+Observed dependent variables
+
+  Continuous
+   INTIMACY
+
+Observed independent variables
+   TREATMEN    TIME01
+
+Continuous latent variables
+   SLOPE
+
+Variables with special functions
+
+  Cluster variable      ID
+
+  Within variables
+   TIME01
+
+  Between variables
+   TREATMEN
+
+
+Estimator                                                       ML
+Information matrix                                        OBSERVED
+Maximum number of iterations                                   100
+Convergence criterion                                    0.100D-05
+Maximum number of EM iterations                                500
+Convergence criteria for the EM algorithm
+  Loglikelihood change                                   0.100D-02
+  Relative loglikelihood change                          0.100D-05
+  Derivative                                             0.100D-03
+Minimum variance                                         0.100D-03
+Maximum number of steepest descent iterations                   20
+Maximum number of iterations for H1                           2000
+Convergence criterion for H1                             0.100D-03
+Optimization algorithm                                         EMA
+
+Input data file(s)
+  timecourse.dat
+Input data format  FREE
+
+
+SUMMARY OF DATA
+
+     Number of clusters                         50
+
+     Average cluster size       16.000
+
+     Estimated Intraclass Correlations for the Y Variables
+
+                Intraclass              Intraclass
+     Variable  Correlation   Variable  Correlation
+
+     INTIMACY     0.240
+
+
+
+SAMPLE STATISTICS
+
+NOTE:  The sample statistics for within and between refer to the
+       maximum-likelihood estimated within and between covariance
+       matrices, respectively.
+
+
+     ESTIMATED SAMPLE STATISTICS FOR WITHIN
+
+
+           Means
+              INTIMACY      TIME01        TREATMEN
+              ________      ________      ________
+                0.000         0.500         0.000
+
+
+           Covariances
+              INTIMACY      TIME01        TREATMEN
+              ________      ________      ________
+ INTIMACY       2.028
+ TIME01         0.113         0.094
+ TREATMEN       0.000         0.000         0.000
+
+
+           Correlations
+              INTIMACY      TIME01        TREATMEN
+              ________      ________      ________
+ INTIMACY       1.000
+ TIME01         0.258         1.000
+ TREATMEN       0.000         0.000         0.000
+
+
+     ESTIMATED SAMPLE STATISTICS FOR BETWEEN
+
+
+           Means
+              INTIMACY      TIME01        TREATMEN
+              ________      ________      ________
+                3.469         0.000         0.500
+
+
+           Covariances
+              INTIMACY      TIME01        TREATMEN
+              ________      ________      ________
+ INTIMACY       0.642
+ TIME01         0.000         0.000
+ TREATMEN       0.101         0.000         0.250
+
+
+           Correlations
+              INTIMACY      TIME01        TREATMEN
+              ________      ________      ________
+ INTIMACY       1.000
+ TIME01         0.000         0.000
+ TREATMEN       0.252         0.000         1.000
+
+
+UNIVARIATE SAMPLE STATISTICS
+
+
+     UNIVARIATE HIGHER-ORDER MOMENT DESCRIPTIVE STATISTICS
+
+         Variable/         Mean/     Skewness/   Minimum/ % with                Percentiles
+        Sample Size      Variance    Kurtosis    Maximum  Min/Max      20%/60%    40%/80%    Median
+
+     INTIMACY              3.469       0.281       0.000    1.25%       2.090      3.030      3.330
+             800.000       2.669      -0.054       9.410    0.12%       3.770      4.810
+     TIME01                0.500       0.000       0.000    6.25%       0.200      0.400      0.500
+             800.000       0.094      -1.209       1.000    6.25%       0.600      0.800
+     TREATMENT             0.500       0.000       0.000   50.00%       0.000      0.000      0.500
+              50.000       0.250      -2.000       1.000   50.00%       1.000      1.000
+
+
+THE MODEL ESTIMATION TERMINATED NORMALLY
+
+
+
+MODEL FIT INFORMATION
+
+Number of Free Parameters                        8
+
+Loglikelihood
+
+          H0 Value                       -1415.122
+
+Information Criteria
+
+          Akaike (AIC)                    2846.244
+          Bayesian (BIC)                  2883.721
+          Sample-Size Adjusted BIC        2858.316
+            (n* = (n + 2) / 24)
+
+
+
+MODEL RESULTS
+
+                                                    Two-Tailed
+                    Estimate       S.E.  Est./S.E.    P-Value
+
+Within Level
+
+ Residual Variances
+    INTIMACY           1.693      0.091     18.701      0.000
+
+Between Level
+
+ SLOPE      ON
+    TREATMENT          0.921      0.479      1.921      0.055
+
+ INTIMACY   ON
+    TREATMENT         -0.056      0.286     -0.196      0.844
+
+ INTIMACY WITH
+    SLOPE             -0.462      0.282     -1.639      0.101
+
+ Intercepts
+    INTIMACY           2.899      0.202     14.335      0.000
+    SLOPE              0.735      0.339      2.168      0.030
+
+ Residual Variances
+    INTIMACY           0.637      0.204      3.115      0.002
+    SLOPE              1.752      0.573      3.055      0.002
+
+
+QUALITY OF NUMERICAL RESULTS
+
+     Condition Number for the Information Matrix              0.533E-02
+       (ratio of smallest to largest eigenvalue)
+
+
+CONFIDENCE INTERVALS OF MODEL RESULTS
+
+                  Lower .5%  Lower 2.5%    Lower 5%    Estimate    Upper 5%  Upper 2.5%   Upper .5%
+
+Within Level
+
+ Residual Variances
+    INTIMACY         1.460       1.516       1.544       1.693       1.842       1.871       1.926
+
+Between Level
+
+ SLOPE    ON
+    TREATMENT       -0.314      -0.019       0.132       0.921       1.710       1.861       2.156
+
+ INTIMACY ON
+    TREATMENT       -0.793      -0.617      -0.527      -0.056       0.414       0.504       0.681
+
+ INTIMACY WITH
+    SLOPE           -1.187      -1.013      -0.925      -0.462       0.002       0.090       0.264
+
+ Intercepts
+    INTIMACY         2.378       2.503       2.567       2.899       3.232       3.296       3.420
+    SLOPE           -0.138       0.070       0.177       0.735       1.292       1.399       1.608
+
+ Residual Variances
+    INTIMACY         0.110       0.236       0.300       0.637       0.973       1.037       1.163
+    SLOPE            0.275       0.628       0.808       1.752       2.695       2.876       3.229
+
+
+DIAGRAM INFORMATION
+
+  Mplus diagrams are currently not available for multilevel analysis.
+  No diagram output was produced.
+
+
+     Beginning Time:  09:09:20
+        Ending Time:  09:09:20
+       Elapsed Time:  00:00:00
+
+
+
+MUTHEN & MUTHEN
+3463 Stoner Ave.
+Los Angeles, CA  90066
+
+Tel: (310) 391-9971
+Fax: (310) 391-8971
+Web: www.StatModel.com
+Support: Support@StatModel.com
+
+Copyright (c) 1998-2021 Muthen & Muthen

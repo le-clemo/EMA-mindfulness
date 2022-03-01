@@ -1,0 +1,20 @@
+TITLE:    Extension of Categorical: Grad Couples example; 
+DATA:     FILE IS categorical.dat;
+VARIABLE: NAMES ARE id time time7c pconf lpconf lpconfc amang 
+                    amangc amangcb amangcw;
+          USEVAR ARE pconf amang time7c;
+          CATEGORICAL = pconf;
+          WITHIN = time7c ;
+          CLUSTER = id;
+          LAGGED = pconf (1);
+DEFINE:   center amang (GRANDMEAN);
+ANALYSIS: TYPE = TWOLEVEL RANDOM;
+          ESTIMATOR=bayes; BITERATIONS = (5000);
+MODEL:    %WITHIN% 
+          slope | pconf on amang; !Latent separation of amang
+          pconf ON pconf&1; !Specifies lagged effect for outcome 
+          pconf on time7c; 
+          %BETWEEN%
+          pconf on amang;  !Latent separation of amang
+          slope with pconf;
+Output:   tech8;

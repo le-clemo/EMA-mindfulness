@@ -1,0 +1,16 @@
+TITLE:    AILD Workshop Ch. 2 Time Course (Intimacy Treatment Example); 
+DATA:     FILE IS timecourse.dat;
+VARIABLE: NAMES ARE id time time01 intimacy treatment;
+          USEVAR ARE intimacy treatment time01;
+          BETWEEN = treatment;
+          WITHIN = time01;
+          CLUSTER = id;
+ANALYSIS: TYPE = twolevel random;
+          ESTIMATOR=ml;
+MODEL:    %WITHIN%
+          slope | intimacy ON time01;
+          %BETWEEN%
+          intimacy slope ON treatment;
+          intimacy with slope@0;
+          slope@0;
+OUTPUT:   sampstat cinterval;

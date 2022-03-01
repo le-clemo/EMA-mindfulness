@@ -1,0 +1,37 @@
+TITLE:    Extension of Dyads (Work-to-Home Stress Example); 
+DATA:     FILE IS dyadsdata.dat;
+VARIABLE: NAMES ARE coupleid personid time time7c freldis fwrkstrs fwrkstrsc 
+          fwrkstrscb fwrkstrscw mreldis mwrkstrs mwrkstrsc mwrkstrscb mwrkstrscw;
+          USEVAR =  time7c freldis mreldis fwrkstrs mwrkstrs; 
+          WITHIN =  time7c;
+          CLUSTER = coupleid;
+          LAGGED = freldis(1) mreldis(1);
+DEFINE:   CENTER fwrkstrs mwrkstrs (GRANDMEAN);
+ANALYSIS: TYPE = TWOLEVEL RANDOM; ESTIMATOR=bayes;
+	      PROCESSORS = 4; 
+	      BITERATIONS = (5000);
+MODEL:    %WITHIN% 
+           cf | freldis ON fwrkstrs; ! Latent separation of fwrkstrs
+           cm | mreldis ON mwrkstrs; ! Latent separation of mwrkstrs
+           freldis^ ON freldis^1; !This is to specify AR(1) error structure
+           mreldis^ ON mreldis^1; !This is to specify AR(1) error structure
+           freldis mreldis ON time7c;
+           freldis (freldisv1); mreldis (mreldisv1);
+           freldis WITH mreldis (covlev1);
+          %BETWEEN%
+           freldis ON fwrkstrs;
+           mreldis ON mwrkstrs;         
+           freldis WITH cf cm;
+           mreldis WITH cf cm;
+           freldis WITH mreldis (covint);
+           cf WITH cm (covslp);
+           freldis (freldisv2);
+           mreldis (mreldisv2);
+           cf (cf); [cf] (meancf);
+           cm (cm); [cm] (meancm);
+          MODEL CONSTRAINT:
+           NEW rint; rint = covint/sqrt(freldisv2 * mreldisv2);
+           NEW rslp; rslp = covslp/sqrt(cf * cm);
+           NEW rlev1; rlev1 = covlev1/sqrt(freldisv1 * mreldisv1);
+           NEW slpdiff; slpdiff=meancf-meancm; 
+OUTPUT:    stdyx tech8;

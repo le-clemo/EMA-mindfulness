@@ -1,0 +1,445 @@
+Mplus VERSION 8.6
+MUTHEN & MUTHEN
+06/16/2021   9:44 AM
+
+INPUT INSTRUCTIONS
+
+  TITLE:    Extension of Time Course: Intimacy Treatment example;
+  DATA:     FILE IS timecourse.dat;
+  VARIABLE: NAMES ARE id time time01 intim tx; !Variable names shortened
+            USEVAR ARE intim tx time01;
+            WITHIN =  time01;
+            BETWEEN = tx;
+            CLUSTER = id;
+            LAGGED = intim(1); !This is needed for lagging residual or outcome
+  ANALYSIS: TYPE = TWOLEVEL RANDOM;
+            !ESTIMATOR=ml;
+  	      ESTIMATOR = BAYES; !Needed for Mplus v.8 DSEM features
+  	      PROCESSORS = 2; !Can make things run faster on multi-core systems
+  	      BITERATIONS = (2000); !Facilitate stable convergence specifying a minimum # of iter
+
+  MODEL:    %WITHIN%
+            !sy | intimacy ON intimacy&1; !This is for a random autoregressive effect
+            slope | intim on time01;
+            !logv | intim; !This is for random level-1 residual variance
+            intim^ on intim^1; !This is to specify AR(1) error structure
+            !sar1|intim^ on intim^1; !This is for random AR(1) error structure
+            %BETWEEN%
+            intim slope on tx;
+            intim with slope;
+            [slope] (a);
+
+  OUTPUT:	  tech8; !Examine tech8 for PSR history
+
+
+
+*** WARNING
+  Input line exceeded 90 characters. Some input may be truncated.
+  	      BITERATIONS = (2000); !Facilitate stable convergence specifying a minimum # of itera
+   1 WARNING(S) FOUND IN THE INPUT INSTRUCTIONS
+
+
+
+Extension of Time Course: Intimacy Treatment example;
+
+SUMMARY OF ANALYSIS
+
+Number of groups                                                 1
+Number of observations                                         800
+
+Number of dependent variables                                    1
+Number of independent variables                                  3
+Number of continuous latent variables                            1
+
+Observed dependent variables
+
+  Continuous
+   INTIM
+
+Observed independent variables
+   TX          TIME01      INTIM^1
+
+Continuous latent variables
+   SLOPE
+
+Variables with special functions
+
+  Cluster variable      ID
+
+  Within variables
+   TIME01      INTIM^1
+
+  Between variables
+   TX
+
+
+Estimator                                                    BAYES
+Specifications for Bayesian Estimation
+  Point estimate                                            MEDIAN
+  Number of Markov chain Monte Carlo (MCMC) chains               2
+  Random seed for the first chain                                0
+  Starting value information                           UNPERTURBED
+  Algorithm used for Markov chain Monte Carlo           GIBBS(PX1)
+  Convergence criterion                                  0.500D-01
+  Maximum number of iterations                               50000
+  K-th iteration used for thinning                               1
+
+Input data file(s)
+  timecourse.dat
+Input data format  FREE
+
+
+SUMMARY OF DATA
+
+     Number of clusters                         50
+
+       Size (s)    Cluster ID with Size s
+
+         16        1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21
+                   22 23 24 25 26 27 28 29 30 31 32 33 34 35 36 37 38 39
+                   40 41 42 43 44 45 46 47 48 49 50
+
+
+
+COVARIANCE COVERAGE OF DATA
+
+Minimum covariance coverage value   0.100
+
+     Number of missing data patterns             2
+
+
+     PROPORTION OF DATA PRESENT
+
+
+           Covariance Coverage
+              INTIM         TIME01        TX
+              ________      ________      ________
+ INTIM          1.000
+ TIME01         1.000         1.000
+ TX             1.000         1.000         1.000
+
+
+
+UNIVARIATE SAMPLE STATISTICS
+
+
+     UNIVARIATE HIGHER-ORDER MOMENT DESCRIPTIVE STATISTICS
+
+         Variable/         Mean/     Skewness/   Minimum/ % with                Percentiles
+        Sample Size      Variance    Kurtosis    Maximum  Min/Max      20%/60%    40%/80%    Median
+
+     INTIM                 3.469       0.281       0.000    1.25%       2.090      3.030      3.330
+             800.000       2.669      -0.054       9.410    0.12%       3.770      4.810
+     TIME01                0.500       0.000       0.000    6.25%       0.200      0.400      0.500
+             800.000       0.094      -1.209       1.000    6.25%       0.600      0.800
+     TX                    0.500       0.000       0.000   50.00%       0.000      0.000      0.500
+              50.000       0.250      -2.000       1.000   50.00%       1.000      1.000
+
+
+THE MODEL ESTIMATION TERMINATED NORMALLY
+
+     USE THE FBITERATIONS OPTION TO INCREASE THE NUMBER OF ITERATIONS BY A FACTOR
+     OF AT LEAST TWO TO CHECK CONVERGENCE AND THAT THE PSR VALUE DOES NOT INCREASE.
+
+
+
+MODEL FIT INFORMATION
+
+Number of Free Parameters                               9
+
+Information Criteria
+
+          Deviance (DIC)                         2776.995
+          Estimated Number of Parameters (pD)      79.957
+
+
+
+MODEL RESULTS
+
+                                Posterior  One-Tailed         95% C.I.
+                    Estimate       S.D.      P-Value   Lower 2.5%  Upper 2.5%  Significance
+
+Within Level
+
+ INTIM^     ON
+    INTIM^1            0.003       0.044      0.471      -0.083       0.090
+
+ Residual Variances
+    INTIM              1.704       0.094      0.000       1.535       1.917      *
+
+Between Level
+
+ SLOPE      ON
+    TX                 0.946       0.504      0.029      -0.041       1.904
+
+ INTIM      ON
+    TX                -0.040       0.301      0.451      -0.670       0.521
+
+ INTIM    WITH
+    SLOPE             -0.580       0.376      0.016      -1.507      -0.049      *
+
+ Intercepts
+    INTIM              2.895       0.208      0.000       2.477       3.329      *
+    SLOPE              0.735       0.352      0.023       0.010       1.417      *
+
+ Residual Variances
+    INTIM              0.762       0.275      0.000       0.381       1.464      *
+    SLOPE              2.193       0.750      0.000       0.995       3.940      *
+
+
+TECHNICAL 1 OUTPUT
+
+
+     PARAMETER SPECIFICATION FOR WITHIN
+
+
+           NU
+              INTIM         TIME01        INTIM^1
+              ________      ________      ________
+                    0             0             0
+
+
+           LAMBDA
+              INTIM         TIME01        INTIM^1
+              ________      ________      ________
+ INTIM              0             0             0
+ TIME01             0             0             0
+ INTIM^1            0             0             0
+
+
+           THETA
+              INTIM         TIME01        INTIM^1
+              ________      ________      ________
+ INTIM              0
+ TIME01             0             0
+ INTIM^1            0             0             0
+
+
+           ALPHA
+              INTIM         TIME01        INTIM^1
+              ________      ________      ________
+                    0             0             0
+
+
+           BETA
+              INTIM         TIME01        INTIM^1
+              ________      ________      ________
+ INTIM              0             0             1
+ TIME01             0             0             0
+ INTIM^1            0             0             0
+
+
+           PSI
+              INTIM         TIME01        INTIM^1
+              ________      ________      ________
+ INTIM              2
+ TIME01             0             0
+ INTIM^1            0             0             0
+
+
+     PARAMETER SPECIFICATION FOR BETWEEN
+
+
+           NU
+              INTIM         TX
+              ________      ________
+                    0             0
+
+
+           LAMBDA
+              SLOPE         INTIM         TX
+              ________      ________      ________
+ INTIM              0             0             0
+ TX                 0             0             0
+
+
+           THETA
+              INTIM         TX
+              ________      ________
+ INTIM              0
+ TX                 0             0
+
+
+           ALPHA
+              SLOPE         INTIM         TX
+              ________      ________      ________
+                    3             4             0
+
+
+           BETA
+              SLOPE         INTIM         TX
+              ________      ________      ________
+ SLOPE              0             0             5
+ INTIM              0             0             6
+ TX                 0             0             0
+
+
+           PSI
+              SLOPE         INTIM         TX
+              ________      ________      ________
+ SLOPE              7
+ INTIM              8             9
+ TX                 0             0             0
+
+
+     STARTING VALUES FOR WITHIN
+
+
+           NU
+              INTIM         TIME01        INTIM^1
+              ________      ________      ________
+                0.000         0.000         0.000
+
+
+           LAMBDA
+              INTIM         TIME01        INTIM^1
+              ________      ________      ________
+ INTIM          1.000         0.000         0.000
+ TIME01         0.000         1.000         0.000
+ INTIM^1        0.000         0.000         1.000
+
+
+           THETA
+              INTIM         TIME01        INTIM^1
+              ________      ________      ________
+ INTIM          0.000
+ TIME01         0.000         0.000
+ INTIM^1        0.000         0.000         0.000
+
+
+           ALPHA
+              INTIM         TIME01        INTIM^1
+              ________      ________      ________
+                0.000         0.000         0.000
+
+
+           BETA
+              INTIM         TIME01        INTIM^1
+              ________      ________      ________
+ INTIM          0.000         0.000         0.000
+ TIME01         0.000         0.000         0.000
+ INTIM^1        0.000         0.000         0.000
+
+
+           PSI
+              INTIM         TIME01        INTIM^1
+              ________      ________      ________
+ INTIM          1.335
+ TIME01         0.000         0.047
+ INTIM^1        0.000         0.000         1.298
+
+
+     STARTING VALUES FOR BETWEEN
+
+
+           NU
+              INTIM         TX
+              ________      ________
+                0.000         0.000
+
+
+           LAMBDA
+              SLOPE         INTIM         TX
+              ________      ________      ________
+ INTIM          0.000         1.000         0.000
+ TX             0.000         0.000         1.000
+
+
+           THETA
+              INTIM         TX
+              ________      ________
+ INTIM          0.000
+ TX             0.000         0.000
+
+
+           ALPHA
+              SLOPE         INTIM         TX
+              ________      ________      ________
+                0.000         3.469         0.000
+
+
+           BETA
+              SLOPE         INTIM         TX
+              ________      ________      ________
+ SLOPE          0.000         0.000         0.000
+ INTIM          0.000         0.000         0.000
+ TX             0.000         0.000         0.000
+
+
+           PSI
+              SLOPE         INTIM         TX
+              ________      ________      ________
+ SLOPE          1.000
+ INTIM          0.000         1.335
+ TX             0.000         0.000         0.125
+
+
+
+     PRIORS FOR ALL PARAMETERS            PRIOR MEAN      PRIOR VARIANCE     PRIOR STD. DEV.
+
+     Parameter 1~N(0.000,infinity)           0.0000            infinity            infinity
+     Parameter 2~IG(-1.000,0.000)          infinity            infinity            infinity
+     Parameter 3~N(0.000,infinity)           0.0000            infinity            infinity
+     Parameter 4~N(0.000,infinity)           0.0000            infinity            infinity
+     Parameter 5~N(0.000,infinity)           0.0000            infinity            infinity
+     Parameter 6~N(0.000,infinity)           0.0000            infinity            infinity
+     Parameter 7~IW(0.000,-3)              infinity            infinity            infinity
+     Parameter 8~IW(0.000,-3)              infinity            infinity            infinity
+     Parameter 9~IW(0.000,-3)              infinity            infinity            infinity
+
+
+TECHNICAL 8 OUTPUT
+
+
+   TECHNICAL 8 OUTPUT FOR BAYES ESTIMATION
+
+     CHAIN    BSEED
+     1        0
+     2        285380
+
+                     POTENTIAL       PARAMETER WITH
+     ITERATION    SCALE REDUCTION      HIGHEST PSR
+     100              1.037               2
+     200              1.020               7
+     300              1.118               1
+     400              1.163               8
+     500              1.069               8
+     600              1.084               8
+     700              1.063               8
+     800              1.022               9
+     900              1.014               9
+     1000             1.005               3
+     1100             1.016               3
+     1200             1.018               3
+     1300             1.010               3
+     1400             1.012               3
+     1500             1.006               3
+     1600             1.008               1
+     1700             1.013               9
+     1800             1.010               7
+     1900             1.016               9
+     2000             1.010               9
+
+
+DIAGRAM INFORMATION
+
+  Mplus diagrams are currently not available for multilevel analysis.
+  No diagram output was produced.
+
+
+     Beginning Time:  09:44:22
+        Ending Time:  09:44:24
+       Elapsed Time:  00:00:02
+
+
+
+MUTHEN & MUTHEN
+3463 Stoner Ave.
+Los Angeles, CA  90066
+
+Tel: (310) 391-9971
+Fax: (310) 391-8971
+Web: www.StatModel.com
+Support: Support@StatModel.com
+
+Copyright (c) 1998-2021 Muthen & Muthen

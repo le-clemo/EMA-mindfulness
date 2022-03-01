@@ -1,0 +1,46 @@
+TITLE: MC power estimation based on SPSS Process analysis results;
+MONTECARLO:	
+        NAMES ARE day7c intimacy confcw confcb relqual rqconfcb;
+		NOBSERVATIONS = 1848;
+		NCSIZES = 1;
+		CSIZES = 66 (28);
+		SEED = 5859;
+		NREPS = 1000;
+		WITHIN = day7c confcw;
+		BETWEEN = confcb relqual rqconfcb;
+ANALYSIS:  
+        TYPE = TWOLEVEL RANDOM;
+        PROCESSORS = 4;
+MODEL POPULATION:
+        %WITHIN%
+        slope | intimacy ON confcw;
+        intimacy ON day7c*-0.028;
+        intimacy*3.589;
+        [confcw*0]; confcw*0.146;
+        [day7c*0]; day7c*1.332
+        %BETWEEN%
+        slope ON relqual*1.032;
+        intimacy ON confcb*-0.840;
+        intimacy ON relqual*0.647;
+        intimacy ON rqconfcb*2.524;
+        intimacy WITH slope*0.383;
+        [relqual*0.610]; relqual*0.239;
+        [confcb*0]; confcb*0.027;
+        [rqconfcb*-0.041]; rqconfcb*0.009;
+        [intimacy*4.532]; intimacy*0.746;
+        [slope*-2.023]; slope*2.577;       
+MODEL:		
+        %WITHIN%
+        slope | intimacy ON confcw;
+        intimacy ON day7c*-0.028;
+        intimacy*3.589;
+        %BETWEEN%
+        slope ON relqual*1.032;
+        intimacy ON confcb*-0.840;
+        intimacy ON relqual*0.647;
+        intimacy ON rqconfcb*2.524;
+        intimacy WITH slope*0.383;
+        [intimacy*4.532]; intimacy*0.746;
+        [slope*-2.023]; slope*2.577;       
+
+OUTPUT:	TECH9;

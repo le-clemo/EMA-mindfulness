@@ -2,7 +2,9 @@
 #################################### Set up ####################################
 rm(list = ls()) #clean all up
 
-setwd("C:/Users/cleme/Documents/Education/RUG/Thesis/EMA-mindfulness/Data/ESM/mindcog_v202202-2")
+#setwd("C:/Users/cleme/Documents/Education/RUG/Thesis/EMA-mindfulness/Data/ESM/mindcog_v202202-2")
+
+setwd("~/Documents/RUG/Thesis/EMA-mindfulness/Data/ESM/mindcog_v202202-2")
 
 library(readxl)
 library(tidyverse)
@@ -68,7 +70,7 @@ na_data <- missing_data[(is.na(missing_data$patient_id)) |
 
 #drop subjects without an assigned group
 data <- drop_na(data, group)
-data <- drop_na(data, id)
+data <- drop_na(data, patient_id)
 
 
 #unique(data$id)
@@ -100,7 +102,7 @@ colNamesNew <- c('firstEntry', 'sleepQuality', 'toBedHour', 'toBedMinute', 'tryS
                  'durationFallAsleep', 'wakeupHour', 'wakeupMinute', 'restednessWakeup', 'wakeful',
                  'sad', 'satisfied', 'irritated', 'energetic', 'restless', 'stressed', 'anxious',
                  'listless', 'thinkingOf', 'worried', 'stickiness', 'thoughtsPleasant',
-                 'thoughtsPastPresFut', 'thoughtsNegNeuPos', 'thoughtsSelfOther', 'distracted',
+                 'thoughtsTime', 'thoughtsValence', 'thoughtsObject', 'distracted',
                  'restOfDayPos', 'aloneCompany', 'companyPleasant', 'alonePleasant', 'posMax',
                  'posIntensity', 'negMax', 'negIntensity', 'comments')
 
@@ -272,8 +274,8 @@ group_responses <- ddply(data, .(group), plyr::summarise,
 #Creating lagged variables
 #the variables to be lagged
 cols <- c('wakeful', 'sad', 'satisfied', 'irritated', 'energetic', 'restless', 'stressed', 'anxious',
-             'listless', 'thinkingOf', 'worried', 'stickiness', 'thoughtsPleasant', 'thoughtsPastPresFut',
-             'thoughtsNegNeuPos', 'thoughtsSelfOther', 'distracted', 'restOfDayPos', 'aloneCompany',
+             'listless', 'thinkingOf', 'worried', 'stickiness', 'thoughtsPleasant', 'thoughtsTime',
+             'thoughtsValence', 'thoughtsObject', 'distracted', 'restOfDayPos', 'aloneCompany',
              'companyPleasant', 'alonePleasant', 'posMax', 'posIntensity', 'negMax', 'negIntensity')
 
 #creating a vector with new "lagged" column names
@@ -315,7 +317,7 @@ for(id in subject_IDs){
 #################################### Change scores ####################################
 
 cols <- c('wakeful', 'sad', 'satisfied', 'irritated', 'energetic', 'restless', 'stressed', 'anxious',
-          'listless', 'worried', 'stickiness', 'thoughtsPleasant',  'thoughtsSelfOther', 'distracted', 'restOfDayPos',
+          'listless', 'worried', 'stickiness', 'thoughtsPleasant',  'thoughtsObject', 'distracted', 'restOfDayPos',
           'companyPleasant', 'alonePleasant', 'posMax', 'posIntensity', 'negMax', 'negIntensity')
 
 #creating a vector with new "lagged" column names
@@ -766,4 +768,46 @@ figure
 
 #test <- subset(data[data$respondent_id == 3602171,], select = c(respondent_id, mindcog_db_protocol, assessmentDay, beepNum, mindcog_db_open_from))
 
-               
+
+#################################### Rumination measures ##################################
+
+pc_time <- ddply(data, .(group, intervention, phase, block), plyr::summarize,
+                  N = length(group[which(!is.na(thoughtsTime))]),
+                  past = round(length(group[which(thoughtsTime == 1)])/N, 2),
+                  present = round(length(group[which(thoughtsTime == 2)])/N, 2),
+                  future = round(length(group[which(thoughtsTime == 3)])/N, 2))
+
+pc_time <- drop_na(pc_time, intervention)
+
+pc_val <- ddply(data, .(group, intervention, phase, block), plyr::summarize,
+                 N = length(group[which(!is.na(thoughtsValence))]),
+                 negative = round(length(group[which(thoughtsValence == 1)])/N, 2),
+                 neutral = round(length(group[which(thoughtsValence == 2)])/N, 2),
+                 positive = round(length(group[which(thoughtsValence == 3)])/N, 2))
+
+pc_val <- drop_na(pc_val, intervention)
+
+
+pc_object <- ddply(data, .(group, intervention, phase, block), plyr::summarize,
+                   N = length(group[which(!is.na(thoughtsObject))]),
+                   self = round(length(group[which(thoughtsObject == 1)])/N, 2),
+                   somebody = round(length(group[which(thoughtsObject == 2)])/N, 2),
+                   neither = round(length(group[which(thoughtsObject == 3)])/N, 2))
+
+pc_object <- drop_na(pc_object, intervention)
+
+
+pc_thinkingOf <- ddply(data, .(group, intervention, phase, block), plyr::summarize,
+                   N = length(group[which(!is.na(thinkingOf))]),
+                   currentActivity = round(length(group[which(thinkingOf == 1)])/N, 2),
+                   externalStimuli = round(length(group[which(thinkingOf == 2)])/N, 2),
+                   currentFeelings = round(length(group[which(thinkingOf == 3)])/N, 2),
+                   personalConcerns = round(length(group[which(thinkingOf == 4)])/N, 2),
+                   daydreaming = round(length(group[which(thinkingOf == 5)])/N, 2),
+                   other = round(length(group[which(thinkingOf == 6)])/N, 2))
+
+pc_thinkingOf <- drop_na(pc_thinkingOf, intervention)
+
+merge(pc_time, pc_val, pc_object, pc_thinkingOf, by = c(group, intervention, phase, block))
+
+pc_summary <- Reduce(function(x, y) merge(x, y, all=TRUE), list(pc_time, pc_val, pc_object, pc_thinkingOf))

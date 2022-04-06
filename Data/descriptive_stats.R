@@ -53,6 +53,40 @@ for(row in 1:nrow(data)) { #some "s" are missing
   
 }
 
+
+#add group
+data$group <- NA
+for(row in 1:nrow(data)) { 
+  if((grepl("g1", data$id[row], fixed = TRUE))){
+    data$group[row] <- "controls"
+  } 
+  if((grepl("g2", data$id[row], fixed = TRUE))){
+    data$group[row] <- "remitted"
+  }
+}
+
+#add phase
+data$phase <- NA
+for(row in 1:nrow(data)) { 
+  if((grepl("m1", data$id[row], fixed = TRUE)) | (grepl("m3", data$id[row], fixed = TRUE))){
+    data$phase[row] <- "pre"
+  } 
+  if((grepl("m2", data$id[row], fixed = TRUE)) | (grepl("m4", data$id[row], fixed = TRUE))){
+    data$phase[row] <- "peri"
+  }
+}
+
+#add block (1 = first intervention cycle, 2 = second intervention cycle)
+data$block <- NA
+for(row in 1:nrow(data)) { 
+  if((grepl("m1", data$id[row], fixed = TRUE)) | (grepl("m2", data$id[row], fixed = TRUE))){
+    data$block[row] <- 1
+  } else {
+    data$block[row] <- 2
+  }
+}
+
+
 missing_data <- ddply(data, .(patient_id, id, group, intervention), plyr::summarise,
                       numBeeped = length(mindcog_db_open_from),
                       responseRate = round((numBeeped - length(unique(mindcog_db_non_response)))/numBeeped,2))
@@ -71,20 +105,9 @@ na_data <- missing_data[(is.na(missing_data$patient_id)) |
 #drop subjects without an assigned group
 data <- drop_na(data, group)
 data <- drop_na(data, patient_id)
-
+data <- drop_na(data, id)
 
 #unique(data$id)
-
-
-#add block (1 = first intervention cycle, 2 = second intervention cycle)
-data$block <- NA
-for(row in 1:nrow(data)) { 
-  if((grepl("m1", data$id[row], fixed = TRUE)) | (grepl("m2", data$id[row], fixed = TRUE))){
-    data$block[row] <- 1
-  } else {
-    data$block[row] <- 2
-  }
-}
 
 #test <- subset(data, select = c(id, phase, block))
 
@@ -360,6 +383,8 @@ for(id in subject_IDs){
 
 # test <- subset(data, select = c(subject, phase, sad, sad_change, assessmentDay))
 # View(test)
+
+#write.csv(data, file = "ESM_preprocessed_25032022.csv")
 
 #################################### Initial analyses by group ####################################
 

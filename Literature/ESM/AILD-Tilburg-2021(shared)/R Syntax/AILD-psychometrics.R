@@ -1,11 +1,11 @@
-
+setwd("/Users/clemenskaiser/Documents/RUG/Thesis/EMA-mindfulness/Literature/ESM/AILD-Tilburg-2021(shared)/R Syntax")
 ### Load the packages we will need
 library(here)
 library(lme4)
 library(brms)
 
 ### Load the psychometrics dataset
-psychometrics <- read.csv(here('psychometrics.csv'))
+psychometrics <- read.csv('psychometrics.csv')
 head(psychometrics, 10)
 
 ### Create versions of person, time and item that R treats as factors

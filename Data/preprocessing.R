@@ -24,7 +24,7 @@ library(qgraph)
 data <- read_xlsx('mindcog_db_2022-02-14.xlsx') 
 
 
-################################# add id, intervention #################################################
+################################# load Medoq info and clean up #################################################
 #get sheet names
 #sheetnames <- excel_sheets('Medoq_informatie_2.xlsx')
 mylist <- lapply(excel_sheets('Medoq_informatie_2.xlsx'), read_excel, path = 'Medoq_informatie_2.xlsx')
@@ -41,6 +41,33 @@ matchingData <- rbind(matchingMindfulness, matchingFantasizing) #bind into one d
 
 #changing column names since spaces lead to weird errors
 colnames(matchingData)[c(1,2,4,5,6)] <- c("id", "recordedDates", "meeting_id", "DatesBaseline", "DatesIntervention")
+
+#turn all ids to lower case for easier error handling below
+matchingData$id <- tolower(matchingData$id)
+
+#fix various errors in id column
+for(row in 1:nrow(matchingData)) { #some "s" are missing
+  if( ! (grepl("s", matchingData$id[row], fixed=TRUE)) & (!(is.na(matchingData$id[row])))){ 
+    matchingData$id[row] <- paste("s", matchingData$id[row], sep = "")
+  }  
+  if( ! (grepl("_g", matchingData$id[row], fixed=TRUE))){ #some "_" prior to "g" are missing
+    matchingData$id[row] <- sub("g", "\\1_g", matchingData$id[row])
+  }
+  if( ! (grepl("_m", matchingData$id[row], fixed = TRUE))){ #some "_" prior to "m" are missing
+    matchingData$id[row] <- sub("m", "\\1_m", matchingData$id[row])
+  }
+  if( (grepl("meting", matchingData$id[row], fixed = TRUE))){#some had "meting" instead of just "m"
+    matchingData$id[row] <- sub("meting", "\\1m", matchingData$id[row])
+  }
+  
+}
+
+#there are some duplicate entries that would cause issues later on
+n_occur <- data.frame(table(matchingData$id))
+#n_occur[n_occur$Freq > 1,]
+duplicate_entries <- subset(matchingData[matchingData$id %in% n_occur$Var1[n_occur$Freq > 1],],
+                            select = c(id, recordedDates, DatesBaseline, DatesIntervention))
+
 
 #extract start and end dates from "Datum baseline" and "Datum interventie" columns
 for(row in 1:nrow(matchingData)) { #change all "t/m" to "tm"
@@ -77,7 +104,7 @@ for(row in 1:nrow(matchingData)){
     
   }
 }
-
+##################################### combine data ####################################
 #performing a "vlookup" of the md... numbers and adding corresponding columns
 #from matchingData to data
 data$id <- NA
@@ -107,27 +134,9 @@ for(i in 1:nrow(data)){
   }
 }
 
-#################################### Data clean up ####################################
-#turn all ids to lower case for easier error handling below
-data$id <- tolower(data$id)
-
-#fix various errors in id column
-for(row in 1:nrow(data)) { #some "s" are missing
-  if( ! (grepl("s", data$id[row], fixed=TRUE)) & (!(is.na(data$id[row])))){ 
-    data$id[row] <- paste("s", data$id[row], sep = "")
-  }  
-  if( ! (grepl("_g", data$id[row], fixed=TRUE))){ #some "_" prior to "g" are missing
-    data$id[row] <- sub("g", "\\1_g", data$id[row])
-  }
-  if( ! (grepl("_m", data$id[row], fixed = TRUE))){ #some "_" prior to "m" are missing
-    data$id[row] <- sub("m", "\\1_m", data$id[row])
-  }
-  if( (grepl("meting", data$id[row], fixed = TRUE))){#some had "meting" instead of just "m"
-    data$id[row] <- sub("meting", "\\1m", data$id[row])
-  }
-  
-}
-
+# View(subset(data, id=="s156_g2_m1" | id=="s156_g2_m2"))
+# unique(subset(data, id=="s156_g2_m1" | id=="s156_g2_m2")$patient_id)
+#################################### add variables  ####################################
 #add group
 data$group <- NA
 for(row in 1:nrow(data)) { 
@@ -175,9 +184,11 @@ data[['mindcog_db_completed_at']] <- as.POSIXct(data[['mindcog_db_completed_at']
                                                 format = "%d/%m/%Y %H:%M")
 
 data[['mindcog_db_date']] <- format(as.POSIXct(data[['mindcog_db_date']],
-                                                format = "%d/%m/%Y %H:%M"), format="%d/%m/%Y")
+                                                format = "%d/%m/%Y %H:%M"), format="%Y-%m-%d")
 
 
+
+################################# What data are we missing? ###################################
 missing_data <- ddply(data, .(patient_id, id, group, intervention), plyr::summarise,
                       numBeeped = length(mindcog_db_open_from),
                       responseRate = round((numBeeped - length(unique(mindcog_db_non_response)))/numBeeped,2))
@@ -193,25 +204,85 @@ write.csv(na_data, file = "patientID_issues.csv")
 data <- drop_na(data, group)
 data <- drop_na(data, patient_id)
 
-View(data[which(is.na(data$mindcog_db_date)),])
+#View(data[which(is.na(data$mindcog_db_date)),])
 
+############################# Handle issue with diverging dates ###########################
 #fix problem with dates (whether entry belongs to pre- or peri-intervention phase)
-error_demo <- ddply(data[which(data$subject=="s8"),],
+error_demo <- ddply(data[which(data$subject=="s3"),],
                     .(subject, id, phase, block, mindcog_db_date, recordedStart, recordedEnd,
                       baselineStart, baselineEnd, interventionStart, interventionEnd), plyr::summarise,
                     nEntries <- length(subject))
 
-for(row in 1:nrow(data)){
+#turning the recordedStart/-End, baselineStart/-End, ... into actual dates with corresponding year
+for(row in 1:nrow(data)){ #first extract year from the mindcog_db_date column
+  y <- format(as.POSIXct(data$mindcog_db_date[row], format = "%Y-%m-%d"), format="%Y")
+  #if there is an entry for recordedStart and mindcog_db_date (i.e., if its not a non-response)
   if((!is.na(data$recordedStart[row])) & (!is.na(data$mindcog_db_date[row]))){
-    y <- format(as.POSIXct(data$mindcog_db_date[row], format = "%d/%m/%Y"), format="%Y")
-    data$recordedStart[row] <- paste(data$recordedStart[row], y, sep = "-")
+    #combine day-month from recordedStart (etc.) with extracted year and reformat to match other dates in df
+    data$recordedStart[row] <- format(as.POSIXct(paste(data$recordedStart[row], y, sep = "-"),
+                                          format = "%d-%m-%Y"), format = "%Y-%m-%d")
+    data$recordedEnd[row] <- format(as.POSIXct(paste(data$recordedEnd[row], y, sep = "-"),
+                                          format = "%d-%m-%Y"), format = "%Y-%m-%d")
+  }# repeat for other columns
+  if((!is.na(data$baselineStart[row])) & (!is.na(data$mindcog_db_date[row]))){
+    data$baselineStart[row] <- format(as.POSIXct(paste(data$baselineStart[row], y, sep = "-"),
+                                                 format = "%d-%m-%Y"), format = "%Y-%m-%d")
+    data$baselineEnd[row] <- format(as.POSIXct(paste(data$baselineEnd[row], y, sep = "-"),
+                                               format = "%d-%m-%Y"), format = "%Y-%m-%d")
+    data$interventionStart[row] <- format(as.POSIXct(paste(data$interventionStart[row], y, sep = "-"),
+                                                 format = "%d-%m-%Y"), format = "%Y-%m-%d")
+    data$interventionEnd[row] <- format(as.POSIXct(paste(data$interventionEnd[row], y, sep = "-"),
+                                               format = "%d-%m-%Y"), format = "%Y-%m-%d")
   }
 }
 
-if(!is.na(data$baselineStart))
-  
+pre_to_peri <- c() #empty lists for row indices of faulty entries
+peri_to_pre <- c()
+i <- 1 #to add to the lists (in a computationally efficient way)
+j <- 1
+for(row in 1:nrow(data)){
+  #if there is a date in baselineStart (which means there is one in the other relevant columns too)
+  # and if it is not a non-response
+  if((!is.na(data$baselineStart[row])) & (!is.na(data$mindcog_db_date[row]))){
+    #if phase is "pre"
+    if((!is.na(data$phase[row])) & (data$phase[row] == "pre")){
+      #if the recorded mindcog date is greater than the end of baseline date
+      if((data$mindcog_db_date[row] > data$baselineEnd[row])){
+        pre_to_peri[i] <- row #add row index to list
+        i <- i+1 #increment list index count
+      }
+    } #same for entries coded as peri that should be pre
+    if((!is.na(data$phase[row])) & (data$phase[row] == "peri")){
+      if((data$mindcog_db_date[row] < data$interventionStart[row])){
+        peri_to_pre[j] <- row
+        j <- j+1
+      }
+    }
+  }
+}
 
-#Changing ESM item names
+data$phase[pre_to_peri,] <- "peri"
+for(row in 1:nrow(data[pre_to_peri,])){
+  if((grepl("m1", data$id[row], fixed=TRUE))){
+    data$id[row] <- sub("m", "\\1_m", matchingData$id[row])
+  }
+
+  
+}
+
+data$phase[peri_to_pre,] <- "pre"
+
+
+
+# length(pre_to_peri)
+# length(peri_to_pre)
+# pre_to_peri_df <- (subset(data[pre_to_peri,], select=c("id", "mindcog_db_date", "phase", "baselineStart",
+#                                     "baselineEnd", "interventionStart", "interventionEnd")))
+# 
+# peri_to_pre_df <- (subset(data[peri_to_pre,], select=c("id", "mindcog_db_date", "phase", "baselineStart",
+#                                                        "baselineEnd", "interventionStart", "interventionEnd")))
+
+######################################## Changing ESM item names ##############################
 #Get numbers of ESM item columns
 item1 <- which( colnames(data)=="mindcog_db_1" ) #this is the first column that interests us
 item33 <- which( colnames(data)=="mindcog_db_33" )#last item of interest
@@ -262,7 +333,7 @@ for(id in subject_IDs){ #for loop to fill the column with the day numbers
 
 #test <- subset(data, select = c(id, subject, mindcog_db_open_from, minLastBeep))
 
-#################################### Beep number, assessment day and lagged variables  ####################################
+####################### Beep number, assessment day and lagged variables  #############################
 
 #adding beep number (continuous count of sent assessment queries)
 data$beepNum <- NA
@@ -380,8 +451,8 @@ for(id in subject_IDs){ #for loop to fill the column with the day numbers
   }
 }
 
+############################## Some changes for convenience ################################
 #drop unnecessary columns and reorder columns for convenience
-
 columnNames <- c(colnames(data))
 data <- data %>% select(patient_id, id, subject, group, intervention, phase, block,
                         #18 = db_open_from; 23 = db_date; 26:61 = firstEntry:comments; 67:76

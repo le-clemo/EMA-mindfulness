@@ -40,7 +40,7 @@ matchingFantasizing$intervention <- "fantasizing"
 matchingData <- rbind(matchingMindfulness, matchingFantasizing) #bind into one df
 
 #changing column names since spaces lead to weird errors
-colnames(matchingData)[c(1,4,5,6)] <- c("id", "meeting_id", "DatesBaseline", "DatesIntervention")
+colnames(matchingData)[c(1,2,4,5,6)] <- c("id", "recordedDates", "meeting_id", "DatesBaseline", "DatesIntervention")
 
 #extract start and end dates from "Datum baseline" and "Datum interventie" columns
 for(row in 1:nrow(matchingData)) { #change all "t/m" to "tm"
@@ -48,15 +48,20 @@ for(row in 1:nrow(matchingData)) { #change all "t/m" to "tm"
     matchingData$DatesBaseline[row] <- sub("t/m", "\\tm", matchingData$DatesBaseline[row])
   }
   if( ! (grepl("tm", matchingData$DatesIntervention[row], fixed=TRUE))){ 
-      matchingData$DatesIntervention[row] <- sub("t/m", "\\tm", matchingData$DatesIntervention[row])
+    matchingData$DatesIntervention[row] <- sub("t/m", "\\tm", matchingData$DatesIntervention[row])
   }  
+  if( ! (grepl("tm", matchingData$recordedDates[row], fixed=TRUE))){
+    matchingData$recordedDates[row] <- sub("t/m", "\\tm", matchingData$recordedDates[row])
+  }
+
 }
 
 matchingData$baselineStart <- NA
 matchingData$baselineEnd <- NA
 matchingData$interventionStart <- NA
 matchingData$interventionEnd <- NA
-
+matchingData$recordedStart <- NA
+matchingData$recordedEnd <- NA
 for(row in 1:nrow(matchingData)){
   if(! is.na(matchingData$DatesBaseline[row])){
     matchingData$baselineStart[row] <- sub("\\ tm.*", "", matchingData$DatesBaseline[row]) #extract start date
@@ -66,24 +71,40 @@ for(row in 1:nrow(matchingData)){
     matchingData$interventionStart[row] <- sub("\\ tm.*", "", matchingData$DatesIntervention[row])
     matchingData$interventionEnd[row] <- sub(".* tm", "", matchingData$DatesIntervention[row])
   }
+  if(! is.na(matchingData$recordedDates[row])){
+    matchingData$recordedStart[row] <- sub("\\ tm.*", "", matchingData$recordedDates[row])
+    matchingData$recordedEnd[row] <- sub(".* tm", "", matchingData$recordedDates[row])
+    
+  }
 }
 
 #performing a "vlookup" of the md... numbers and adding corresponding columns
 #from matchingData to data
 data$id <- NA
 data$intervention <- NA
-data$baselineDates <- NA
-data$interventionDates <- NA
+data$baselineStart <- NA
+data$baselineEnd <- NA
+data$interventionStart <- NA
+data$interventionEnd <- NA
+data$recordedStart <- NA
+data$recordedEnd <- NA
 for(i in 1:nrow(data)){
   for(j in 1:nrow(matchingData)){
     if(data$patient_id[i] == matchingData$meeting_id[j]){
       data$id[i] <- matchingData$id[j]
+      #data$recordedDates[i] <- matchingData$recordedDates[j]
       data$intervention[i] <- matchingData$intervention[j]
-      data$baselineDates[i] = matchingData$DatesBaseline[j]
-      data$interventionDates[i] <- matchingData$DatesIntervention[j]
+      
+      if(is.na(data$mindcog_db_non_response[i])){
+        data$baselineStart[i] = matchingData$baselineStart[j]
+        data$baselineEnd[i] = matchingData$baselineEnd[j]
+        data$interventionStart[i] <- matchingData$interventionStart[j]
+        data$interventionEnd[i] <- matchingData$interventionEnd[j]
+        data$recordedStart[i] <- matchingData$recordedStart[j]
+        data$recordedEnd[i] <- matchingData$recordedEnd[j]
+      }
     }
   }
-  
 }
 
 #################################### Data clean up ####################################
@@ -118,26 +139,10 @@ for(row in 1:nrow(data)) {
   }
 }
 
-missing_data <- ddply(data, .(patient_id, id, group, intervention), plyr::summarise,
-                      numBeeped = length(mindcog_db_open_from),
-                      responseRate = round((numBeeped - length(unique(mindcog_db_non_response)))/numBeeped,2))
+#add new column "subject" -> extract all characters up until the first underscore in column "id"
+data$subject <- str_extract(data$id, regex("^[^_]+(?=_)"))
 
-na_data <- missing_data[(is.na(missing_data$patient_id)) |
-                          is.na((missing_data$group)) |
-                          is.na((missing_data$intervention)), ]
-
-write.csv(na_data, file = "patientID_issues.csv")
-
-#convert excel na to R na and remove respondents without group (for now)
-#data[data=="#N/A"] = NA
-
-#drop subjects without an assigned group
-data <- drop_na(data, group)
-data <- drop_na(data, patient_id)
-
-
-################################# add phase, block, subject ########################################################
-
+#add phase
 data$phase <- NA
 for(row in 1:nrow(data)) { 
   if((grepl("m1", data$id[row], fixed = TRUE)) | (grepl("m3", data$id[row], fixed = TRUE))){
@@ -159,11 +164,52 @@ for(row in 1:nrow(data)) {
   }
 }
 
-#test <- subset(data, select = c(id, phase, block))
+#Convert dates from characters to datetimes
+data[['mindcog_db_open_from']] <- as.POSIXct(data[['mindcog_db_open_from']],
+                                             format = "%d/%m/%Y %H:%M")
+
+data[['mindcog_db_started_at']] <- as.POSIXct(data[['mindcog_db_started_at']],
+                                              format = "%d/%m/%Y %H:%M")
+
+data[['mindcog_db_completed_at']] <- as.POSIXct(data[['mindcog_db_completed_at']],
+                                                format = "%d/%m/%Y %H:%M")
+
+data[['mindcog_db_date']] <- format(as.POSIXct(data[['mindcog_db_date']],
+                                                format = "%d/%m/%Y %H:%M"), format="%d/%m/%Y")
 
 
-#add new column "subject" -> extract all characters up until the first underscore in column "id"
-data$subject <- str_extract(data$id, regex("^[^_]+(?=_)"))
+missing_data <- ddply(data, .(patient_id, id, group, intervention), plyr::summarise,
+                      numBeeped = length(mindcog_db_open_from),
+                      responseRate = round((numBeeped - length(unique(mindcog_db_non_response)))/numBeeped,2))
+
+na_data <- missing_data[(is.na(missing_data$patient_id)) |
+                          is.na((missing_data$group)) |
+                          is.na((missing_data$intervention)), ]
+
+write.csv(na_data, file = "patientID_issues.csv")
+
+
+#drop subjects without an assigned group
+data <- drop_na(data, group)
+data <- drop_na(data, patient_id)
+
+View(data[which(is.na(data$mindcog_db_date)),])
+
+#fix problem with dates (whether entry belongs to pre- or peri-intervention phase)
+error_demo <- ddply(data[which(data$subject=="s8"),],
+                    .(subject, id, phase, block, mindcog_db_date, recordedStart, recordedEnd,
+                      baselineStart, baselineEnd, interventionStart, interventionEnd), plyr::summarise,
+                    nEntries <- length(subject))
+
+for(row in 1:nrow(data)){
+  if((!is.na(data$recordedStart[row])) & (!is.na(data$mindcog_db_date[row]))){
+    y <- format(as.POSIXct(data$mindcog_db_date[row], format = "%d/%m/%Y"), format="%Y")
+    data$recordedStart[row] <- paste(data$recordedStart[row], y, sep = "-")
+  }
+}
+
+if(!is.na(data$baselineStart))
+  
 
 #Changing ESM item names
 #Get numbers of ESM item columns
@@ -182,16 +228,6 @@ colNamesNew <- c('firstEntry', 'sleepQuality', 'toBedHour', 'toBedMinute', 'tryS
 setnames(data, old = colNamesOld$columns, new = colNamesNew)
 
 #################################### add measures on response times  ####################################
-
-#Convert dates from characters to datetimes
-data[['mindcog_db_open_from']] <- as.POSIXct(data[['mindcog_db_open_from']],
-                                   format = "%d/%m/%Y %H:%M")
-
-data[['mindcog_db_started_at']] <- as.POSIXct(data[['mindcog_db_started_at']],
-                                             format = "%d/%m/%Y %H:%M")
-
-data[['mindcog_db_completed_at']] <- as.POSIXct(data[['mindcog_db_completed_at']],
-                                             format = "%d/%m/%Y %H:%M")
 
 #calculate the time it took a participant to start after being informed (in minutes)
 data$response_delay <- (data$mindcog_db_started_at - data$mindcog_db_open_from)/60

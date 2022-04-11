@@ -2,9 +2,9 @@
 #################################### Set up ####################################
 rm(list = ls()) #clean all up
 
-setwd("C:/Users/cleme/Documents/Education/RUG/Thesis/EMA-mindfulness/Data/ESM/mindcog_v202202-2")
+#setwd("C:/Users/cleme/Documents/Education/RUG/Thesis/EMA-mindfulness/Data/ESM/mindcog_v202202-2")
 
-#setwd("~/Documents/RUG/Thesis/EMA-mindfulness/Data/ESM/mindcog_v202202-2")
+setwd("~/Documents/RUG/Thesis/EMA-mindfulness/Data/ESM/mindcog_v202202-2")
 
 library(readxl)
 library(tidyverse)
@@ -42,6 +42,7 @@ participant_responses <- ddply(data, .(subject), plyr::summarise,
 
 #recreacting with assessment days per group
 group_responses <- ddply(data, .(group), plyr::summarise,
+                               nSubj = length(unique(subject)),
                                numBeeped = length(mindcog_db_open_from),
                                noResponse = length(unique(mindcog_db_non_response)),
                                response = numBeeped - noResponse,

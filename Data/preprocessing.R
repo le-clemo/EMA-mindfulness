@@ -2,9 +2,9 @@
 #################################### Set up ####################################
 rm(list = ls()) #clean all up
 
-#setwd("C:/Users/cleme/Documents/Education/RUG/Thesis/EMA-mindfulness/Data/ESM/mindcog_v202202-2")
+setwd("C:/Users/cleme/Documents/Education/RUG/Thesis/EMA-mindfulness/Data/ESM/mindcog_v202202-2")
 
-setwd("~/Documents/RUG/Thesis/EMA-mindfulness/Data/ESM/mindcog_v202202-2")
+#setwd("~/Documents/RUG/Thesis/EMA-mindfulness/Data/ESM/mindcog_v202202-2")
 
 library(readxl)
 library(tidyverse)
@@ -261,16 +261,26 @@ for(row in 1:nrow(data)){
   }
 }
 
-data$phase[pre_to_peri,] <- "peri"
+#replacing f 
+data[pre_to_peri,]$phase <- "peri"
 for(row in 1:nrow(data[pre_to_peri,])){
   if((grepl("m1", data$id[row], fixed=TRUE))){
-    data$id[row] <- sub("m", "\\1_m", matchingData$id[row])
+    data$id[row] <- sub("m1", "\\1_m2", matchingData$id[row])
   }
-
-  
+  if((grepl("m3", data$id[row], fixed=TRUE))){
+    data$id[row] <- sub("m3", "\\1_m4", matchingData$id[row])
+  }
 }
 
-data$phase[peri_to_pre,] <- "pre"
+data[peri_to_pre,]$phase <- "pre"
+for(row in 1:nrow(data[peri_to_pre,])){
+  if((grepl("m2", data$id[row], fixed=TRUE))){
+    data$id[row] <- sub("m2", "\\1_m1", matchingData$id[row])
+  }
+  if((grepl("m4", data$id[row], fixed=TRUE))){
+    data$id[row] <- sub("m4", "\\1_m3", matchingData$id[row])
+  }
+}
 
 
 

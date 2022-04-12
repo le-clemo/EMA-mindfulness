@@ -2,9 +2,9 @@
 #################################### Set up ####################################
 rm(list = ls()) #clean all up
 
-#setwd("C:/Users/cleme/Documents/Education/RUG/Thesis/EMA-mindfulness/Data/ESM/mindcog_v202202-2")
+setwd("C:/Users/cleme/Documents/Education/RUG/Thesis/EMA-mindfulness/Data/ESM/mindcog_v202204")
 
-setwd("~/Documents/RUG/Thesis/EMA-mindfulness/Data/ESM/mindcog_v202202-2")
+#setwd("~/Documents/RUG/Thesis/EMA-mindfulness/Data/ESM/mindcog_v202204")
 
 library(readxl)
 library(tidyverse)
@@ -21,7 +21,7 @@ library(igraph)
 library(qgraph)
 
 #read in data
-data <- read_csv('preprocessed_data.csv') 
+data <- read.csv('preprocessed_data.csv') 
 
 ################################# response-related measures #####################################
 # #group by id and count the number on nonresponses
@@ -51,14 +51,14 @@ group_responses <- ddply(data, .(group), plyr::summarise,
 
 #the mean response rate is ~66%
 meanResponseRate <- mean(participant_responses$responseRate)
-#sd of 20.48
+#sd of 20.28
 sdResponseRate <- sd(participant_responses$responseRate)
 
 
 ################################### Initial analyses - raw values ####################################
 
 #number of respondents (i.e., participants?) so far
-length(unique(data$subject)) #35 associated with a group
+length(unique(data$subject)) #38 associated with a group
 
 #summary(data)
 
@@ -101,14 +101,14 @@ metricCols <- c('wakeful', 'sad', 'satisfied', 'irritated', 'energetic', 'restle
 data <- as.data.frame(data)
 
 #boxplot comparisons
-meltData1 <- melt(data[, c("group", metricCols[1:9])])
+meltData1 <- melt(data[which((data$phase=="pre") & (data$block==1)), c("group", metricCols[1:9])])
 #boxplot(data=meltData, value~variable)
 
 p1 <- ggplot(meltData1, aes(factor(variable), value, fill = group)) 
 p1 + geom_boxplot() + facet_wrap(~variable, scale="free")
 
 
-meltData2 <- melt(data[, c("group", metricCols[10:18])])
+meltData2 <- melt(data[which((data$phase=="pre") & (data$block==1)), c("group", metricCols[10:18])])
 #boxplot(data=meltData, value~variable)
 
 p2 <- ggplot(meltData2, aes(factor(variable), value, fill = group)) 

@@ -2,9 +2,9 @@
 #################################### Set up ####################################
 rm(list = ls()) #clean all up
 
-#setwd("C:/Users/cleme/Documents/Education/RUG/Thesis/EMA-mindfulness/Data/ESM/mindcog_v202202-2")
+setwd("C:/Users/cleme/Documents/Education/RUG/Thesis/EMA-mindfulness/Data/ESM/mindcog_v202204")
 
-setwd("~/Documents/RUG/Thesis/EMA-mindfulness/Data/ESM/mindcog_v202202-2")
+#setwd("~/Documents/RUG/Thesis/EMA-mindfulness/Data/ESM/mindcog_v202204")
 
 library(readxl)
 library(tidyverse)
@@ -21,7 +21,7 @@ library(igraph)
 library(qgraph)
 
 #read in data
-data <- read_xlsx('mindcog_db_2022-02-14.xlsx') 
+data <- read.csv('mindcog_db_2022-04-12.csv', sep = ";") 
 
 
 ################################# load Medoq info and clean up #################################################
@@ -175,16 +175,16 @@ for(row in 1:nrow(data)) {
 
 #Convert dates from characters to datetimes
 data[['mindcog_db_open_from']] <- as.POSIXct(data[['mindcog_db_open_from']],
-                                             format = "%d/%m/%Y %H:%M")
+                                             format = "%d-%m-%Y %H:%M")
 
 data[['mindcog_db_started_at']] <- as.POSIXct(data[['mindcog_db_started_at']],
-                                              format = "%d/%m/%Y %H:%M")
+                                              format = "%d-%m-%Y %H:%M")
 
 data[['mindcog_db_completed_at']] <- as.POSIXct(data[['mindcog_db_completed_at']],
-                                                format = "%d/%m/%Y %H:%M")
+                                                format = "%d-%m-%Y %H:%M")
 
 data[['mindcog_db_date']] <- format(as.POSIXct(data[['mindcog_db_date']],
-                                                format = "%d/%m/%Y %H:%M"), format="%Y-%m-%d")
+                                                format = "%d-%m-%Y %H:%M"), format="%Y-%m-%d")
 
 
 

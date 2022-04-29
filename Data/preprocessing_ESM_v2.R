@@ -122,14 +122,14 @@ for(i in 1:nrow(data)){
       #data$recordedDates[i] <- matchingData$recordedDates[j]
       data$intervention[i] <- matchingData$intervention[j]
       
-      if(is.na(data$mindcog_db_non_response[i])){
-        data$baselineStart[i] = matchingData$baselineStart[j]
-        data$baselineEnd[i] = matchingData$baselineEnd[j]
-        data$interventionStart[i] <- matchingData$interventionStart[j]
-        data$interventionEnd[i] <- matchingData$interventionEnd[j]
-        data$recordedStart[i] <- matchingData$recordedStart[j]
-        data$recordedEnd[i] <- matchingData$recordedEnd[j]
-      }
+      #if(is.na(data$mindcog_db_non_response[i])){
+      data$baselineStart[i] = matchingData$baselineStart[j]
+      data$baselineEnd[i] = matchingData$baselineEnd[j]
+      data$interventionStart[i] <- matchingData$interventionStart[j]
+      data$interventionEnd[i] <- matchingData$interventionEnd[j]
+      data$recordedStart[i] <- matchingData$recordedStart[j]
+      data$recordedEnd[i] <- matchingData$recordedEnd[j]
+      #}
     }
   }
 }
@@ -175,16 +175,16 @@ for(row in 1:nrow(data)) {
 
 #Convert dates from characters to datetimes
 data[['mindcog_db_open_from']] <- as.POSIXct(data[['mindcog_db_open_from']],
-                                             format = "%d-%m-%Y %H:%M")
+                                             format = "%d-%m-%Y %H:%M:%S")
 
 data[['mindcog_db_started_at']] <- as.POSIXct(data[['mindcog_db_started_at']],
-                                              format = "%d-%m-%Y %H:%M")
+                                              format = "%d-%m-%Y %H:%M:%S")
 
 data[['mindcog_db_completed_at']] <- as.POSIXct(data[['mindcog_db_completed_at']],
-                                                format = "%d-%m-%Y %H:%M")
+                                                format = "%d-%m-%Y %H:%M:%S")
 
 data[['mindcog_db_date']] <- format(as.POSIXct(data[['mindcog_db_date']],
-                                                format = "%d-%m-%Y %H:%M"), format="%Y-%m-%d")
+                                                format = "%d-%m-%Y %H:%M:%S"), format="%Y-%m-%d")
 
 
 
@@ -206,6 +206,8 @@ data <- drop_na(data, patient_id)
 
 #View(data[which(is.na(data$mindcog_db_date)),])
 
+#View(data[which(is.na(data$phase)),])
+
 ############################# Handle issue with diverging dates ###########################
 #fix problem with dates (whether entry belongs to pre- or peri-intervention phase)
 error_demo <- ddply(data[which(data$subject=="s3"),],
@@ -213,26 +215,95 @@ error_demo <- ddply(data[which(data$subject=="s3"),],
                       baselineStart, baselineEnd, interventionStart, interventionEnd), plyr::summarise,
                     nEntries <- length(subject))
 
+
+# #turning the recordedStart/-End, baselineStart/-End, ... into actual dates with corresponding year
+# for(row in 1:nrow(data)){ #first extract year from the mindcog_db_date column
+#   y <- format(as.POSIXct(data$mindcog_db_date[row], format = "%Y-%m-%d"), format="%Y")
+#   #if there is an entry for recordedStart and mindcog_db_date (i.e., if its not a non-response)
+#   if((!is.na(data$recordedStart[row])) & (!is.na(data$mindcog_db_date[row]))){
+#     #combine day-month from recordedStart (etc.) with extracted year and reformat to match other dates in df
+#     data$recordedStart[row] <- format(as.POSIXct(paste(data$recordedStart[row], y, sep = "-"),
+#                                           format = "%d-%m-%Y"), format = "%Y-%m-%d")
+#     data$recordedEnd[row] <- format(as.POSIXct(paste(data$recordedEnd[row], y, sep = "-"),
+#                                           format = "%d-%m-%Y"), format = "%Y-%m-%d")
+#   }# repeat for other columns
+#   if((!is.na(data$baselineStart[row])) & (!is.na(data$mindcog_db_date[row]))){
+#     data$baselineStart[row] <- format(as.POSIXct(paste(data$baselineStart[row], y, sep = "-"),
+#                                                  format = "%d-%m-%Y"), format = "%Y-%m-%d")
+#     data$baselineEnd[row] <- format(as.POSIXct(paste(data$baselineEnd[row], y, sep = "-"),
+#                                                format = "%d-%m-%Y"), format = "%Y-%m-%d")
+#     data$interventionStart[row] <- format(as.POSIXct(paste(data$interventionStart[row], y, sep = "-"),
+#                                                  format = "%d-%m-%Y"), format = "%Y-%m-%d")
+#     data$interventionEnd[row] <- format(as.POSIXct(paste(data$interventionEnd[row], y, sep = "-"),
+#                                                format = "%d-%m-%Y"), format = "%Y-%m-%d")
+#   }
+# }
+# 
+# pre_to_peri <- c() #empty lists for row indices of faulty entries
+# peri_to_pre <- c()
+# i <- 1 #to add to the lists (in a computationally efficient way)
+# j <- 1
+# for(row in 1:nrow(data)){
+#   #if there is a date in baselineStart (which means there is one in the other relevant columns too)
+#   # and if it is not a non-response
+#   if((!is.na(data$baselineStart[row])) & (!is.na(data$mindcog_db_date[row]))){
+#     #if phase is "pre"
+#     if((!is.na(data$phase[row])) & (data$phase[row] == "pre")){
+#       #if the recorded mindcog date is greater than the end of baseline date
+#       if((data$mindcog_db_date[row] > data$baselineEnd[row])){
+#         pre_to_peri[i] <- row #add row index to list
+#         i <- i+1 #increment list index count
+#       }
+#     } #same for entries coded as peri that should be pre
+#     if((!is.na(data$phase[row])) & (data$phase[row] == "peri")){
+#       if((data$mindcog_db_date[row] < data$interventionStart[row])){
+#         peri_to_pre[j] <- row
+#         j <- j+1
+#       }
+#     }
+#   }
+# }
+# 
+# data[pre_to_peri,]$phase <- "peri"
+# for(row in pre_to_peri){
+#   if((grepl("m1", data$id[row], fixed=TRUE))){
+#     data$id[row] <- sub("m1", "\\m2", data$id[row])
+#   }
+#   if((grepl("m3", data$id[row], fixed=TRUE))){
+#     data$id[row] <- sub("m3", "\\m4", data$id[row])
+#   }
+# }
+# 
+# data[peri_to_pre,]$phase <- "pre"
+# for(row in peri_to_pre){
+#   if((grepl("m2", data$id[row], fixed=TRUE))){
+#     data$id[row] <- sub("m2", "\\m1", data$id[row])
+#   }
+#   if((grepl("m4", data$id[row], fixed=TRUE))){
+#     data$id[row] <- sub("m4", "\\m3", data$id[row])
+#   }
+# }
+
 #turning the recordedStart/-End, baselineStart/-End, ... into actual dates with corresponding year
 for(row in 1:nrow(data)){ #first extract year from the mindcog_db_date column
-  y <- format(as.POSIXct(data$mindcog_db_date[row], format = "%Y-%m-%d"), format="%Y")
+  y <- format(as.POSIXct(data$mindcog_db_open_from[row], format = "%Y-%m-%d %H:%M:%S"), format="%Y")
   #if there is an entry for recordedStart and mindcog_db_date (i.e., if its not a non-response)
-  if((!is.na(data$recordedStart[row])) & (!is.na(data$mindcog_db_date[row]))){
+  if((!is.na(data$recordedStart[row])) & (!is.na(data$mindcog_db_open_from[row]))){
     #combine day-month from recordedStart (etc.) with extracted year and reformat to match other dates in df
     data$recordedStart[row] <- format(as.POSIXct(paste(data$recordedStart[row], y, sep = "-"),
-                                          format = "%d-%m-%Y"), format = "%Y-%m-%d")
+                                                 format = "%d-%m-%Y"), format = "%Y-%m-%d")
     data$recordedEnd[row] <- format(as.POSIXct(paste(data$recordedEnd[row], y, sep = "-"),
-                                          format = "%d-%m-%Y"), format = "%Y-%m-%d")
+                                               format = "%d-%m-%Y"), format = "%Y-%m-%d")
   }# repeat for other columns
-  if((!is.na(data$baselineStart[row])) & (!is.na(data$mindcog_db_date[row]))){
+  if((!is.na(data$baselineStart[row])) & (!is.na(data$mindcog_db_open_from[row]))){
     data$baselineStart[row] <- format(as.POSIXct(paste(data$baselineStart[row], y, sep = "-"),
                                                  format = "%d-%m-%Y"), format = "%Y-%m-%d")
     data$baselineEnd[row] <- format(as.POSIXct(paste(data$baselineEnd[row], y, sep = "-"),
                                                format = "%d-%m-%Y"), format = "%Y-%m-%d")
     data$interventionStart[row] <- format(as.POSIXct(paste(data$interventionStart[row], y, sep = "-"),
-                                                 format = "%d-%m-%Y"), format = "%Y-%m-%d")
+                                                     format = "%d-%m-%Y"), format = "%Y-%m-%d")
     data$interventionEnd[row] <- format(as.POSIXct(paste(data$interventionEnd[row], y, sep = "-"),
-                                               format = "%d-%m-%Y"), format = "%Y-%m-%d")
+                                                   format = "%d-%m-%Y"), format = "%Y-%m-%d")
   }
 }
 
@@ -243,17 +314,17 @@ j <- 1
 for(row in 1:nrow(data)){
   #if there is a date in baselineStart (which means there is one in the other relevant columns too)
   # and if it is not a non-response
-  if((!is.na(data$baselineStart[row])) & (!is.na(data$mindcog_db_date[row]))){
+  if((!is.na(data$baselineStart[row])) & (!is.na(data$mindcog_db_open_from[row]))){
     #if phase is "pre"
     if((!is.na(data$phase[row])) & (data$phase[row] == "pre")){
       #if the recorded mindcog date is greater than the end of baseline date
-      if((data$mindcog_db_date[row] > data$baselineEnd[row])){
+      if((data$mindcog_db_open_from[row] > data$baselineEnd[row])){
         pre_to_peri[i] <- row #add row index to list
         i <- i+1 #increment list index count
       }
     } #same for entries coded as peri that should be pre
     if((!is.na(data$phase[row])) & (data$phase[row] == "peri")){
-      if((data$mindcog_db_date[row] < data$interventionStart[row])){
+      if((data$mindcog_db_open_from[row] < data$interventionStart[row])){
         peri_to_pre[j] <- row
         j <- j+1
       }
@@ -284,14 +355,13 @@ for(row in peri_to_pre){
 # View(data[pre_to_peri,])
 # View(data[peri_to_pre,])
 
+length(pre_to_peri)
+length(peri_to_pre)
+pre_to_peri_df <- (subset(data[pre_to_peri,], select=c("id", "mindcog_db_date", "phase", "baselineStart",
+                                    "baselineEnd", "interventionStart", "interventionEnd")))
 
-# length(pre_to_peri)
-# length(peri_to_pre)
-# pre_to_peri_df <- (subset(data[pre_to_peri,], select=c("id", "mindcog_db_date", "phase", "baselineStart",
-#                                     "baselineEnd", "interventionStart", "interventionEnd")))
-# 
-# peri_to_pre_df <- (subset(data[peri_to_pre,], select=c("id", "mindcog_db_date", "phase", "baselineStart",
-#                                                        "baselineEnd", "interventionStart", "interventionEnd")))
+peri_to_pre_df <- (subset(data[peri_to_pre,], select=c("id", "mindcog_db_date", "phase", "baselineStart",
+                                                       "baselineEnd", "interventionStart", "interventionEnd")))
 
 ######################################## Changing ESM item names ##############################
 #Get numbers of ESM item columns
@@ -308,6 +378,29 @@ colNamesNew <- c('firstEntry', 'sleepQuality', 'toBedHour', 'toBedMinute', 'tryS
                  'posIntensity', 'negMax', 'negIntensity', 'comments')
 
 setnames(data, old = colNamesOld$columns, new = colNamesNew)
+
+################################### Positive / Negative Affect ####################################
+
+# data$meanPA <- rowMeans(subset(data, select = c(wakeful, satisfied, energetic)), na.rm = TRUE)
+# data$meanNA <- rowMeans(subset(data, select = c(sad, irritated, restless,
+#                                                 stressed, anxious, listless)), na.rm = TRUE)
+
+data$sumPA <- NA
+data$sumNA <- NA
+for(row in 1:nrow(data)){
+  if((!is.na(data$wakeful[row])) & (!is.na(data$satisfied[row])) & (!is.na(data$energetic[row]))){
+    data$sumPA[row] <- data$wakeful[row] + data$satisfied[row] + data$energetic[row]
+  }
+  if((!is.na(data$sad[row])) & (!is.na(data$irritated[row])) & (!is.na(data$restless[row])) &
+     (!is.na(data$anxious[row]))){
+    data$sumNA[row] <- data$sad[row] + data$irritated[row] + data$restless[row] + data$anxious[row]
+  }
+}
+
+# data$sumPA <- rowSums(subset(data, select = c(wakeful, satisfied, energetic)), na.rm = TRUE)
+# data$sumNA <- rowSums(subset(data, select = c(sad, irritated, restless,
+#                                                 stressed, anxious, listless)), na.rm = TRUE)
+
 
 #################################### add measures on response times  ####################################
 
@@ -343,6 +436,7 @@ for(id in subject_IDs){ #for loop to fill the column with the day numbers
 }
 
 #test <- subset(data, select = c(id, subject, mindcog_db_open_from, minLastBeep))
+
 
 ####################### Beep number, assessment day and lagged variables  #############################
 
@@ -462,14 +556,21 @@ for(id in subject_IDs){ #for loop to fill the column with the day numbers
   }
 }
 
+
+
+View(subset(data[which(data$phaseAssessmentDay>7),],
+            select=c("group", "intervention", "id", "phase", "block",
+                     "phaseAssessmentDay", "mindcog_db_open_from", "mindcog_db_non_response", "mindcog_db_date",
+                     "baselineStart", "baselineEnd", "interventionStart", "interventionEnd")))
+
 ############################## Some changes for convenience ################################
 #drop unnecessary columns and reorder columns for convenience
 columnNames <- c(colnames(data))
 data <- data %>% select(patient_id, id, subject, group, intervention, phase, block,
                         #18 = db_open_from; 23 = db_date; 26:61 = firstEntry:comments; 67:76
-                        columnNames[18:23], columnNames[26:61],
+                        columnNames[18:23], columnNames[26:61], sumPA, sumNA,
                         #67:78 = response measures
-                        columnNames[74:82])
+                        columnNames[76:84])
 
 # data <- subset(data, select = -c(roqua_id, hide_pii_from_researchers, gender, birth_year,
 #                                  hide_values_from_professionals, respondent_label, respondent_type,
@@ -482,7 +583,8 @@ data <- data %>% select(patient_id, id, subject, group, intervention, phase, blo
 cols <- c('wakeful', 'sad', 'satisfied', 'irritated', 'energetic', 'restless', 'stressed', 'anxious',
              'listless', 'thinkingOf', 'worried', 'stickiness', 'thoughtsPleasant', 'thoughtsTime',
              'thoughtsValence', 'thoughtsObject', 'distracted', 'restOfDayPos', 'aloneCompany',
-             'companyPleasant', 'alonePleasant', 'posMax', 'posIntensity', 'negMax', 'negIntensity')
+             'companyPleasant', 'alonePleasant', 'posMax', 'posIntensity', 'negMax', 'negIntensity',
+              'sumPA', 'sumNA')
 
 #creating a vector with new "lagged" column names
 laggedCols <- c()
@@ -524,7 +626,8 @@ for(id in subject_IDs){
 
 cols <- c('wakeful', 'sad', 'satisfied', 'irritated', 'energetic', 'restless', 'stressed', 'anxious',
           'listless', 'worried', 'stickiness', 'thoughtsPleasant',  'thoughtsObject', 'distracted', 'restOfDayPos',
-          'companyPleasant', 'alonePleasant', 'posMax', 'posIntensity', 'negMax', 'negIntensity')
+          'companyPleasant', 'alonePleasant', 'posMax', 'posIntensity', 'negMax', 'negIntensity',
+          'sumPA', 'sumNA')
 
 #creating a vector with new "lagged" column names
 changeCols <- c()

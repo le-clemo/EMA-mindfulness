@@ -19,9 +19,15 @@ library(ggpubr)
 library(lubridate)
 library(igraph)
 library(qgraph)
+library(gridExtra)
+library(ggpubr)
 
 #read in data
 data <- read.csv('preprocessed_data.csv') 
+
+data$group <- factor(data$group, levels = c("controls", "remitted"))
+data$intervention <- factor(data$intervention, levels = c("mindfulness", "fantasizing"))
+data$phase <- factor(data$phase, levels = c("pre", "peri"))
 
 ################################# response-related measures #####################################
 # #group by id and count the number on nonresponses
@@ -31,23 +37,8 @@ data <- read.csv('preprocessed_data.csv')
 #                                response = numBeeped - noResponse,
 #                                responseRate = round(response/numBeeped,2))
 
-
-#recreacting with assessment days per participant
-participant_responses <- ddply(data, .(subject), plyr::summarise,
-                               numBeeped = length(mindcog_db_open_from),
-                               noResponse = length(unique(mindcog_db_non_response)),
-                               response = numBeeped - noResponse,
-                               responseRate = round(response/numBeeped,2),
-                               numDays = max(assessmentDay))
-
-#recreacting with assessment days per group
-group_responses <- ddply(data, .(group), plyr::summarise,
-                               nSubj = length(unique(subject)),
-                               numBeeped = length(mindcog_db_open_from),
-                               noResponse = length(unique(mindcog_db_non_response)),
-                               response = numBeeped - noResponse,
-                               responseRate = round(response/numBeeped,2),
-                               numDays = max(assessmentDay)) #6% higher response rate in controls
+#number of participants so far
+length(unique(data$subject)) #38 associated with a group
 
 #the mean response rate is ~66%
 meanResponseRate <- mean(participant_responses$responseRate)
@@ -55,14 +46,274 @@ meanResponseRate <- mean(participant_responses$responseRate)
 sdResponseRate <- sd(participant_responses$responseRate)
 
 
+View(subset(data[which(data$phaseAssessmentDay>7),],
+            select=c("group", "intervention", "id", "phase", "block",
+                     "phaseAssessmentDay", "mindcog_db_open_from", "mindcog_db_non_response", "mindcog_db_date")))
+
+
+#recreacting with assessment days per participant
+participant_responses <- ddply(data, .(subject), plyr::summarise,
+                               numCompleted = length(mindcog_db_open_from),
+                               noResponse = length(unique(mindcog_db_non_response)),
+                               response = numBeeped - noResponse,
+                               responseRate = round(response/numBeeped,2),
+                               numDays = max(assessmentDay))
+
+responses_by_block <- ddply(data, .(group, intervention, phase, block, phaseAssessmentDay), plyr::summarise,
+                               numCompleted = length(mindcog_db_open_from))
+
+#recreacting with assessment days per group
+group_responses <- ddply(data, .(group), plyr::summarise,
+                               nSubj = length(unique(subject)),
+                               numCompleted = length(mindcog_db_open_from),
+                               noResponse = length(unique(mindcog_db_non_response)),
+                               response = numBeeped - noResponse,
+                               responseRate = round(response/numBeeped,2),
+                               numDays = max(assessmentDay)) #6% higher response rate in controls
+
+
+################################### Positive / Negative Affect ####################################
+
+group_PANA <- ddply(data, .(group), plyr::summarize,
+                  n_Subj = length(unique(subject)),
+                  Pos = mean(sumPA, na.rm = TRUE),
+                  sdPA = sd(sumPA, na.rm = TRUE),
+                  Neg = mean(sumNA, na.rm = TRUE),
+                  sdNA = sd(sumNA, na.rm = TRUE))
+
+phase_PANA <- ddply(data, .(group, phase), plyr::summarize,
+                    n_Subj = length(unique(subject)),
+                    Pos = mean(sumPA, na.rm = TRUE),
+                    sdPA = sd(sumPA, na.rm = TRUE),
+                    Neg = mean(sumNA, na.rm = TRUE),
+                    sdNA = sd(sumNA, na.rm = TRUE))
+
+block_PANA <- ddply(data, .(group, block, intervention, phase), plyr::summarize,
+                    n_Subj = length(unique(subject)),
+                    Pos = mean(sumPA, na.rm = TRUE),
+                    sdPA = sd(sumPA, na.rm = TRUE),
+                    Neg = mean(sumNA, na.rm = TRUE),
+                    sdNA = sd(sumNA, na.rm = TRUE))
+
+
+#for some strange dplyr-ralted reason I need to do this to get melt() to work
+data <- as.data.frame(data)
+
+# check baseline assessment per group (Block 1, pre)
+meltData1 <- melt(data[which((data$phase=="pre") & (data$block==1)), c("group", "sumPA", "sumNA")], na.rm = TRUE)
+meltData2 <- melt(data[which((data$phase=="peri") & (data$block==1)), c("group", "sumPA", "sumNA")], na.rm = TRUE)
+meltData3 <- melt(data[which((data$phase=="pre") & (data$block==2)), c("group", "sumPA", "sumNA")], na.rm = TRUE)
+meltData4 <- melt(data[which((data$phase=="peri") & (data$block==2)), c("group", "sumPA", "sumNA")], na.rm = TRUE)
+
+p1 <- ggplot(meltData1, aes(factor(variable), value, fill = group)) 
+p1 <- p1 + geom_boxplot() + facet_wrap(~"block", scale="free") +
+  ggtitle("Block 1 - Pre") +
+  scale_fill_manual(values = c("green", "red")) +
+  theme(strip.text.x = element_text(margin = margin(2, 0, 2, 0)), legend.direction = "horizontal",
+        legend.position = c(1,1))
+
+p2 <- ggplot(meltData2, aes(factor(variable), value, fill = group)) 
+p2 <- p2 + geom_boxplot() + facet_wrap(~"block", scale="free") +
+  ggtitle("Block 1 - Peri") +
+  scale_fill_manual(values = c("green", "red")) +
+  theme(strip.text.x = element_text(margin = margin(2, 0, 2, 0)),
+        #strip.background = element_rect(fill = "lightblue"),
+        legend.position="None")
+
+p3 <- ggplot(meltData3, aes(factor(variable), value, fill = group)) 
+p3 <- p3 + geom_boxplot() + facet_wrap(~"block", scale="free") +
+  ggtitle("Block 2 - Pre") +
+  scale_fill_manual(values = c("green", "red")) +
+  theme(strip.text.x = element_text(margin = margin(2, 0, 2, 0)),
+        #strip.background = element_rect(fill = "lightblue"),
+        legend.position="None")
+
+p4 <- ggplot(meltData4, aes(factor(variable), value, fill = group)) 
+p4 <- p4 + geom_boxplot() + facet_wrap(~"block", scale="free") +
+  ggtitle("Block 2 - Peri") +
+  scale_fill_manual(values = c("green", "red")) +
+  theme(strip.text.x = element_text(margin = margin(2, 0, 2, 0)),
+        #strip.background = element_rect(fill = "lightblue"),
+        legend.position="None")
+
+legend <- get_legend(p1)
+p1 <- p1 + theme(legend.position="none")
+grid.arrange(p1, p2, p3, p4, legend, ncol=2, nrow = 3)
+
+#check per group, intervention and phase
+
+meltData <- melt(data, id.vars=c("group", "intervention", "phase", "block"),
+                 measure.vars = c("sumPA", "sumNA"), na.rm = TRUE)
+
+meltData$groupByInt <- factor(paste(meltData$group, meltData$intervention),
+                              levels = c("controls mindfulness", "controls fantasizing",
+                                         "remitted mindfulness", "remitted fantasizing"))
+meltData$blockPhase <- factor(paste(meltData$phase, meltData$block, sep = " "),
+                              levels = c("pre 1", "peri 1", "pre 2", "peri 2"))
+
+
+ggplot(data = meltData, aes(variable, y = value, fill = factor(group))) +
+  geom_boxplot() + facet_grid(factor(intervention) ~ blockPhase, scale = "free") +
+  labs(title = "Levels of PA and NA",
+       subtitle = " by group, intervention, block and phase",
+       y = "Raw score", x = "") + scale_fill_manual(values = c("green", "red"))
+
+#with change scores
+# meltChange <- melt(data, id.vars=c("group", "intervention", "phase", "block"),
+#                  measure.vars = c("sumPA_change", "sumNA_change"), na.rm = TRUE)
+# 
+# meltChange$groupByInt <- factor(paste(meltChange$group, meltChange$intervention),
+#                               levels = c("controls mindfulness", "controls fantasizing",
+#                                          "remitted mindfulness", "remitted fantasizing"))
+# meltChange$blockPhase <- factor(paste(meltChange$phase, meltChange$block, sep = " "),
+#                               levels = c("pre 1", "peri 1", "pre 2", "peri 2"))
+# 
+# 
+# ggplot(data = meltChange, aes(variable, y = value, fill = factor(group))) +
+#   geom_boxplot() + facet_grid(factor(intervention) ~ blockPhase, scale = "free") +
+#   labs(title = "Change Scores of PA and NA",
+#        subtitle = " by group, intervention, block and phase",
+#        y = "Raw score", x = "") + scale_fill_manual(values = c("green", "red"))
+
+
+#Plotting changes against average baseline assessment values
+#per phaseBeepNum
+#create a df with only the relevant variables
+meltChange <- melt(data[which(data$phase=="peri"),], id.vars=c("group", "intervention", "phase", "block", "phaseBeepNum"),
+                                         measure.vars = c("sumPA", "sumNA"), na.rm = TRUE)
+
+#cacluate the average values per phaseBeepNum
+meltChange_avg <- ddply(meltChange, .(group, intervention, phase, block, phaseBeepNum, variable), plyr::summarise,
+                        n_values = length(group),
+                        avgValue = mean(value))
+
+#plot the average values of sumPA and sumNA (peri) against the average of the baseline assessment periods (pre)
+for(b in 1:2){
+  for(g in c("controls", "remitted")){
+    for(intervention in c('mindfulness', 'fantasizing')){
+      for(v in c('sumPA', 'sumNA')){
+        
+        if(v == 'sumPA'){
+          meanVal <- mean(data[which((data$phase=="pre") & (data$block==b) & (data$group==g) &
+                                       (data$intervention==intervention)),]$sumPA, na.rm=TRUE)
+          color <- "green"
+          lab_y <- "Avg change in PA"
+          main <- "Change in Positive Affect per individual assessment"
+          subtitle <- paste("(", g, ",", intervention, ",", "peri-intervention, block", b, ")")
+        }
+        if(v == 'sumNA'){
+          meanVal <- mean(data[which((data$phase=="pre") & (data$block==b) & (data$group==g) &
+                                       (data$intervention==intervention)),]$sumNA, na.rm=TRUE)
+          color <- "red"
+          lab_y <- "Avg change in NA"
+          main <- "Change in Negative Affect per individual assessment"
+          subtitle <- paste("(", g, ",", intervention, ",", "peri-intervention, block", b, ")")
+        }
+        
+        
+        px <- ggplot(data = meltChange_avg[which((meltChange_avg$group==g) &
+                                                   (meltChange_avg$block==b) &
+                                                   (meltChange_avg$variable==v) &
+                                                   (meltChange_avg$intervention==intervention)),],
+                     aes(x=phaseBeepNum, y=avgValue-meanVal)) +
+          geom_line(color = color) + geom_point() + scale_fill_manual(values=color) +
+          labs(title=main, subtitle=subtitle) + xlab('Phase Assessment Number') + ylab(lab_y)
+        print(px)
+      }
+    }
+  }
+}
+
+#per Assessment day
+#create a df with only the relevant variables
+meltChange <- melt(data[which(data$phase=="peri"),], id.vars=c("group", "intervention", "phase", "block", "phaseAssessmentDay"),
+                   measure.vars = c("sumPA", "sumNA"), na.rm = TRUE)
+
+#cacluate the average values per phaseBeepNum
+meltChange_avg <- ddply(meltChange, .(group, intervention, phase, block, phaseAssessmentDay, variable), plyr::summarise,
+                        n_values = length(group),
+                        avgValue = mean(value))
+
+#plot the average values of sumPA and sumNA (peri) against the average of the baseline assessment periods (pre)
+for(b in 1:2){
+  for(g in c("controls", "remitted")){
+    for(intervention in c('mindfulness', 'fantasizing')){
+      for(v in c('sumPA', 'sumNA')){
+        
+        if(v == 'sumPA'){
+          meanVal <- mean(data[which((data$phase=="pre") & (data$block==b) & (data$group==g) &
+                                       (data$intervention==intervention)),]$sumPA, na.rm=TRUE)
+          color <- "green"
+          lab_y <- "Avg change in PA"
+          main <- "Change in Positive Affect per Assessment Day"
+          subtitle <- paste("(", g, ",", intervention, ",", "peri-intervention, block", b, ")")
+        }
+        if(v == 'sumNA'){
+          meanVal <- mean(data[which((data$phase=="pre") & (data$block==b) & (data$group==g) &
+                                       (data$intervention==intervention)),]$sumNA, na.rm=TRUE)
+          color <- "red"
+          lab_y <- "Avg change in NA"
+          main <- "Change in Negative Affect per Assessment Day"
+          subtitle <- paste("(", g, ",", intervention, ",", "peri-intervention, block", b, ")")
+        }
+        
+        
+        px <- ggplot(data = meltChange_avg[which((meltChange_avg$group==g) &
+                                                   (meltChange_avg$block==b) &
+                                                   (meltChange_avg$variable==v) &
+                                                   (meltChange_avg$intervention==intervention)),],
+                     aes(x=phaseAssessmentDay, y=avgValue-meanVal)) +
+          geom_line(color = color) + geom_point() + scale_fill_manual(values=color) +
+          labs(title=main, subtitle=subtitle) + xlab('Phase Assessment Day') + ylab(lab_y)
+        print(px)
+      }
+    }
+  }
+}
+
+meltChange_avg <- ddply(meltChange, .(group, intervention, phase, phaseAssessmentDay, variable), plyr::summarise,
+                        n_values = length(group),
+                        avgValue = mean(value))
+
+#combining both blocks
+for(g in c("controls", "remitted")){
+  for(intervention in c('mindfulness', 'fantasizing')){
+    for(v in c('sumPA', 'sumNA')){
+      
+      if(v == 'sumPA'){
+        meanVal <- mean(data[which((data$phase=="pre") & (data$group==g) &
+                                     (data$intervention==intervention)),]$sumPA, na.rm=TRUE)
+        color <- "green"
+        lab_y <- "Avg change in PA"
+        main <- "Change in Positive Affect per Assessment Day"
+        subtitle <- paste("(", g, ",", intervention, ",", "peri-intervention, both blocks)")
+      }
+      if(v == 'sumNA'){
+        meanVal <- mean(data[which((data$phase=="pre") & (data$group==g) &
+                                     (data$intervention==intervention)),]$sumNA, na.rm=TRUE)
+        color <- "red"
+        lab_y <- "Avg change in NA"
+        main <- "Change in Negative Affect per Assessment Day"
+        subtitle <- paste("(", g, ",", intervention, ",", "peri-intervention, both blocks)")
+      }
+      
+      
+      px <- ggplot(data = meltChange_avg[which((meltChange_avg$group==g) &
+                                                 (meltChange_avg$variable==v) &
+                                                 (meltChange_avg$intervention==intervention)),],
+                   aes(x=phaseAssessmentDay, y=avgValue-meanVal)) +
+        geom_line(color = color) + geom_point() + scale_fill_manual(values=color) +
+        labs(title=main, subtitle=subtitle) + xlab('Phase Assessment Day') + ylab(lab_y)
+      print(px)
+    }
+  }
+}
+
+
+
 ################################### Initial analyses - raw values ####################################
 
-#number of respondents (i.e., participants?) so far
-length(unique(data$subject)) #38 associated with a group
-
-#summary(data)
-
-#calculating statistics per group (remitted vs controls)
+#calculating averages per group (remitted vs controls)
 grp_avgs <- ddply(data, .(group), plyr::summarize,
                  n_Subj = length(unique(subject)),
                  db2_sleep_avg = mean(sleepQuality, na.rm = TRUE),
@@ -97,9 +348,6 @@ metricCols <- c('wakeful', 'sad', 'satisfied', 'irritated', 'energetic', 'restle
                 'stressed', 'anxious', 'listless', 'worried', 'stickiness', 'thoughtsPleasant', 'distracted',
                 'restOfDayPos', 'posMax', 'posIntensity', 'negMax', 'negIntensity')
 
-#for some strange dplyr-ralted reason I need to do this to get melt() to work
-data <- as.data.frame(data)
-
 #boxplot comparisons
 meltData1 <- melt(data[which((data$phase=="pre") & (data$block==1)), c("group", metricCols[1:9])])
 #boxplot(data=meltData, value~variable)
@@ -116,7 +364,7 @@ p2 + geom_boxplot() + facet_wrap(~variable, scale="free")
 
 #per group and intervention
 int_avgs <- ddply(data, .(group, intervention), plyr::summarize,
-                  n_Subj = length(unique(id)),
+                  n_Subj = length(unique(subject)),
                   db2_sleep_avg = mean(sleepQuality, na.rm = TRUE),
                   db2_sleep_sd = sd(sleepQuality, na.rm = TRUE),
                   db8_wakeful_avg = mean(wakeful, na.rm = TRUE),
@@ -162,7 +410,7 @@ p2 + geom_boxplot() + facet_wrap(~variable, scale="free")
 
 #per group, intervention, and phase
 phase_avgs <- ddply(data, .(group, intervention, phase), plyr::summarize,
-                  n_Subj = length(unique(id)),
+                  n_Subj = length(unique(subject)),
                   db2_sleep_avg = mean(sleepQuality, na.rm = TRUE),
                   db2_sleep_sd = sd(sleepQuality, na.rm = TRUE),
                   db8_wakeful_avg = mean(wakeful, na.rm = TRUE),
@@ -404,33 +652,70 @@ figure
 
 #################################### Exploratory rumination analysis ##################################
 
-pc_time <- ddply(data, .(group, intervention, phase, block), plyr::summarize,
+#Rumination averages and changes compared to baseline
+# add here!!!!!!!!!!!!!!!!11
+#!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+#time spent thinking about the past / present / future by group, phase and block
+pc_time <- ddply(data, .(group, phase, block), plyr::summarize,
                   N = length(group[which(!is.na(thoughtsTime))]),
                   past = round(length(group[which(thoughtsTime == 1)])/N, 2),
                   present = round(length(group[which(thoughtsTime == 2)])/N, 2),
                   future = round(length(group[which(thoughtsTime == 3)])/N, 2))
 
-pc_time <- drop_na(pc_time, intervention)
+#same but with intervention
+pc_time_int <- ddply(data, .(group, intervention, phase), plyr::summarize,
+                 N = length(group[which(!is.na(thoughtsTime))]),
+                 past = round(length(group[which(thoughtsTime == 1)])/N, 2),
+                 present = round(length(group[which(thoughtsTime == 2)])/N, 2),
+                 future = round(length(group[which(thoughtsTime == 3)])/N, 2))
 
-pc_val <- ddply(data, .(group, intervention, phase, block), plyr::summarize,
+pc_time_int <- drop_na(pc_time_int, intervention)
+
+#valence of thoughts
+pc_val <- ddply(data, .(group, phase, block), plyr::summarize,
+                    N = length(group[which(!is.na(thoughtsValence))]),
+                    negative = round(length(group[which(thoughtsValence == 1)])/N, 2),
+                    neutral = round(length(group[which(thoughtsValence == 2)])/N, 2),
+                    positive = round(length(group[which(thoughtsValence == 3)])/N, 2))
+
+#same with intervention
+pc_val_int <- ddply(data, .(group, intervention, phase), plyr::summarize,
                  N = length(group[which(!is.na(thoughtsValence))]),
                  negative = round(length(group[which(thoughtsValence == 1)])/N, 2),
                  neutral = round(length(group[which(thoughtsValence == 2)])/N, 2),
                  positive = round(length(group[which(thoughtsValence == 3)])/N, 2))
 
-pc_val <- drop_na(pc_val, intervention)
+pc_val_int <- drop_na(pc_val_int, intervention)
 
-
-pc_object <- ddply(data, .(group, intervention, phase, block), plyr::summarize,
+#object of thoughts
+pc_object <- ddply(data, .(group, phase), plyr::summarize,
                    N = length(group[which(!is.na(thoughtsObject))]),
                    self = round(length(group[which(thoughtsObject == 1)])/N, 2),
                    somebody = round(length(group[which(thoughtsObject == 2)])/N, 2),
                    neither = round(length(group[which(thoughtsObject == 3)])/N, 2))
 
-pc_object <- drop_na(pc_object, intervention)
+#same with interventions
+pc_object_int <- ddply(data, .(group, intervention, phase), plyr::summarize,
+                   N = length(group[which(!is.na(thoughtsObject))]),
+                   self = round(length(group[which(thoughtsObject == 1)])/N, 2),
+                   somebody = round(length(group[which(thoughtsObject == 2)])/N, 2),
+                   neither = round(length(group[which(thoughtsObject == 3)])/N, 2))
 
+pc_object_int <- drop_na(pc_object_int, intervention)
 
-pc_thinkingOf <- ddply(data, .(group, intervention, phase, block), plyr::summarize,
+#what are they thinking about?
+pc_thinkingOf <- ddply(data, .(group, phase), plyr::summarize,
+                       N = length(group[which(!is.na(thinkingOf))]),
+                       currentActivity = round(length(group[which(thinkingOf == 1)])/N, 2),
+                       externalStimuli = round(length(group[which(thinkingOf == 2)])/N, 2),
+                       currentFeelings = round(length(group[which(thinkingOf == 3)])/N, 2),
+                       personalConcerns = round(length(group[which(thinkingOf == 4)])/N, 2),
+                       daydreaming = round(length(group[which(thinkingOf == 5)])/N, 2),
+                       other = round(length(group[which(thinkingOf == 6)])/N, 2))
+
+#same with intervention
+pc_thinkingOf_int <- ddply(data, .(group, intervention, phase), plyr::summarize,
                    N = length(group[which(!is.na(thinkingOf))]),
                    currentActivity = round(length(group[which(thinkingOf == 1)])/N, 2),
                    externalStimuli = round(length(group[which(thinkingOf == 2)])/N, 2),
@@ -439,12 +724,11 @@ pc_thinkingOf <- ddply(data, .(group, intervention, phase, block), plyr::summari
                    daydreaming = round(length(group[which(thinkingOf == 5)])/N, 2),
                    other = round(length(group[which(thinkingOf == 6)])/N, 2))
 
-pc_thinkingOf <- drop_na(pc_thinkingOf, intervention)
+pc_thinkingOf_int <- drop_na(pc_thinkingOf_int, intervention)
 
 #merge(pc_time, pc_val, pc_object, pc_thinkingOf, by = c(group, intervention, phase, block))
 
-pc_summary <- Reduce(function(x, y) merge(x, y, all=TRUE), list(pc_time, pc_val, pc_object, pc_thinkingOf))
-
+#pc_summary <- Reduce(function(x, y) merge(x, y, all=TRUE), list(pc_time, pc_val, pc_object, pc_thinkingOf))
 
 
 ################################### Change scores ######################################

@@ -30,6 +30,8 @@ length(games$gameSessionID) #3771
 
 games_summary <- ddply(games, .(userID), plyr::summarise,
                        nGames = length(unique(gameSessionID)))
+
+
                        
 ################################# Inspecting numbers ##################################
 length(unique(numbers$userID)) #71

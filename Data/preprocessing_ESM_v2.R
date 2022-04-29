@@ -2,9 +2,9 @@
 #################################### Set up ####################################
 rm(list = ls()) #clean all up
 
-setwd("C:/Users/cleme/Documents/Education/RUG/Thesis/EMA-mindfulness/Data/ESM/mindcog_v202204")
+#setwd("C:/Users/cleme/Documents/Education/RUG/Thesis/EMA-mindfulness/Data/ESM/mindcog_v202204")
 
-#setwd("~/Documents/RUG/Thesis/EMA-mindfulness/Data/ESM/mindcog_v202204")
+setwd("~/Documents/RUG/Thesis/EMA-mindfulness/Data/ESM/mindcog_v202204")
 
 library(readxl)
 library(tidyverse)
@@ -104,6 +104,11 @@ for(row in 1:nrow(matchingData)){
     
   }
 }
+
+#s3_g1_m3 and s3_g1_m4 have duplicate entries in MatchingData (once without corrected dates) --> remove wrong one
+#View(matchingData[which((matchingData$id=="s3_g1_m3") | (matchingData$id=="s3_g1_m4") ),])
+matchingData <- matchingData[!(matchingData$id == "s3_g1_m3" & is.na(matchingData$recordedDates)),]
+matchingData <- matchingData[!(matchingData$id == "s3_g1_m4" & is.na(matchingData$recordedDates)),]
 ##################################### combine data ####################################
 #performing a "vlookup" of the md... numbers and adding corresponding columns
 #from matchingData to data
@@ -318,19 +323,30 @@ for(row in 1:nrow(data)){
     #if phase is "pre"
     if((!is.na(data$phase[row])) & (data$phase[row] == "pre")){
       #if the recorded mindcog date is greater than the end of baseline date
-      if((data$mindcog_db_open_from[row] > data$baselineEnd[row])){
+      if((format(data$mindcog_db_open_from[row], format = "%Y-%m-%d") > data$baselineEnd[row])){
         pre_to_peri[i] <- row #add row index to list
         i <- i+1 #increment list index count
       }
     } #same for entries coded as peri that should be pre
     if((!is.na(data$phase[row])) & (data$phase[row] == "peri")){
-      if((data$mindcog_db_open_from[row] < data$interventionStart[row])){
+      if((format(data$mindcog_db_open_from[row], format = "%Y-%m-%d") < data$interventionStart[row])){
         peri_to_pre[j] <- row
         j <- j+1
       }
     }
   }
 }
+
+# View(data[pre_to_peri,])
+# View(data[peri_to_pre,])
+
+length(pre_to_peri)
+length(peri_to_pre)
+pre_to_peri_df <- (subset(data[pre_to_peri,], select=c("id", "mindcog_db_open_from", "phase", "baselineStart",
+                                                       "baselineEnd", "interventionStart", "interventionEnd")))
+
+peri_to_pre_df <- (subset(data[peri_to_pre,], select=c("id", "mindcog_db_open_from", "phase", "baselineStart",
+                                                       "baselineEnd", "interventionStart", "interventionEnd")))
 
 data[pre_to_peri,]$phase <- "peri"
 for(row in pre_to_peri){
@@ -352,16 +368,7 @@ for(row in peri_to_pre){
   }
 }
 
-# View(data[pre_to_peri,])
-# View(data[peri_to_pre,])
 
-length(pre_to_peri)
-length(peri_to_pre)
-pre_to_peri_df <- (subset(data[pre_to_peri,], select=c("id", "mindcog_db_date", "phase", "baselineStart",
-                                    "baselineEnd", "interventionStart", "interventionEnd")))
-
-peri_to_pre_df <- (subset(data[peri_to_pre,], select=c("id", "mindcog_db_date", "phase", "baselineStart",
-                                                       "baselineEnd", "interventionStart", "interventionEnd")))
 
 ######################################## Changing ESM item names ##############################
 #Get numbers of ESM item columns
@@ -557,11 +564,57 @@ for(id in subject_IDs){ #for loop to fill the column with the day numbers
 }
 
 
+###################################### fixing remaining issues #######################################
+# View(subset(data[which(data$phaseAssessmentDay>7),],
+#             select=c("group", "intervention", "id", "phase", "block",
+#                      "phaseAssessmentDay", "mindcog_db_open_from", "mindcog_db_non_response", "mindcog_db_date",
+#                      "baselineStart", "baselineEnd", "interventionStart", "interventionEnd")))
 
-View(subset(data[which(data$phaseAssessmentDay>7),],
-            select=c("group", "intervention", "id", "phase", "block",
-                     "phaseAssessmentDay", "mindcog_db_open_from", "mindcog_db_non_response", "mindcog_db_date",
-                     "baselineStart", "baselineEnd", "interventionStart", "interventionEnd")))
+#s163 block 2 is all non-responses --> remove
+# View(subset(data[which((data$subject=="s163") & (data$block==2)),],
+#             select=c("group", "intervention", "id", "phase", "block",
+#                      "phaseAssessmentDay", "mindcog_db_open_from", "mindcog_db_non_response", "mindcog_db_date",
+#                      "baselineStart", "baselineEnd", "interventionStart", "interventionEnd")))
+data <- data[!(data$subject == "s163" & data$block ==2 ),]
+
+#s81_g1_m3 ESM started one day early (only non response on that day) --> remove first day + adjust assessmentDay columns
+# View(subset(data[which(data$subject=="s81"),],
+#             select=c("group", "intervention", "id", "phase", "block", "assessmentDay", "blockAssessmentDay",
+#                      "phaseAssessmentDay", "mindcog_db_open_from", "mindcog_db_non_response", "mindcog_db_date",
+#                      "baselineStart", "baselineEnd", "interventionStart", "interventionEnd")))
+
+data <- data[!(data$id == "s81_g1_m3" & data$blockAssessmentDay ==1 ),]
+#adjust assessmentDay column
+data[((data$subject == "s81") &
+        (data$block == 2)),]$assessmentDay = data[((data$subject == "s81") &
+                                                     (data$block == 2)),]$assessmentDay -1
+#adjust blockAssessmentDay column
+data[((data$subject == "s81") &
+        (data$block == 2)),]$blockAssessmentDay = data[((data$subject == "s81") &
+                                                     (data$block == 2)),]$blockAssessmentDay -1
+#adjust phaseAssessmentDay column (not for entire block 2; only for pre-intervention phase)
+data[(data$id == "s81_g1_m3"),]$phaseAssessmentDay = data[(data$id == "s81_g1_m3"),]$phaseAssessmentDay -1
+
+#s24_g1_m2 one extra day with only one response --> remove extra day (day 8 of peri phase block 1)
+# View(subset(data[which(data$subject=="s24"),],
+#             select=c("group", "intervention", "id", "phase", "block", "assessmentDay", "blockAssessmentDay",
+#                      "phaseAssessmentDay", "mindcog_db_open_from", "mindcog_db_non_response", "mindcog_db_date",
+#                      "baselineStart", "baselineEnd", "interventionStart", "interventionEnd")))
+#remove extra day
+data <- data[!(data$id == "s24_g1_m2" & data$phaseAssessmentDay ==8 ),]
+
+#adjust assessmentDay column
+data[((data$subject == "s24") &
+        (data$block == 2)),]$assessmentDay = data[((data$subject == "s24") &
+                                                     (data$block == 2)),]$assessmentDay -1
+
+#s108_g1_m3 12 days in pre 2 and 6 days in pre 2 + a lot of non responses in block 2 --> remove block 2 (?)
+# View(subset(data[which(data$subject=="s108"),],
+#             select=c("group", "intervention", "id", "phase", "block", "assessmentDay", "blockAssessmentDay",
+#                      "phaseAssessmentDay", "mindcog_db_open_from", "mindcog_db_non_response", "mindcog_db_date",
+#                      "baselineStart", "baselineEnd", "interventionStart", "interventionEnd")))
+
+data <- data[!(data$subject == "s108" & data$block == 2 ),]
 
 ############################## Some changes for convenience ################################
 #drop unnecessary columns and reorder columns for convenience

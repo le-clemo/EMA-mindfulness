@@ -220,75 +220,6 @@ error_demo <- ddply(data[which(data$subject=="s3"),],
                       baselineStart, baselineEnd, interventionStart, interventionEnd), plyr::summarise,
                     nEntries <- length(subject))
 
-
-# #turning the recordedStart/-End, baselineStart/-End, ... into actual dates with corresponding year
-# for(row in 1:nrow(data)){ #first extract year from the mindcog_db_date column
-#   y <- format(as.POSIXct(data$mindcog_db_date[row], format = "%Y-%m-%d"), format="%Y")
-#   #if there is an entry for recordedStart and mindcog_db_date (i.e., if its not a non-response)
-#   if((!is.na(data$recordedStart[row])) & (!is.na(data$mindcog_db_date[row]))){
-#     #combine day-month from recordedStart (etc.) with extracted year and reformat to match other dates in df
-#     data$recordedStart[row] <- format(as.POSIXct(paste(data$recordedStart[row], y, sep = "-"),
-#                                           format = "%d-%m-%Y"), format = "%Y-%m-%d")
-#     data$recordedEnd[row] <- format(as.POSIXct(paste(data$recordedEnd[row], y, sep = "-"),
-#                                           format = "%d-%m-%Y"), format = "%Y-%m-%d")
-#   }# repeat for other columns
-#   if((!is.na(data$baselineStart[row])) & (!is.na(data$mindcog_db_date[row]))){
-#     data$baselineStart[row] <- format(as.POSIXct(paste(data$baselineStart[row], y, sep = "-"),
-#                                                  format = "%d-%m-%Y"), format = "%Y-%m-%d")
-#     data$baselineEnd[row] <- format(as.POSIXct(paste(data$baselineEnd[row], y, sep = "-"),
-#                                                format = "%d-%m-%Y"), format = "%Y-%m-%d")
-#     data$interventionStart[row] <- format(as.POSIXct(paste(data$interventionStart[row], y, sep = "-"),
-#                                                  format = "%d-%m-%Y"), format = "%Y-%m-%d")
-#     data$interventionEnd[row] <- format(as.POSIXct(paste(data$interventionEnd[row], y, sep = "-"),
-#                                                format = "%d-%m-%Y"), format = "%Y-%m-%d")
-#   }
-# }
-# 
-# pre_to_peri <- c() #empty lists for row indices of faulty entries
-# peri_to_pre <- c()
-# i <- 1 #to add to the lists (in a computationally efficient way)
-# j <- 1
-# for(row in 1:nrow(data)){
-#   #if there is a date in baselineStart (which means there is one in the other relevant columns too)
-#   # and if it is not a non-response
-#   if((!is.na(data$baselineStart[row])) & (!is.na(data$mindcog_db_date[row]))){
-#     #if phase is "pre"
-#     if((!is.na(data$phase[row])) & (data$phase[row] == "pre")){
-#       #if the recorded mindcog date is greater than the end of baseline date
-#       if((data$mindcog_db_date[row] > data$baselineEnd[row])){
-#         pre_to_peri[i] <- row #add row index to list
-#         i <- i+1 #increment list index count
-#       }
-#     } #same for entries coded as peri that should be pre
-#     if((!is.na(data$phase[row])) & (data$phase[row] == "peri")){
-#       if((data$mindcog_db_date[row] < data$interventionStart[row])){
-#         peri_to_pre[j] <- row
-#         j <- j+1
-#       }
-#     }
-#   }
-# }
-# 
-# data[pre_to_peri,]$phase <- "peri"
-# for(row in pre_to_peri){
-#   if((grepl("m1", data$id[row], fixed=TRUE))){
-#     data$id[row] <- sub("m1", "\\m2", data$id[row])
-#   }
-#   if((grepl("m3", data$id[row], fixed=TRUE))){
-#     data$id[row] <- sub("m3", "\\m4", data$id[row])
-#   }
-# }
-# 
-# data[peri_to_pre,]$phase <- "pre"
-# for(row in peri_to_pre){
-#   if((grepl("m2", data$id[row], fixed=TRUE))){
-#     data$id[row] <- sub("m2", "\\m1", data$id[row])
-#   }
-#   if((grepl("m4", data$id[row], fixed=TRUE))){
-#     data$id[row] <- sub("m4", "\\m3", data$id[row])
-#   }
-# }
-
 #turning the recordedStart/-End, baselineStart/-End, ... into actual dates with corresponding year
 for(row in 1:nrow(data)){ #first extract year from the mindcog_db_date column
   y <- format(as.POSIXct(data$mindcog_db_open_from[row], format = "%Y-%m-%d %H:%M:%S"), format="%Y")
@@ -619,7 +550,7 @@ data <- data[!(data$subject == "s108" & data$block == 2 ),]
 ############################## Some changes for convenience ################################
 #drop unnecessary columns and reorder columns for convenience
 columnNames <- c(colnames(data))
-data <- data %>% select(patient_id, id, subject, group, intervention, phase, block,
+data <- data %>% select(patient_id, id, subject, group, intervention, phase, block, respondent_id,
                         #18 = db_open_from; 23 = db_date; 26:61 = firstEntry:comments; 67:76
                         columnNames[18:23], columnNames[26:61], sumPA, sumNA,
                         #67:78 = response measures

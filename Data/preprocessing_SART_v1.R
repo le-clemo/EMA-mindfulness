@@ -1,9 +1,9 @@
 
 rm(list = ls()) #clean all up
 
-#setwd("C:/Users/cleme/Documents/Education/RUG/Thesis/EMA-mindfulness/Data/SART")
+setwd("C:/Users/cleme/Documents/Education/RUG/Thesis/EMA-mindfulness/Data")
 
-setwd("~/Documents/RUG/Thesis/EMA-mindfulness/Data")
+#setwd("~/Documents/RUG/Thesis/EMA-mindfulness/Data")
 
 library(readxl)
 library(tidyverse)
@@ -158,6 +158,11 @@ games$fullID <- idvec
 games_summary <- ddply(games, .(subject, fullID, userID), plyr::summarise,
                        nGames = length(unique(gameSessionID)))
 
+games_subj <- ddply(games, .(group,intervention), plyr::summarise,
+                    nSubj = length(unique(subject)))
+
+length(unique(games$subject))
+
 # View(esm[which((esm$mindcog_db_open_from=="2021-11-09") & (esm$subject=="s7")),])
 # View(games[which( (games$subject=="s7")),])                       
 ################################# Inspecting numbers ##################################
@@ -201,15 +206,15 @@ numbers_summary <- ddply(numbers, .(group), plyr::summarise,
                           meanRT = round(mean(responseTime),2),
                           sdRT = round(sd(responseTime),2))
 
-numbers_summary2 <- ddply(numbers, .(group, intervention, phase, block), plyr::summarise,
+numbers_summary2 <- ddply(numbers, .(group, intervention, phase), plyr::summarise, rm.na=TRUE,
                          nGames = length(unique(gameSessionID)),
                          nTrials = length(correct),
                          proportionCorrect = round(length(correct[which(correct == TRUE)]) / nTrials,2),
                          meanRT = round(mean(responseTime),2),
                          sdRT = round(sd(responseTime),2))
 
-max(numbers_summary$nTrials) #21493
-mean(numbers_summary$nTrials) #1612
+max(numbers_summary2$nTrials) #28136
+mean(numbers_summary2$nTrials) #6023
 #View(numbers[which(numbers$userID=="148649783"),])                      
 
 ################################ Inspecting questions ##################################
@@ -279,8 +284,8 @@ questions_summary <- ddply(questions, .(userID), plyr::summarise,
                            nGames = length(unique(gameSessionID)),
                            nQuestions = length(questionID))
 
-unique(questions$answer)
-questions_summary2 <- ddply(questions, .(questionID, group), plyr::summarise,
+#unique(questions$answer)
+remitted_summary <- ddply(questions[which(questions$group=="remitted"),], .(questionID, phase), plyr::summarise,
                             nResponses = length(group),
                             proportionAnswer0 = round(length(questionID[which(answer==0)])/length(questionID),2),
                             proportionAnswer1 = round(length(questionID[which(answer==1)])/length(questionID),2),

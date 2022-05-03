@@ -2,9 +2,9 @@
 #################################### Set up ####################################
 rm(list = ls()) #clean all up
 
-#setwd("C:/Users/cleme/Documents/Education/RUG/Thesis/EMA-mindfulness/Data/ESM/mindcog_v202204")
+setwd("C:/Users/cleme/Documents/Education/RUG/Thesis/EMA-mindfulness/Data/ESM/mindcog_v202204")
 
-setwd("~/Documents/RUG/Thesis/EMA-mindfulness/Data/ESM/mindcog_v202204")
+#setwd("~/Documents/RUG/Thesis/EMA-mindfulness/Data/ESM/mindcog_v202204")
 
 library(readxl)
 library(tidyverse)
@@ -35,8 +35,8 @@ data$phase <- factor(data$phase, levels = c("pre", "peri"))
 participant_responses <- ddply(data, .(subject), plyr::summarise,
                                numCompleted = length(mindcog_db_open_from),
                                noResponse = length(unique(mindcog_db_non_response)),
-                               response = numBeeped - noResponse,
-                               responseRate = round(response/numBeeped,2),
+                               response = numCompleted - noResponse,
+                               responseRate = round(response/numCompleted,2),
                                numDays = max(assessmentDay))
 
 #number of participants so far
@@ -52,17 +52,20 @@ sdResponseRate <- sd(participant_responses$responseRate)
 #             select=c("group", "intervention", "id", "phase", "block",
 #                      "phaseAssessmentDay", "mindcog_db_open_from", "mindcog_db_non_response", "mindcog_db_date")))
 
-responses_by_block <- ddply(data, .(group, intervention, phase, block, phaseAssessmentDay), plyr::summarise,
-                               numCompleted = length(mindcog_db_open_from))
+responses_by_block <- ddply(data, .(group, intervention, phase, block), plyr::summarise,
+                               numCompleted = length(mindcog_db_open_from),
+                                noResponse = length(unique(mindcog_db_non_response)),
+                                response = numCompleted - noResponse,
+                                responseRate = round(response/numCompleted,2))
+                                #numDays = max(phaseAssessmentDay))
 
 #recreacting with assessment days per group
-group_responses <- ddply(data, .(group), plyr::summarise,
+group_responses <- ddply(data, .(group, intervention), plyr::summarise,
                                nSubj = length(unique(subject)),
                                numCompleted = length(mindcog_db_open_from),
                                noResponse = length(unique(mindcog_db_non_response)),
                                response = numCompleted - noResponse,
-                               responseRate = round(response/numCompleted,2),
-                               numDays = max(assessmentDay)) #6% higher response rate in controls
+                               responseRate = round(response/numCompleted,2)) #6% higher response rate in controls
 
 
 
@@ -361,7 +364,7 @@ for(b in 1:2){
                                        (data$intervention==intervention)),]$sumPA, na.rm=TRUE)
           color <- "green"
           lab_y <- "Avg change in PA"
-          main <- "Change in Positive Affect per individual assessment"
+          main <- "Change in Positive Affect per individual assessment compared to baseline mean"
           subtitle <- paste("(", g, ",", intervention, ",", "peri-intervention, block", b, ")")
         }
         if(v == 'sumNA'){
@@ -369,7 +372,7 @@ for(b in 1:2){
                                        (data$intervention==intervention)),]$sumNA, na.rm=TRUE)
           color <- "red"
           lab_y <- "Avg change in NA"
-          main <- "Change in Negative Affect per individual assessment"
+          main <- "Change in Negative Affect per individual assessment compared to baseline mean"
           subtitle <- paste("(", g, ",", intervention, ",", "peri-intervention, block", b, ")")
         }
         
@@ -388,6 +391,53 @@ for(b in 1:2){
     }
   }
 }
+
+#both blocks
+#cacluate the average values per phaseBeepNum
+meltChange_avg <- ddply(meltChange, .(group, intervention, phase, phaseBeepNum, variable), plyr::summarise,
+                        n_values = length(group),
+                        avgValue = mean(value),
+                        sdValue = sd(value))
+
+#plot the average values of sumPA and sumNA (peri) against the average of the baseline assessment periods (pre)
+for(b in 1:2){
+  for(g in c("controls", "remitted")){
+    for(intervention in c('mindfulness', 'fantasizing')){
+      for(v in c('sumPA', 'sumNA')){
+        
+        if(v == 'sumPA'){
+          meanVal <- mean(data[which((data$phase=="pre") & (data$group==g) &
+                                       (data$intervention==intervention)),]$sumPA, na.rm=TRUE)
+          color <- "green"
+          lab_y <- "Avg change in PA"
+          main <- "Change in Positive Affect per individual assessment compared to baseline mean"
+          subtitle <- paste("(", g, ",", intervention, ",", "peri-intervention, both blocks )")
+        }
+        if(v == 'sumNA'){
+          meanVal <- mean(data[which((data$phase=="pre") & (data$group==g) &
+                                       (data$intervention==intervention)),]$sumNA, na.rm=TRUE)
+          color <- "red"
+          lab_y <- "Avg change in NA"
+          main <- "Change in Negative Affect per individual assessment compared to baseline mean"
+          subtitle <- paste("(", g, ",", intervention, ",", "peri-intervention, both blocks )")
+        }
+        
+        
+        px <- ggplot(data = meltChange_avg[which((meltChange_avg$group==g) &
+                                                   (meltChange_avg$variable==v) &
+                                                   (meltChange_avg$intervention==intervention)),],
+                     aes(x=phaseBeepNum, y=avgValue-meanVal)) +
+          geom_line(color = color) + geom_point() + scale_fill_manual(values=color) +
+          labs(title=main, subtitle=subtitle) + xlab('Phase Assessment Number') + ylab(lab_y) +
+          geom_errorbar(aes(ymin=avgValue-sdValue-meanVal, ymax=avgValue+sdValue-meanVal), width=.2,
+                        position=position_dodge(.9)) 
+        print(px)
+      }
+    }
+  }
+}
+
+
 
 #per Assessment day
 #create a df with only the relevant variables
@@ -411,7 +461,7 @@ for(b in 1:2){
                                        (data$intervention==intervention)),]$sumPA, na.rm=TRUE)
           color <- "green"
           lab_y <- "Avg change in PA"
-          main <- "Change in Positive Affect per Assessment Day"
+          main <- "Change in Positive Affect per Assessment Day compared to baseline"
           subtitle <- paste("(", g, ",", intervention, ",", "peri-intervention, block", b, ")")
         }
         if(v == 'sumNA'){
@@ -419,7 +469,7 @@ for(b in 1:2){
                                        (data$intervention==intervention)),]$sumNA, na.rm=TRUE)
           color <- "red"
           lab_y <- "Avg change in NA"
-          main <- "Change in Negative Affect per Assessment Day"
+          main <- "Change in Negative Affect per Assessment Day compared to baseline"
           subtitle <- paste("(", g, ",", intervention, ",", "peri-intervention, block", b, ")")
         }
         
@@ -454,7 +504,7 @@ for(g in c("controls", "remitted")){
                                      (data$intervention==intervention)),]$sumPA, na.rm=TRUE)
         color <- "green"
         lab_y <- "Avg change in PA"
-        main <- "Change in Positive Affect per Assessment Day"
+        main <- "Change in Positive Affect per Assessment Day compared to baseline"
         subtitle <- paste("(", g, ",", intervention, ",", "peri-intervention, both blocks)")
       }
       if(v == 'sumNA'){
@@ -462,7 +512,7 @@ for(g in c("controls", "remitted")){
                                      (data$intervention==intervention)),]$sumNA, na.rm=TRUE)
         color <- "red"
         lab_y <- "Avg change in NA"
-        main <- "Change in Negative Affect per Assessment Day"
+        main <- "Change in Negative Affect per Assessment Day compared to baseline"
         subtitle <- paste("(", g, ",", intervention, ",", "peri-intervention, both blocks)")
       }
       
@@ -500,7 +550,7 @@ grp_avgs <- ddply(data, .(group), plyr::summarize,
                  db14_stressed_avg = mean(stressed, na.rm = TRUE),
                  db15_anxious_avg = mean(anxious, na.rm = TRUE),
                  db16_listless_avg = mean(listless, na.rm = TRUE),
-                 db18_worrying_avg = mean(worried, na.rm = TRUE),
+                 db18_worrying_avg = mean(ruminating, na.rm = TRUE),
                  db19_stickiness_avg = mean(stickiness, na.rm = TRUE),
                  db20_easeThoughts_avg = mean(thoughtsPleasant, na.rm = TRUE),
                  db24_distracted_avg = mean(distracted, na.rm = TRUE),
@@ -516,7 +566,7 @@ grp_avgs <- ddply(data, .(group), plyr::summarize,
 
 #Metric columns
 metricCols <- c('wakeful', 'down', 'satisfied', 'irritated', 'energetic', 'restless',
-                'stressed', 'anxious', 'listless', 'worried', 'stickiness', 'thoughtsPleasant', 'distracted',
+                'stressed', 'anxious', 'listless', 'ruminating', 'stickiness', 'thoughtsPleasant', 'distracted',
                 'restOfDayPos', 'posMax', 'posIntensity', 'negMax', 'negIntensity')
 
 #boxplot comparisons
@@ -549,7 +599,7 @@ int_avgs <- ddply(data, .(group, intervention), plyr::summarize,
                   db14_stressed_avg = mean(stressed, na.rm = TRUE),
                   db15_anxious_avg = mean(anxious, na.rm = TRUE),
                   db16_listless_avg = mean(listless, na.rm = TRUE),
-                  db18_worrying_avg = mean(worried, na.rm = TRUE),
+                  db18_worrying_avg = mean(ruminating, na.rm = TRUE),
                   db19_stickiness_avg = mean(stickiness, na.rm = TRUE),
                   db20_easeThoughts_avg = mean(thoughtsPleasant, na.rm = TRUE),
                   db24_distracted_avg = mean(distracted, na.rm = TRUE),
@@ -595,7 +645,7 @@ phase_avgs <- ddply(data, .(group, intervention, phase), plyr::summarize,
                   db14_stressed_avg = mean(stressed, na.rm = TRUE),
                   db15_anxious_avg = mean(anxious, na.rm = TRUE),
                   db16_listless_avg = mean(listless, na.rm = TRUE),
-                  db18_worrying_avg = mean(worried, na.rm = TRUE),
+                  db18_worrying_avg = mean(ruminating, na.rm = TRUE),
                   db19_stickiness_avg = mean(stickiness, na.rm = TRUE),
                   db20_easeThoughts_avg = mean(thoughtsPleasant, na.rm = TRUE),
                   db24_distracted_avg = mean(distracted, na.rm = TRUE),
@@ -658,7 +708,7 @@ time_avgs <- ddply(data, .(group, intervention, beepNum), plyr::summarize,
                   stressed_avg = mean(stressed, na.rm = TRUE),
                   anxious_avg = mean(anxious, na.rm = TRUE),
                   listless_avg = mean(listless, na.rm = TRUE),
-                  worrying_avg = mean(worried, na.rm = TRUE),
+                  worrying_avg = mean(ruminating, na.rm = TRUE),
                   stickiness_avg = mean(stickiness, na.rm = TRUE),
                   easeThoughts_avg = mean(thoughtsPleasant, na.rm = TRUE),
                   distracted_avg = mean(distracted, na.rm = TRUE),
@@ -709,7 +759,7 @@ phase_avgs <- ddply(data, .(group, intervention, block, phase, blockBeepNum), pl
                    stressed_avg = mean(stressed, na.rm = TRUE),
                    anxious_avg = mean(anxious, na.rm = TRUE),
                    listless_avg = mean(listless, na.rm = TRUE),
-                   worrying_avg = mean(worried, na.rm = TRUE),
+                   worrying_avg = mean(ruminating, na.rm = TRUE),
                    stickiness_avg = mean(stickiness, na.rm = TRUE),
                    easeThoughts_avg = mean(thoughtsPleasant, na.rm = TRUE),
                    distracted_avg = mean(distracted, na.rm = TRUE),
@@ -784,30 +834,30 @@ par(mfrow = c(1,1))
 
 #################################### Individual plots ####################################
 
-dependent_var <- "stickiness"
+dependent_var <- "ruminating"
 
-remittedIDs <-  unique(data[data$group == "remitted",]$id) #get a list of all unique IDs
-set.seed(125)
+remittedIDs <-  unique(data[which((data$group == "remitted") & (data$block==1) & (data$phase=="pre")),]$subject) #get a list of all unique IDs
+set.seed(234)
 remittedSample <- sample(remittedIDs, 3)
 
-contIDs <-  unique(data[data$group == "controls",]$id) #get a list of all unique IDs
+contIDs <-  unique(data[which((data$group == "controls") & (data$block==1) & (data$phase=="pre")),]$subject) #get a list of all unique IDs
 contSample <- sample(contIDs, 3)
 
-randData1 <- data[data$id %in% remittedSample,]
-randData2 <- data[data$id %in% contSample,]
+randData1 <- data[data$subject %in% remittedSample,]
+randData2 <- data[data$subject %in% contSample,]
 
-meltData1 <- melt(randData1, id = c("id", "assessmentDay", "beepNum"), measure.vars = dependent_var)
-meltData2 <- melt(randData2, id = c("id", "assessmentDay", "beepNum"), measure.vars = dependent_var)
+meltData1 <- melt(randData1, id = c("subject", "phaseAssessmentDay", "phaseBeepNum"), measure.vars = dependent_var)
+meltData2 <- melt(randData2, id = c("subject", "phaseAssessmentDay", "phaseBeepNum"), measure.vars = dependent_var)
 
-#for x: use beepNum for time or another variable to see relationship
-p1 <- ggplot(meltData1,aes(x=beepNum,y=value,colour=factor(id), group = variable)) +
+#for x: use phaseBeepNum for time or another variable to see relationship
+p1 <- ggplot(meltData1,aes(x=phaseBeepNum,y=value,colour=factor(subject), group = variable)) +
   geom_line() + geom_smooth(method='lm')
-p2 <- ggplot(meltData2,aes(x=beepNum,y=value,colour=factor(id), group = variable)) +
+p2 <- ggplot(meltData2,aes(x=phaseBeepNum,y=value,colour=factor(subject), group = variable)) +
   geom_line() + geom_smooth(method='lm')
 
 #to split one plot into a grid of multiple plots
-p1 <- p1 + facet_grid(rows = vars(factor(id))) + xlab("Assessment Number") + ylab(dependent_var)
-p2 <- p2 + facet_grid(rows = vars(factor(id))) + xlab("Assessment Number") + ylab(dependent_var)
+p1 <- p1 + facet_grid(rows = vars(factor(subject))) + xlab("Assessment Number") + ylab(dependent_var)
+p2 <- p2 + facet_grid(rows = vars(factor(subject))) + xlab("Assessment Number") + ylab(dependent_var)
 
 p1 <- p1 + theme(legend.position="None")
 p2 <- p2 + theme(legend.position="None") #+ geom_vline(xintercept = assessmentDay, linetype = "dashed", color = "red")
@@ -979,11 +1029,49 @@ for(g in c("controls", "remitted")){
 }
 
 
+################################### sleep ######################################
+meltChange <- melt(data[which(data$phase=="peri"),], id.vars=c("group", "intervention", "phase", "block", "phaseAssessmentDay"),
+                   measure.vars = "sleepQuality", na.rm = TRUE)
+#without block
+meltChange_avg <- ddply(meltChange, .(group, intervention, phase, phaseAssessmentDay, variable), plyr::summarise,
+                        n_values = length(group),
+                        avgValue = mean(value),
+                        sdValue = sd(value))
+
+#combining both blocks
+
+for(g in c("controls", "remitted")){
+  if(g=="controls"){
+    color = "green"
+  } else {
+    color = "red"
+  }
+  for(intervention in c('mindfulness', 'fantasizing')){
+    
+    meanVal <- mean(data[which((data$phase=="pre") & (data$group==g) &
+                                 (data$intervention==intervention)),]$sleepQuality, na.rm=TRUE)
+    
+    color <- "green"
+    lab_y <- "Avg change in rumination"
+    main <- "Change in Sleep Quality per Assessment Day compared to baseline mean"
+    subtitle <- paste("(", g, ",", intervention, ",", "peri-intervention, both blocks", ")")
+    
+    
+    px <- ggplot(data = meltChange_avg[which((meltChange_avg$group==g) &
+                                               (meltChange_avg$intervention==intervention)),],
+                 aes(x=phaseAssessmentDay, y=avgValue-meanVal)) +
+      geom_line(color = color) + geom_point() + scale_fill_manual(values=color) +
+      labs(title=main, subtitle=subtitle) + xlab('Phase Assessment Day') + ylab(lab_y) +
+      geom_errorbar(aes(ymin=avgValue-sdValue-meanVal, ymax=avgValue+sdValue-meanVal), width=.2,
+                    position=position_dodge(.9)) 
+    print(px)
+  }
+}
 
 
 ################################### Change scores ######################################
 cols <- c('wakeful', 'down', 'satisfied', 'irritated', 'energetic', 'restless', 'stressed', 'anxious',
-          'listless', 'thinkingOf', 'worried', 'stickiness', 'thoughtsPleasant', 'thoughtsTime',
+          'listless', 'thinkingOf', 'ruminating', 'stickiness', 'thoughtsPleasant', 'thoughtsTime',
           'thoughtsValence', 'thoughtsObject', 'distracted', 'restOfDayPos', 'aloneCompany',
           'companyPleasant', 'alonePleasant', 'posMax', 'posIntensity', 'negMax', 'negIntensity')
 
@@ -1007,7 +1095,7 @@ grp_avg_cs<- ddply(data, .(group), plyr::summarize,
                   stressed_avg = mean(stressed_change, na.rm = TRUE),
                   anxious_avg = mean(anxious_change, na.rm = TRUE),
                   listless_avg = mean(listless_change, na.rm = TRUE),
-                  worrying_avg = mean(worried_change, na.rm = TRUE),
+                  worrying_avg = mean(ruminating_change, na.rm = TRUE),
                   stickiness_avg = mean(stickiness_change, na.rm = TRUE),
                   easeThoughts_avg = mean(thoughtsPleasant_change, na.rm = TRUE),
                   distracted_avg = mean(distracted_change, na.rm = TRUE),
@@ -1036,7 +1124,7 @@ phase_avg_cs<- ddply(data, .(group, intervention, phase), plyr::summarize,
                    stressed_avg = mean(stressed_change, na.rm = TRUE),
                    anxious_avg = mean(anxious_change, na.rm = TRUE),
                    listless_avg = mean(listless_change, na.rm = TRUE),
-                   worrying_avg = mean(worried_change, na.rm = TRUE),
+                   worrying_avg = mean(ruminating_change, na.rm = TRUE),
                    stickiness_avg = mean(stickiness_change, na.rm = TRUE),
                    easeThoughts_avg = mean(thoughtsPleasant_change, na.rm = TRUE),
                    distracted_avg = mean(distracted_change, na.rm = TRUE),

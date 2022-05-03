@@ -2,9 +2,9 @@
 #################################### Set up ####################################
 rm(list = ls()) #clean all up
 
-#setwd("C:/Users/cleme/Documents/Education/RUG/Thesis/EMA-mindfulness/Data/ESM/mindcog_v202204")
+setwd("C:/Users/cleme/Documents/Education/RUG/Thesis/EMA-mindfulness/Data/ESM/mindcog_v202204")
 
-setwd("~/Documents/RUG/Thesis/EMA-mindfulness/Data/ESM/mindcog_v202204")
+#setwd("~/Documents/RUG/Thesis/EMA-mindfulness/Data/ESM/mindcog_v202204")
 
 library(readxl)
 library(tidyverse)
@@ -215,10 +215,10 @@ data <- drop_na(data, patient_id)
 
 ############################# Handle issue with diverging dates ###########################
 #fix problem with dates (whether entry belongs to pre- or peri-intervention phase)
-error_demo <- ddply(data[which(data$subject=="s3"),],
-                    .(subject, id, phase, block, mindcog_db_date, recordedStart, recordedEnd,
-                      baselineStart, baselineEnd, interventionStart, interventionEnd), plyr::summarise,
-                    nEntries <- length(subject))
+# error_demo <- ddply(data[which(data$subject=="s3"),],
+#                     .(subject, id, phase, block, mindcog_db_date, recordedStart, recordedEnd,
+#                       baselineStart, baselineEnd, interventionStart, interventionEnd), plyr::summarise,
+#                     nEntries <- length(subject))
 
 #turning the recordedStart/-End, baselineStart/-End, ... into actual dates with corresponding year
 for(row in 1:nrow(data)){ #first extract year from the mindcog_db_date column

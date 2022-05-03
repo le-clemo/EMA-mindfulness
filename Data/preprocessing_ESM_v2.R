@@ -309,8 +309,8 @@ colNamesOld <- setNames(data.frame(colnames(data[, item1:item33])), "columns")
 
 colNamesNew <- c('firstEntry', 'sleepQuality', 'toBedHour', 'toBedMinute', 'trySleepHour', 'trySleepMinute',
                  'durationFallAsleep', 'wakeupHour', 'wakeupMinute', 'restednessWakeup', 'wakeful',
-                 'sad', 'satisfied', 'irritated', 'energetic', 'restless', 'stressed', 'anxious',
-                 'listless', 'thinkingOf', 'worried', 'stickiness', 'thoughtsPleasant',
+                 'down', 'satisfied', 'irritated', 'energetic', 'restless', 'stressed', 'anxious',
+                 'listless', 'thinkingOf', 'ruminating', 'stickiness', 'thoughtsPleasant',
                  'thoughtsTime', 'thoughtsValence', 'thoughtsObject', 'distracted',
                  'restOfDayPos', 'aloneCompany', 'companyPleasant', 'alonePleasant', 'posMax',
                  'posIntensity', 'negMax', 'negIntensity', 'comments')
@@ -320,7 +320,7 @@ setnames(data, old = colNamesOld$columns, new = colNamesNew)
 ################################### Positive / Negative Affect ####################################
 
 # data$meanPA <- rowMeans(subset(data, select = c(wakeful, satisfied, energetic)), na.rm = TRUE)
-# data$meanNA <- rowMeans(subset(data, select = c(sad, irritated, restless,
+# data$meanNA <- rowMeans(subset(data, select = c(down, irritated, restless,
 #                                                 stressed, anxious, listless)), na.rm = TRUE)
 
 data$sumPA <- NA
@@ -329,14 +329,14 @@ for(row in 1:nrow(data)){
   if((!is.na(data$wakeful[row])) & (!is.na(data$satisfied[row])) & (!is.na(data$energetic[row]))){
     data$sumPA[row] <- data$wakeful[row] + data$satisfied[row] + data$energetic[row]
   }
-  if((!is.na(data$sad[row])) & (!is.na(data$irritated[row])) & (!is.na(data$restless[row])) &
+  if((!is.na(data$down[row])) & (!is.na(data$irritated[row])) & (!is.na(data$restless[row])) &
      (!is.na(data$anxious[row]))){
-    data$sumNA[row] <- data$sad[row] + data$irritated[row] + data$restless[row] + data$anxious[row]
+    data$sumNA[row] <- data$down[row] + data$irritated[row] + data$restless[row] + data$anxious[row]
   }
 }
 
 # data$sumPA <- rowSums(subset(data, select = c(wakeful, satisfied, energetic)), na.rm = TRUE)
-# data$sumNA <- rowSums(subset(data, select = c(sad, irritated, restless,
+# data$sumNA <- rowSums(subset(data, select = c(down, irritated, restless,
 #                                                 stressed, anxious, listless)), na.rm = TRUE)
 
 
@@ -564,8 +564,8 @@ data <- data %>% select(patient_id, id, subject, group, intervention, phase, blo
 
 ###################################### Creating lagged variables #############################################
 #the variables to be lagged
-cols <- c('wakeful', 'sad', 'satisfied', 'irritated', 'energetic', 'restless', 'stressed', 'anxious',
-             'listless', 'thinkingOf', 'worried', 'stickiness', 'thoughtsPleasant', 'thoughtsTime',
+cols <- c('wakeful', 'down', 'satisfied', 'irritated', 'energetic', 'restless', 'stressed', 'anxious',
+             'listless', 'thinkingOf', 'ruminating', 'stickiness', 'thoughtsPleasant', 'thoughtsTime',
              'thoughtsValence', 'thoughtsObject', 'distracted', 'restOfDayPos', 'aloneCompany',
              'companyPleasant', 'alonePleasant', 'posMax', 'posIntensity', 'negMax', 'negIntensity',
               'sumPA', 'sumNA')
@@ -608,8 +608,8 @@ for(id in subject_IDs){
 
 ############################################ Change scores ####################################################
 
-cols <- c('wakeful', 'sad', 'satisfied', 'irritated', 'energetic', 'restless', 'stressed', 'anxious',
-          'listless', 'worried', 'stickiness', 'thoughtsPleasant',  'thoughtsObject', 'distracted', 'restOfDayPos',
+cols <- c('wakeful', 'down', 'satisfied', 'irritated', 'energetic', 'restless', 'stressed', 'anxious',
+          'listless', 'ruminating', 'stickiness', 'thoughtsPleasant',  'thoughtsObject', 'distracted', 'restOfDayPos',
           'companyPleasant', 'alonePleasant', 'posMax', 'posIntensity', 'negMax', 'negIntensity',
           'sumPA', 'sumNA')
 
@@ -650,7 +650,7 @@ for(id in subject_IDs){
   }
 }
 
-# test <- subset(data, select = c(subject, phase, sad, sad_change, assessmentDay))
+# test <- subset(data, select = c(subject, phase, down, down_change, assessmentDay))
 # View(test)
 
 write.csv(data, "preprocessed_data.csv", row.names = FALSE)

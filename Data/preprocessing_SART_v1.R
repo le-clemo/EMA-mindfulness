@@ -35,8 +35,11 @@ list2env(mylist ,.GlobalEnv)
 #load preprocessed ESM data for matching
 esm <- read_csv('ESM/mindcog_v202204/preprocessed_data.csv')
 
-################################## Inspecting proefpersoon ###################################
-length(unique(wander_all$Proefpersoon)) #34
+# esm$group <- factor(esm$group, levels = c("controls", "remitted"))
+# esm$intervention <- factor(esm$intervention, levels = c("mindfulness", "fantasizing"))
+# esm$phase <- factor(esm$phase, levels = c("pre", "peri"))
+
+################################## Adapting proefpersoon ###################################
 wander_all$Proefpersoon <- tolower(wander_all$Proefpersoon)
 wander_all$subject <- str_extract(wander_all$Proefpersoon, regex("^[^_]+(?=_)"))
 
@@ -57,7 +60,7 @@ for(row in 1:nrow(wander_all)) {
 
 ##################################### combine data ####################################
 #from wander_all to games, numbers, questions
-length(unique(wander_all$Proefpersoon)) #34
+length(unique(wander_all$Proefpersoon)) #34 participants
 
 games$subject <- NA
 games$dagboek_pre1 <- NA
@@ -116,7 +119,7 @@ for(i in 1:nrow(games)){
 length(games[(which(!is.na(games$subject))),]$subject) #3399 games associated with participant
 
 ################################## Inspecting games ###################################
-length(unique(games$userID)) #72
+length(unique(games$userID)) #72 (participants that took part in both blocks are counted twice!)
 length(games$gameSessionID) #3771
 
 #class(games$time) #already POSIXct
@@ -191,18 +194,52 @@ numbers$intervention <- ivec
 numbers$phase <- pvec
 numbers$block <- bvec
 
+numbers_summary <- ddply(numbers, .(group), plyr::summarise,
+                          nGames = length(unique(gameSessionID)),
+                          nTrials = length(correct),
+                          proportionCorrect = round(length(correct[which(correct == TRUE)]) / nTrials,2),
+                          meanRT = round(mean(responseTime),2),
+                          sdRT = round(sd(responseTime),2))
 
-numbers_summary <- ddply(numbers, .(userID), plyr::summarise,
+numbers_summary2 <- ddply(numbers, .(group, intervention, phase, block), plyr::summarise,
                          nGames = length(unique(gameSessionID)),
                          nTrials = length(correct),
                          proportionCorrect = round(length(correct[which(correct == TRUE)]) / nTrials,2),
-                         meanRT = round(mean(responseTime),2))
+                         meanRT = round(mean(responseTime),2),
+                         sdRT = round(sd(responseTime),2))
 
 max(numbers_summary$nTrials) #21493
 mean(numbers_summary$nTrials) #1612
 #View(numbers[which(numbers$userID=="148649783"),])                      
 
 ################################ Inspecting questions ##################################
+#Q0 = What were you just thinking about?
+      #a0 = I was fully concentrated on my task
+      #a1 = I rated aspects of the task (e.g. my performance or how long it takes)
+      #a2 = I was thinking about personal matters
+      #a3 = I was distracted by my surroundings (e.g. sound, temperature, my physical state)
+      #a4 = I was daydreaming / I was thinking about task unrelated things
+      #a5 = I wasn't paying attention, but I wasn't thinking of anything specific
+
+#Q1 = Did your thoughts have a negative, neutral or positive charge?
+      #a0 = negative
+      #a1 = neutral
+      #a2 = positive
+
+#Q2 = How hard was it to let go of the thought?
+      #a0 = very difficult
+      #a1 = difficult
+      #a2 = neither difficult nor easy
+      #a3 = easy
+      #a4 = very easy
+
+#Q3 = What was the time orientation of your thought?
+      #a0 = past
+      #a1 = present
+      #a2 = future
+
+
+
 length(unique(questions$userID)) #62
 
 questions$fullID <- NA
@@ -243,7 +280,8 @@ questions_summary <- ddply(questions, .(userID), plyr::summarise,
                            nQuestions = length(questionID))
 
 unique(questions$answer)
-questions_summary2 <- ddply(questions, .(questionID), plyr::summarise,
+questions_summary2 <- ddply(questions, .(questionID, group), plyr::summarise,
+                            nResponses = length(group),
                             proportionAnswer0 = round(length(questionID[which(answer==0)])/length(questionID),2),
                             proportionAnswer1 = round(length(questionID[which(answer==1)])/length(questionID),2),
                             proportionAnswer2 = round(length(questionID[which(answer==2)])/length(questionID),2),

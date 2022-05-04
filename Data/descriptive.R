@@ -110,13 +110,133 @@ controls_mf <- controls[which(controls$intervention=="mindfulness"),]
 remitted_fa <- remitted[which(remitted$intervention=="fantasizing"),]
 remitted_mf <- remitted[which(remitted$intervention=="mindfulness"),]
 
-plot(remitted_fa[which(remitted_fa$phase=="pre"),]$ruminating_lag1, remitted_fa[which(remitted_fa$phase=="pre"),]$sumNA, col = "red")
-points(remitted_fa[which(remitted_fa$phase=="peri"),]$ruminating_lag1, remitted_fa[which(remitted_fa$phase=="peri"),]$sumNA, col = "green")
+r_pre <- remitted_fa[which(remitted_fa$phase=="pre"),]$ruminating
+rlag1_pre <- remitted_fa[which(remitted_fa$phase=="pre"),]$ruminating_lag1
+NA_pre <- remitted_fa[which(remitted_fa$phase=="pre"),]$sumNA
+PA_pre <- remitted_fa[which(remitted_fa$phase=="pre"),]$sumPA
 
-plot(remitted_mf[which(remitted_fa$phase=="pre"),]$ruminating_lag1, remitted_mf[which(remitted_fa$phase=="pre"),]$sumNA, col = "red")
-points(remitted_mf[which(remitted_fa$phase=="peri"),]$ruminating_lag1, remitted_mf[which(remitted_fa$phase=="peri"),]$sumNA, col = "green")
+r_peri <- remitted_fa[which(remitted_fa$phase=="peri"),]$ruminating
+rlag1_peri <- remitted_fa[which(remitted_fa$phase=="peri"),]$ruminating_lag1
+NA_peri <- remitted_fa[which(remitted_fa$phase=="peri"),]$sumNA
+PA_peri <- remitted_fa[which(remitted_fa$phase=="peri"),]$sumPA
 
-#plot time lines for selected variables
+#NA
+plot(r_pre, NA_pre, col = "red", main = "Remitted, fantasizing", ylab="Negative Affect", xlab="Rumination")
+points(r_peri, NA_peri, col = "green")
+legend("topleft", legend=c("Pre", "Peri"), col=c("red", "green"), pch=c(1,1))
+
+cor(r_pre, NA_pre, use = "complete.obs")
+reg_pre <- lm(r_pre ~ NA_pre)
+abline(reg_pre, col = "red")
+
+cor(r_peri, NA_peri, use = "complete.obs")
+reg_peri <- lm(r_peri ~ NA_peri)
+abline(reg_peri, col = "green")
+
+#PA
+plot(r_pre, PA_pre, col = "red", main = "Remitted, fantasizing", ylab="Positive Affect", xlab="Rumination")
+points(r_peri, PA_peri, col = "green")
+legend("topleft", legend=c("Pre", "Peri"), col=c("red", "green"), pch=c(1,1))
+
+cor(r_pre, PA_pre, use = "complete.obs")
+reg_pre <- lm(r_pre ~ PA_pre)
+abline(reg_pre, col = "red")
+
+cor(r_peri, PA_peri, use = "complete.obs")
+reg_peri <- lm(r_peri ~ PA_peri)
+abline(reg_peri, col = "green")
+
+#with ruminating_lag1 and NA
+plot(rlag1_pre, PA_pre, col = "red", main = "Remitted, fantasizing", ylab="Positive Affect", xlab="Rumination (lag1)")
+points(rlag1_peri, PA_peri, col = "green")
+legend("topleft", legend=c("Pre", "Peri"), col=c("red", "green"), pch=c(1,1))
+
+cor(rlag1_pre, PA_pre, use = "complete.obs")
+reg_pre <- lm(rlag1_pre ~ PA_pre)
+abline(reg_pre, col = "red")
+
+cor(rlag1_peri, PA_peri, use = "complete.obs")
+reg_peri <- lm(rlag1_peri ~ PA_peri)
+abline(reg_peri, col = "green")
+
+#with ruminating_lag1 and PA
+plot(rlag1_pre, PA_pre, col = "red", main = "Remitted, fantasizing", ylab="Positive Affect", xlab="Rumination")
+points(rlag1_peri, PA_peri, col = "green")
+legend("topleft", legend=c("Pre", "Peri"), col=c("red", "green"), pch=c(1,1))
+
+cor(rlag1_pre, PA_pre, use = "complete.obs")
+reg_pre <- lm(rlag1_pre ~ PA_pre)
+abline(reg_pre, col = "red")
+
+cor(rlag1_peri, PA_peri, use = "complete.obs")
+reg_peri <- lm(rlag1_peri ~ PA_peri)
+abline(reg_peri, col = "green")
+
+#for mindfulness group
+r_pre <- remitted_mf[which(remitted_mf$phase=="pre"),]$ruminating
+rlag1_pre <- remitted_mf[which(remitted_mf$phase=="pre"),]$ruminating_lag1
+NA_pre <- remitted_mf[which(remitted_mf$phase=="pre"),]$sumNA
+PA_pre <- remitted_mf[which(remitted_mf$phase=="pre"),]$sumPA
+
+r_peri <- remitted_mf[which(remitted_mf$phase=="peri"),]$ruminating
+rlag1_peri <- remitted_mf[which(remitted_mf$phase=="peri"),]$ruminating_lag1
+NA_peri <- remitted_mf[which(remitted_mf$phase=="peri"),]$sumNA
+PA_peri <- remitted_mf[which(remitted_mf$phase=="peri"),]$sumPA
+
+#NA
+plot(r_pre, NA_pre, col = "red", main = "Remitted, mindfulness", ylab="Negative Affect", xlab="Rumination")
+points(r_peri, NA_peri, col = "green")
+legend("topleft", legend=c("Pre", "Peri"), col=c("red", "green"), pch=c(1,1))
+
+cor(r_pre, NA_pre, use = "complete.obs")
+reg_pre <- lm(r_pre ~ NA_pre)
+abline(reg_pre, col = "red")
+
+cor(r_peri, NA_peri, use = "complete.obs")
+reg_peri <- lm(r_peri ~ NA_peri)
+abline(reg_peri, col = "green")
+
+#with ruminating_lag1
+plot(rlag1_pre, NA_pre, col = "red", main = "Remitted, fantasizing", ylab="Negative Affect", xlab="Rumination (lag1)")
+points(rlag1_peri, NA_peri, col = "green")
+legend("topleft", legend=c("Pre", "Peri"), col=c("red", "green"), pch=c(1,1))
+
+cor(rlag1_pre, NA_pre, use = "complete.obs")
+reg_pre <- lm(rlag1_pre ~ NA_pre)
+abline(reg_pre, col = "red")
+
+cor(rlag1_peri, NA_peri, use = "complete.obs")
+reg_peri <- lm(rlag1_peri ~ NA_peri)
+abline(reg_peri, col = "green")
+
+#PA
+plot(r_pre, PA_pre, col = "red", main = "Remitted, fantasizing", ylab="Positive Affect", xlab="Rumination")
+points(r_peri, PA_peri, col = "green")
+legend("topleft", legend=c("Pre", "Peri"), col=c("red", "green"), pch=c(1,1))
+
+cor(r_pre, PA_pre, use = "complete.obs")
+reg_pre <- lm(r_pre ~ PA_pre)
+abline(reg_pre, col = "red")
+
+cor(r_peri, PA_peri, use = "complete.obs")
+reg_peri <- lm(r_peri ~ PA_peri)
+abline(reg_peri, col = "green")
+
+#with ruminating_lag1 and PA
+plot(rlag1_pre, PA_pre, col = "red", main = "Remitted, fantasizing", ylab="Positive Affect", xlab="Rumination")
+points(rlag1_peri, PA_peri, col = "green")
+legend("topleft", legend=c("Pre", "Peri"), col=c("red", "green"), pch=c(1,1))
+
+cor(rlag1_pre, PA_pre, use = "complete.obs")
+reg_pre <- lm(rlag1_pre ~ PA_pre)
+abline(reg_pre, col = "red")
+
+cor(rlag1_peri, PA_peri, use = "complete.obs")
+reg_peri <- lm(rlag1_peri ~ PA_peri)
+abline(reg_peri, col = "green")
+
+
+#
 aggData <- with(data, aggregate(list(ruminating = ruminating, stickiness = stickiness,
                                      sumNA = sumNA, sumPA = sumPA),
                                 by = list(group = group, intervention = intervention,

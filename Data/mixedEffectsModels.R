@@ -26,6 +26,30 @@ data$phase <- factor(data$phase, levels = c("pre", "peri"))
 data$grInt <- as.factor(paste(data$group, data$intervention, sep = "."))
 data$blockPhase <- as.factor(paste(data$phase, data$block, sep = "."))
 
+############################################ Data visualization #################################################
+aggData <- with(data, aggregate(list(ruminating = ruminating, stickiness = stickiness,
+                                    sumNA = sumNA, sumPA = sumPA, sleepQuality = sleepQuality),
+                               by = list(subject = subject, group = group,
+                                         blockAssessmentDay = blockAssessmentDay), FUN = mean, na.rm = TRUE))
+
+means <- with(aggData, aggregate(list(meanRum = ruminating, meanStick = stickiness, 
+                                      meanNA = sumNA, meanPA = sumPA, meanSleep = sleepQuality),
+                                 by = list(group = group, blockAssessmentDay = blockAssessmentDay), 
+                                 FUN = mean, na.rm = TRUE))
+
+aggBlock <- with(data, aggregate(list(ruminating = ruminating, stickiness = stickiness,
+                                     sumNA = sumNA, sumPA = sumPA, sleepQuality = sleepQuality),
+                                by = list(subject = subject, group = group, intervention = intervention,
+                                          blockAssessmentDay = blockAssessmentDay), FUN = mean, na.rm = TRUE))
+
+ggplot(aggData, aes(blockAssessmentDay, ruminating, group = subject, color=group)) + geom_point()+
+  geom_line(means, mapping = aes(blockAssessmentDay, meanRum, color = group))
+
+ggplot(aggData, aes(blockAssessmentDay, sumNA, group = subject, color=group)) + geom_point()
+
+ggplot(aggData, aes(blockAssessmentDay, sumPA, group = subject, color=group)) + geom_point()
+
+
 ############################################ RE structure #################################################
 m1 <- lmer(ruminating ~  grInt * blockPhase * sumNA * sumPA +
              (1 + assessmentDay | subject) + (1 | blockPhase) + (1 | grInt), data = data)

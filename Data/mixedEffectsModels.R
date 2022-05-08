@@ -4,6 +4,8 @@ rm(list = ls()) #clean all up
 
 setwd("~/Documents/RUG/Thesis/EMA-mindfulness/Data")
 
+library(ggplot2)
+library(data.table)
 library(lme4)
 library(mgcv)
 library(itsadug)
@@ -26,11 +28,26 @@ data$phase <- factor(data$phase, levels = c("pre", "peri"))
 data$grInt <- as.factor(paste(data$group, data$intervention, sep = "."))
 data$blockPhase <- as.factor(paste(data$phase, data$block, sep = "."))
 
+hist(data$ruminating)
+qqnorm(data$ruminating)
+qqline(data$ruminating)
+
+hist(log(data$ruminating+1))
+qqnorm(log(data$ruminating+1))
+qqline(log(data$ruminating+1))
+
+hist(data$sumNA)
+hist(data$sumPA)
+hist(data$stickiness)
+hist(data$sleepQuality)
+
 ############################################ Data visualization #################################################
 aggData <- with(data, aggregate(list(ruminating = ruminating, stickiness = stickiness,
                                     sumNA = sumNA, sumPA = sumPA, sleepQuality = sleepQuality),
                                by = list(subject = subject, group = group,
                                          blockAssessmentDay = blockAssessmentDay), FUN = mean, na.rm = TRUE))
+
+hist(aggData$ruminating)
 
 means <- with(aggData, aggregate(list(meanRum = ruminating, meanStick = stickiness, 
                                       meanNA = sumNA, meanPA = sumPA, meanSleep = sleepQuality),
@@ -42,25 +59,37 @@ aggBlock <- with(data, aggregate(list(ruminating = ruminating, stickiness = stic
                                 by = list(subject = subject, group = group, intervention = intervention,
                                           blockAssessmentDay = blockAssessmentDay), FUN = mean, na.rm = TRUE))
 
+#scatter plots with smooth
+#rumination
 ggplot(aggData, aes(blockAssessmentDay, ruminating, group = subject, color=group)) + geom_point()+
-  geom_line(means, mapping = aes(blockAssessmentDay, meanRum, color = group))
-
-ggplot(aggData, aes(blockAssessmentDay, sumNA, group = subject, color=group)) + geom_point()
-
-ggplot(aggData, aes(blockAssessmentDay, sumPA, group = subject, color=group)) + geom_point()
+    geom_smooth(method = "lm", aes(group=group))
+#NA
+ggplot(aggData, aes(blockAssessmentDay, sumNA, group = subject, color=group)) + geom_point()+
+  geom_smooth(method = "lm", aes(group=group))
+#PA
+ggplot(aggData, aes(blockAssessmentDay, sumPA, group = subject, color=group)) + geom_point()+
+  geom_smooth(method = "lm", aes(group=group))
+#stickiness
+ggplot(aggData, aes(blockAssessmentDay, stickiness, group = subject, color=group)) + geom_point()+
+  geom_smooth(method = "lm", aes(group=group))
+#sleep quality
+ggplot(aggData, aes(blockAssessmentDay, sleepQuality, group = subject, color=group)) + geom_point()+
+  geom_smooth(method = "lm", aes(group=group))
 
 
 ############################################ RE structure #################################################
-m1 <- lmer(ruminating ~  grInt * blockPhase * sumNA * sumPA +
-             (1 + assessmentDay | subject) + (1 | blockPhase) + (1 | grInt), data = data)
+m1 <- lmer(ruminating_lag1 ~  grInt * blockPhase * sumNA * sumPA * stressed * listless * thinkingOf *
+             stickiness * thoughtsPleasant * thoughtsTime * thoughtsValence * thoughtsObject * distracted *
+             restOfDayPos * aloneCompany * companyPleasant * alonePleasant * posMax * posIntensity *
+             negMax * negIntensity + (1 + assessmentDay | subject) + (1 | blockPhase) + (1 | grInt), data = data)
 #converging warning --> consider rescaling
-pvars <- c( "ruminating", "sumNA",# Scaling numeric parameters
+pvars <- c( "ruminating_lag1", "sumNA", "stressed", "listless", "stickiness",# Scaling numeric parameters
             "sumPA")
 
 sc_data <- copy(data)
 sc_data[pvars] <- lapply(data[pvars],scale)
 
-m1 <- lmer(ruminating ~  grInt * blockPhase * sumNA * sumPA +
+m1 <- lmer(ruminating ~  grInt * blockPhase * sumNA_lag1 * sumPA_lag1 +
              (0 + assessmentDay | subject) + (1|grInt), data = sc_data)
 
 summary(m1)
@@ -184,44 +213,48 @@ legend(-1.5, 100, legend=rev(groups),
 #RE structure
 sc_data$subjB <- interaction(sc_data$subject, sc_data$block, drop = TRUE)
 
-m1 <- lmer(ruminating ~  blockAssessmentDay * grInt * sumNA * sumPA * phase +
+m1 <- lmer(ruminating_lag1 ~  blockAssessmentDay * grInt * sumNA * sumPA * phase * stressed *
+             listless * stickiness +
              (1 + blockAssessmentDay | subjB) + (1 | grInt) + (1|phase), data = sc_data)
+
 #failed to converge
 
-
-m1b <- lmer(ruminating ~  blockAssessmentDay * grInt * sumNA * sumPA * phase + 
+m1b <- lmer(ruminating_lag1 ~  blockAssessmentDay * grInt * sumNA * sumPA * phase * stressed *
+              listless * stickiness + 
              (0 + blockAssessmentDay | subjB) + (1|grInt) + (1|phase) + (1|subjB), data = sc_data)
-#failed to converge
 
-m1c <- lmer(ruminating ~ blockAssessmentDay * grInt * sumNA * sumPA * phase + 
+
+m1c <- lmer(ruminating_lag1 ~  blockAssessmentDay * grInt * sumNA * sumPA * phase * stressed *
+              listless * stickiness +
              (0 + blockAssessmentDay | subjB) + (1|subjB) + (1|grInt) , data = sc_data)
+# #failed to converge
+# 
+m1d <- lmer(ruminating_lag1 ~  blockAssessmentDay * grInt * sumNA * sumPA * phase * stressed *
+              listless * stickiness +
+              (0 + blockAssessmentDay | subjB) + (1|subjB) + (1|phase) , data = sc_data)
+
+anova(m1b, m1d, refit = FALSE) #not significant --> simpler model better (m1d)
+
+
+m2 <- lmer(ruminating_lag1 ~  blockAssessmentDay * grInt * sumNA * sumPA * phase * stressed *
+             listless * stickiness +
+             (1|subjB) + (1|phase) , data = sc_data)
 #failed to converge
 
-m1d <- lmer(ruminating ~ blockAssessmentDay * grInt * sumNA * sumPA * phase + 
-             (0 + blockAssessmentDay | subjB) + (1|subjB) + (1|phase) , data = sc_data)
-#failed to converge
-
-m2 <- lmer(ruminating ~ blockAssessmentDay * grInt * sumNA * sumPA * phase + 
-             (0 + blockAssessmentDay | subjB) + (1|subjB), data = sc_data)
-#successfully converged
-
-m2b <- lmer(ruminating ~ blockAssessmentDay * grInt * sumNA * sumPA * phase + 
-              (1|subjB), data = sc_data)
-
-anova(m2, m2b, refit=FALSE) #significant --> m2 better
 
 
-m2c <- lmer(ruminating ~  grInt * sumNA * sumPA * phase + 
-             (0 + blockAssessmentDay | subjB) , data = sc_data)
 
-anova(m2, m2c, refit = FALSE) # significant + rand intercept for subject should arguably be kept anyways
-#m2 is the winner
+# m2c <- lmer(ruminating ~  grInt * sumNA_lag1 * sumPA_lag1 * phase + 
+#              (0 + blockAssessmentDay | subjB) , data = sc_data)
+# 
+# anova(m2, m2c, refit = FALSE) # significant + rand intercept for subject should arguably be kept anyways
+# #m2 is the winner
 
-re2 <- ranef(m2)
-re.s <- re2[[1]]
-#head(re.s)
-#class(re.s)
-#plot(re2b[[1]][,1], re2b[[1]][,2]) #no obvious correlation
+re1 <- ranef(m1d)
+re.s <- re1[[1]]
+# head(re.s)
+# class(re.s)
+#plot(re1[[1]][,1], re1[[1]][,2]) #no obvious correlation
 
 par(cex=1.1)
 plot(re.s[,1], re.s[,2],
@@ -232,38 +265,68 @@ abline(h=0, v=0, lty=3)
 #there is no strong apparent correlation. --> good
 
 #FE structure
-m3 <- lmer(ruminating ~  blockAssessmentDay * grInt * phase + sumNA * sumPA + 
-                    (0 + blockAssessmentDay | subjB) + (1|subjB) , data = sc_data)
-#fails to converge (surprisingly?)
+m2 <- lmer(ruminating_lag1 ~  blockAssessmentDay + grInt * sumNA * sumPA * phase * stressed *
+             listless * stickiness +
+             (0 + blockAssessmentDay | subjB) + (1|subjB) + (1|phase) , data = sc_data)
 
-m3b <- lmer(ruminating ~  grInt + blockAssessmentDay * phase * sumNA * sumPA + 
-              (0 + blockAssessmentDay | subjB) + (1|subjB) , data = sc_data)
+anova(m2, m1d) #significant
 
-anova(m2, m3b) #significant
+m2b <- lmer(ruminating_lag1 ~   grInt + blockAssessmentDay * sumNA * sumPA * phase * stressed *
+              listless * stickiness +
+              (0 + blockAssessmentDay | subjB) + (1 | subjB) + (1|phase), data = sc_data)
 
-m3c <- lmer(ruminating ~  blockAssessmentDay * grInt * phase * sumNA + sumPA + 
-              (0 + blockAssessmentDay | subjB) + (1|subjB) , data = sc_data)
+#failed to converge
 
-anova(m2, m3c) #significant
+m2c <- lmer(ruminating_lag1 ~  phase + blockAssessmentDay * grInt * sumNA * sumPA * stressed *
+              listless * stickiness +
+              (0 + blockAssessmentDay | subjB) + (1|subjB) + (1|phase) , data = sc_data)
 
-m3d <- lmer(ruminating ~  phase + blockAssessmentDay * grInt * sumNA * sumPA + 
-              (0 + blockAssessmentDay | subjB) + (1|subjB) , data = sc_data)
-#model fails to converge
+anova(m2c, m1d) # significant
 
-m3e <- lmer(ruminating ~  blockAssessmentDay + grInt * phase * sumNA * sumPA + 
-              (0 + blockAssessmentDay | subjB) + (1|subjB) , data = sc_data)
+m2d <- lmer(ruminating_lag1 ~ blockAssessmentDay * grInt * phase * sumNA * sumPA * stressed *
+              listless + stickiness +
+              (0 + blockAssessmentDay | subjB) + (1|subjB) + (1|phase) , data = sc_data)
 
-anova(m2, m3e)#significant
+#failed to converge
 
-#m2 appears best
+m2e <- lmer(ruminating_lag1 ~  phase + blockAssessmentDay * grInt * sumNA * sumPA * stressed *
+              stickiness + listless +
+              (0 + blockAssessmentDay | subjB) + (1|subjB) + (1|phase) , data = sc_data)
+
+#failed to converge
+
+
+m2f <- lmer(ruminating_lag1 ~  phase + blockAssessmentDay * grInt * sumNA * sumPA *
+              stickiness * listless + stressed +
+              (0 + blockAssessmentDay | subjB) + (1|subjB) + (1|phase) , data = sc_data)
+
+#failed to converge
+
+m2g <- lmer(ruminating_lag1 ~  phase + blockAssessmentDay * grInt * sumNA * 
+              stickiness * listless * stressed + sumPA +
+              (0 + blockAssessmentDay | subjB) + (1|subjB) + (1|phase) , data = sc_data)
+
+#failed to converge
+
+m2h <- lmer(ruminating_lag1 ~  phase + blockAssessmentDay * grInt * 
+              stickiness * listless * stressed * sumPA + sumNA +
+              (0 + blockAssessmentDay | subjB) + (1|subjB) + (1|phase) , data = sc_data)
+
+anova(m2h, m1d) #significant
+
+m2j <- lmer(ruminating_lag1 ~  phase + blockAssessmentDay * grInt + sumPA * sumNA *
+              stickiness * listless * stressed +
+              (0 + blockAssessmentDay | subjB) + (1|subjB) + (1|phase) , data = sc_data)
+
+anova(m1d, m2j) #significant
 
 #residual diagnostics
-qqnorm(resid(m2))
-qqline(resid(m2))
-#residuals definitely not normally distributed
+qqnorm(resid(m1d))
+qqline(resid(m1d))
+#residuals definitely not normally distributed --> more of a t-distribution
 
 #Plot1
-x <- resid(m2)
+x <- resid(m1d)
 h <- hist(x, col = "grey", breaks = 40)
 xfit<-seq(min(x),max(x),length=40)
 yfit<-dnorm(xfit,mean=mean(x),sd=sd(x))
@@ -271,21 +334,21 @@ yfit <- yfit*diff(h$mids[1:2])*length(x)
 lines(xfit, yfit, col="red", lwd=2)
 
 # PLOT 2:
-plot(fitted(m2), resid(m2))
+plot(fitted(m1d), resid(m1d))
 abline(h=0)
-plot(data$blockAssessmentDay, resid(m2))
+plot(data$blockAssessmentDay, resid(m1d))
 abline(h=0)
 # PLOT 3:
-acf(resid(m2))
+acf(resid(m1d))
 
-resid_m2 <- resid(m2)
-match(c(min(resid_m2),max(resid_m2)),resid_m2) #indices 4742, 5411
-fe_m2 <- fitted(m2)
+resid_m <- resid(m1d)
+match(c(min(resid_m),max(resid_m)),resid_m) #indices 1467, 3781
+fe_m <- fitted(m1d)
 
-resid_m2[c(4742, 5411)]
-fe_m2[c(4742, 5411)]
+resid_m[c(1467, 3781)]
+fe_m[c(1467, 3781)]
 
-summary(m2)
+summary(m1d)
 
 #plotting random effects
 cf.m2 <- coef(m2)

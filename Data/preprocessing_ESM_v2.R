@@ -2,9 +2,9 @@
 #################################### Set up ####################################
 rm(list = ls()) #clean all up
 
-setwd("C:/Users/cleme/Documents/Education/RUG/Thesis/EMA-mindfulness/Data/ESM/mindcog_v202204")
+#setwd("C:/Users/cleme/Documents/Education/RUG/Thesis/EMA-mindfulness/Data/ESM/mindcog_v202204")
 
-#setwd("~/Documents/RUG/Thesis/EMA-mindfulness/Data/ESM/mindcog_v202204")
+setwd("~/Documents/RUG/Thesis/EMA-mindfulness/Data/ESM/mindcog_v202204")
 
 library(readxl)
 library(tidyverse)
@@ -433,6 +433,33 @@ for(id in subject_IDs){ #for loop to fill the column with the day numbers
     }
   }
 }
+
+
+
+#adding half days
+data$halfDay <- NA #adding an empty column for assessment days
+for(id in subject_IDs){ #for loop to fill the column with the day numbers
+  half_day <- 0 
+  num_days <- length(unique(data[which(data$subject==id),]$assessmentDay)) #how many assessment days are recorded?
+  for(d in 1:num_days){ #for each day
+    half_day <- half_day + 1 #increment half_day by 1
+    respondent_rows <- which((data$subject == id) & data$assessmentDay==d)#row indices of rows associated with respondent
+    numEntries <- length(respondent_rows) #how many entries are associated with that day?
+    if(numEntries >= 5){ #if there are more than 5 (a normal day has 10 assessments)
+      data[respondent_rows[1:5],]$halfDay <- half_day #set the first half of the day 
+    } else { #if there are fewer than 5 assessments for a day, they all belong to the first half day
+      data[respondent_rows,]$halfDay <- half_day
+      half_day <- half_day + 1 #we then skip one half day 
+      break
+    }
+    #this will only run if the else - break doesn't run, so only if there are at least 5 entries
+    half_day <- half_day + 1 
+    respondent_rows <- respondent_rows[6:numEntries]#row indices of rows associated with respondent
+    data[respondent_rows,]$halfDay <- half_day
+  }
+}
+
+
 
 phases <- c("pre", "peri")
 data$phaseAssessmentDay <- NA

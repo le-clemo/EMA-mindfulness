@@ -2,9 +2,9 @@
 #################################### Set up ####################################
 rm(list = ls()) #clean all up
 
-#setwd("C:/Users/cleme/Documents/Education/RUG/Thesis/EMA-mindfulness/Data/ESM/mindcog_v202204")
+setwd("C:/Users/cleme/Documents/Education/RUG/Thesis/EMA-mindfulness/Data/ESM/mindcog_v202204")
 
-setwd("~/Documents/RUG/Thesis/EMA-mindfulness/Data/ESM/mindcog_v202204")
+#setwd("~/Documents/RUG/Thesis/EMA-mindfulness/Data/ESM/mindcog_v202204")
 
 library(readxl)
 library(tidyverse)
@@ -343,9 +343,9 @@ for(row in 1:nrow(data)){
 #################################### add measures on response times  ####################################
 
 #calculate the time it took a participant to start after being informed (in minutes)
-data$response_delay <- (data$mindcog_db_started_at - data$mindcog_db_open_from)/60
+data$response_delay <- round((data$mindcog_db_started_at - data$mindcog_db_open_from)/60, 2)
 #calculate how long it took a participant to complete the questionnaire (in minutes)
-data$response_duration <- (data$mindcog_db_completed_at - data$mindcog_db_started_at)/60
+data$response_duration <- round((data$mindcog_db_completed_at - data$mindcog_db_started_at)/60, 2)
 
 #calculate the minutes that have past since the last beep
 subject_IDs <- unique(data$subject) #get a list of all unique IDs
@@ -376,39 +376,8 @@ for(id in subject_IDs){ #for loop to fill the column with the day numbers
 #test <- subset(data, select = c(id, subject, mindcog_db_open_from, minLastBeep))
 
 
-####################### Beep number, assessment day and lagged variables  #############################
+####################### assessment day and lagged variables  #############################
 
-#adding beep number (continuous count of sent assessment queries)
-data$beepNum <- NA
-
-for(id in subject_IDs){ #every participant
-  respondent_rows <- which(data$subject == id) #row indices of rows associated with respondent
-  #adding a number per assessment
-  data[respondent_rows,]$beepNum <- 1:length(respondent_rows) 
-}
-
-#beep number per phase
-data$phaseBeepNum <- NA
-phases <- unique(data$phase)
-for(id in subject_IDs){ #every participant
-  for(phase in phases){
-    phase_rows <- which((data$subject == id) & (data$phase == phase)) #row indices of rows associated with respondent    
-    if(length(phase_rows) > 0){
-      data[phase_rows,]$phaseBeepNum <- 1:length(phase_rows)
-    }
-  }
-}
-
-#beep number per block
-data$blockBeepNum <- NA
-for(id in subject_IDs){ #every participant
-  for(block in 1:2){
-    block_rows <- which((data$subject == id) & (data$block == block)) #row indices of rows associated with respondent    
-    if(length(block_rows) > 0){
-      data[block_rows,]$blockBeepNum <- 1:length(block_rows)
-    }
-  }
-}
 
 #test <- subset(data[data$subject == "s8",], select = c(subject, phase, block, blockBeepNum, phaseBeepNum, beepNum))
 
@@ -489,11 +458,6 @@ for(id in subject_IDs){
   }
 }
 
-# View(subset(data[which(data$subject == "s8"),],
-#     select = c("patient_id", "id", "intervention", "phase", "mindcog_db_open_from",
-#           "assessmentDay", "blockAssessmentDay", "phaseAssessmentDay")))
-
-#test <- subset(data, select = c(id, subject, mindcog_db_open_from, assessmentDay))
 
 #assessment day per block
 data$blockAssessmentDay <- NA #adding an empty column for assessment days
@@ -549,7 +513,7 @@ data[((data$subject == "s81") &
 #adjust blockAssessmentDay column
 data[((data$subject == "s81") &
         (data$block == 2)),]$blockAssessmentDay = data[((data$subject == "s81") &
-                                                     (data$block == 2)),]$blockAssessmentDay -1
+                                                          (data$block == 2)),]$blockAssessmentDay -1
 #adjust phaseAssessmentDay column (not for entire block 2; only for pre-intervention phase)
 data[(data$id == "s81_g1_m3"),]$phaseAssessmentDay = data[(data$id == "s81_g1_m3"),]$phaseAssessmentDay -1
 
@@ -574,6 +538,118 @@ data[((data$subject == "s24") &
 
 data <- data[!(data$subject == "s108" & data$block == 2 ),]
 
+################################################## adding half days (must be done after above issues are fixed) ##########################################
+#adding half days per phase
+data$phaseHalfDay <- NA #adding an empty column for assessment days
+for(id in subject_IDs){
+  print(id)
+  numBlocks <- max(data[which(data$subject==id),]$block)
+  for(b in 1:numBlocks){
+    phases <- unique(data[which((data$subject==id) & (data$block==b)),]$phase)
+    for(p in phases){
+      half_day <- 0 
+      num_days <- length(unique(data[which((data$subject==id) & (data$block==b) & (data$phase==p)),]$phaseAssessmentDay)) #how many assessment days are recorded?
+      for(d in 1:num_days){ #for each day
+        half_day <- half_day + 1 #increment half_day by 1
+        respondent_rows <- which((data$subject == id) & (data$phaseAssessmentDay==d) & (data$block==b) & (data$phase==p))#row indices of rows associated with respondent
+        numEntries <- length(respondent_rows) #how many entries are associated with that day?
+        print(d)
+        print(numEntries)
+        # print(respondent_rows)
+        if(numEntries > 5){ #if there are more than 5 (a normal day has 10 assessments)
+          data[respondent_rows[1:5],]$phaseHalfDay <- half_day #set the first half of the day 
+          half_day <- half_day + 1
+          data[respondent_rows[6:numEntries],]$phaseHalfDay <- half_day
+          
+        } else if(numEntries==5){ #if there are fewer than 5 assessments for a day, they all belong to the first half day
+          data[respondent_rows[1:5],]$phaseHalfDay <- half_day #set the first half of the day 
+          half_day <- half_day + 1
+        } else {
+          data[respondent_rows,]$phaseHalfDay <- half_day
+          half_day <- half_day + 1 #we then skip one half day 
+          #break
+        }
+      }
+    }
+  }#for loop to fill the column with the day numbers
+}
+
+
+
+
+#adding half days per block
+data$blockHalfDay <- NA #adding an empty column for assessment days
+for(id in subject_IDs){
+  print(id)
+  numBlocks <- max(data[which(data$subject==id),]$block)
+  for(b in 1:numBlocks){
+    half_day <- 0 
+    num_days <- length(unique(data[which((data$subject==id) & (data$block==b)),]$blockAssessmentDay)) #how many assessment days are recorded?
+    for(d in 1:num_days){ #for each day
+      half_day <- half_day + 1 #increment half_day by 1
+      respondent_rows <- which((data$subject == id) & (data$blockAssessmentDay==d) & (data$block==b))#row indices of rows associated with respondent
+      numEntries <- length(respondent_rows) #how many entries are associated with that day?
+      print(d)
+      print(numEntries)
+      # print(respondent_rows)
+      if(numEntries > 5){ #if there are more than 5 (a normal day has 10 assessments)
+        data[respondent_rows[1:5],]$blockHalfDay <- half_day #set the first half of the day 
+        half_day <- half_day + 1
+        data[respondent_rows[6:numEntries],]$blockHalfDay <- half_day
+        
+      } else if(numEntries==5){ #if there are fewer than 5 assessments for a day, they all belong to the first half day
+        data[respondent_rows[1:5],]$blockHalfDay <- half_day #set the first half of the day 
+        half_day <- half_day + 1
+      } else {
+        data[respondent_rows,]$blockHalfDay <- half_day
+        half_day <- half_day + 1 #we then skip one half day 
+        #break
+      }
+    }
+  }#for loop to fill the column with the day numbers
+  
+}
+
+#View(subset(data[data$subject=="s81",], select = c("subject", "assessmentDay", "blockAssessmentDay", "blockHalfDay", "phaseAssessmentDay", "phaseHalfDay", "mindcog_db_open_from")))
+
+####################################### adding beep numbers (continuous count of queries sent per subject) #################################################
+#adding beep number (continuous count of sent assessment queries)
+data$beepNum <- NA
+
+for(id in subject_IDs){ #every participant
+  respondent_rows <- which(data$subject == id) #row indices of rows associated with respondent
+  #adding a number per assessment
+  data[respondent_rows,]$beepNum <- 1:length(respondent_rows) 
+}
+
+#beep number per phase
+data$phaseBeepNum <- NA
+phases <- unique(data$phase)
+for(id in subject_IDs){ #every participant
+  numBlocks <- max(data[which(data$subject==id),]$block) #some participants dropped out after the first block
+  for(b in 1:numBlocks){
+    for(phase in phases){
+      phase_rows <- which((data$subject == id) & (data$phase == phase) & (data$block==b)) #row indices of rows associated with respondent    
+      if(length(phase_rows) > 0){
+        data[phase_rows,]$phaseBeepNum <- 1:length(phase_rows)
+      }
+    }
+  }
+
+}
+
+#beep number per block
+data$blockBeepNum <- NA
+for(id in subject_IDs){ #every participant
+  for(block in 1:2){
+    block_rows <- which((data$subject == id) & (data$block == block)) #row indices of rows associated with respondent    
+    if(length(block_rows) > 0){
+      data[block_rows,]$blockBeepNum <- 1:length(block_rows)
+    }
+  }
+}
+
+
 ############################## Some changes for convenience ################################
 #drop unnecessary columns and reorder columns for convenience
 columnNames <- c(colnames(data))
@@ -581,7 +657,7 @@ data <- data %>% select(patient_id, id, subject, group, intervention, phase, blo
                         #18 = db_open_from; 23 = db_date; 26:61 = firstEntry:comments; 67:76
                         columnNames[18:23], columnNames[26:61], sumPA, sumNA,
                         #67:78 = response measures
-                        columnNames[76:84])
+                        columnNames[76:87])
 
 # data <- subset(data, select = -c(roqua_id, hide_pii_from_researchers, gender, birth_year,
 #                                  hide_values_from_professionals, respondent_label, respondent_type,

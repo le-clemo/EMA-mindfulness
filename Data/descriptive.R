@@ -22,6 +22,10 @@ library(qgraph)
 library(gridExtra)
 library(ggpubr)
 library(RColorBrewer)
+library(broom)
+library(AICcmodavg)
+library(effectsize)
+library(languageR)
 
 #read in data
 data <- read.csv('preprocessed_data.csv') 
@@ -78,7 +82,8 @@ plot(data$sumPA, data$ruminating)
 plot(data$sumNA, data$ruminating)
 
 
-plot(data$ruminating, data$stickiness)
+plot(data$ruminating, data$stickiness, col="blue")
+points(data$ruminating_lag1, data$stickiness, col="red")
 # model.fit <- lm(data$ruminating~data$stickiness)
 # summary(model.fit)
 # trend= 3.628506 + 0.635861*data$stickiness
@@ -97,144 +102,144 @@ points(controls$sumPA, controls$sumNA, col = "green")
 plot(remitted$ruminating, remitted$sumNA, col = "red")
 points(controls$ruminating, controls$sumNA, col = "green")
 
-#plot different phases
-# plot(remitted[which(remitted$phase=="pre"),]$sumPA, remitted[which(remitted$phase=="pre"),]$sumNA, col = "red")
-# points(remitted[which(remitted$phase=="peri"),]$sumPA, remitted[which(remitted$phase=="peri"),]$sumNA, col = "green")
+# #plot different phases
+# # plot(remitted[which(remitted$phase=="pre"),]$sumPA, remitted[which(remitted$phase=="pre"),]$sumNA, col = "red")
+# # points(remitted[which(remitted$phase=="peri"),]$sumPA, remitted[which(remitted$phase=="peri"),]$sumNA, col = "green")
+# # 
+# # plot(controls[which(controls$phase=="pre"),]$sumPA, controls[which(controls$phase=="pre"),]$sumNA, col = "red")
+# # points(controls[which(controls$phase=="peri"),]$sumPA, controls[which(controls$phase=="peri"),]$sumNA, col = "green")
 # 
-# plot(controls[which(controls$phase=="pre"),]$sumPA, controls[which(controls$phase=="pre"),]$sumNA, col = "red")
-# points(controls[which(controls$phase=="peri"),]$sumPA, controls[which(controls$phase=="peri"),]$sumNA, col = "green")
-
-#do the intervention lessen the relationship between negative affect and rumination?
-controls_fa <- controls[which(controls$intervention=="fantasizing"),]
-controls_mf <- controls[which(controls$intervention=="mindfulness"),]
-remitted_fa <- remitted[which(remitted$intervention=="fantasizing"),]
-remitted_mf <- remitted[which(remitted$intervention=="mindfulness"),]
-
-r_pre <- remitted_fa[which(remitted_fa$phase=="pre"),]$ruminating
-rlag1_pre <- remitted_fa[which(remitted_fa$phase=="pre"),]$ruminating_lag1
-NA_pre <- remitted_fa[which(remitted_fa$phase=="pre"),]$sumNA
-PA_pre <- remitted_fa[which(remitted_fa$phase=="pre"),]$sumPA
-
-r_peri <- remitted_fa[which(remitted_fa$phase=="peri"),]$ruminating
-rlag1_peri <- remitted_fa[which(remitted_fa$phase=="peri"),]$ruminating_lag1
-NA_peri <- remitted_fa[which(remitted_fa$phase=="peri"),]$sumNA
-PA_peri <- remitted_fa[which(remitted_fa$phase=="peri"),]$sumPA
-
-#NA
-plot(r_pre, NA_pre, col = "red", main = "Remitted, fantasizing", ylab="Negative Affect", xlab="Rumination")
-points(r_peri, NA_peri, col = "green")
-legend("topleft", legend=c("Pre", "Peri"), col=c("red", "green"), pch=c(1,1))
-
-cor(r_pre, NA_pre, use = "complete.obs")
-reg_pre <- lm(r_pre ~ NA_pre)
-abline(reg_pre, col = "red")
-
-cor(r_peri, NA_peri, use = "complete.obs")
-reg_peri <- lm(r_peri ~ NA_peri)
-abline(reg_peri, col = "green")
-
-#PA
-plot(r_pre, PA_pre, col = "red", main = "Remitted, fantasizing", ylab="Positive Affect", xlab="Rumination")
-points(r_peri, PA_peri, col = "green")
-legend("topleft", legend=c("Pre", "Peri"), col=c("red", "green"), pch=c(1,1))
-
-cor(r_pre, PA_pre, use = "complete.obs")
-reg_pre <- lm(r_pre ~ PA_pre)
-abline(reg_pre, col = "red")
-
-cor(r_peri, PA_peri, use = "complete.obs")
-reg_peri <- lm(r_peri ~ PA_peri)
-abline(reg_peri, col = "green")
-
-#with ruminating_lag1 and NA
-plot(rlag1_pre, PA_pre, col = "red", main = "Remitted, fantasizing", ylab="Positive Affect", xlab="Rumination (lag1)")
-points(rlag1_peri, PA_peri, col = "green")
-legend("topleft", legend=c("Pre", "Peri"), col=c("red", "green"), pch=c(1,1))
-
-cor(rlag1_pre, PA_pre, use = "complete.obs")
-reg_pre <- lm(rlag1_pre ~ PA_pre)
-abline(reg_pre, col = "red")
-
-cor(rlag1_peri, PA_peri, use = "complete.obs")
-reg_peri <- lm(rlag1_peri ~ PA_peri)
-abline(reg_peri, col = "green")
-
-#with ruminating_lag1 and PA
-plot(rlag1_pre, PA_pre, col = "red", main = "Remitted, fantasizing", ylab="Positive Affect", xlab="Rumination")
-points(rlag1_peri, PA_peri, col = "green")
-legend("topleft", legend=c("Pre", "Peri"), col=c("red", "green"), pch=c(1,1))
-
-cor(rlag1_pre, PA_pre, use = "complete.obs")
-reg_pre <- lm(rlag1_pre ~ PA_pre)
-abline(reg_pre, col = "red")
-
-cor(rlag1_peri, PA_peri, use = "complete.obs")
-reg_peri <- lm(rlag1_peri ~ PA_peri)
-abline(reg_peri, col = "green")
-
-#for mindfulness group
-r_pre <- remitted_mf[which(remitted_mf$phase=="pre"),]$ruminating
-rlag1_pre <- remitted_mf[which(remitted_mf$phase=="pre"),]$ruminating_lag1
-NA_pre <- remitted_mf[which(remitted_mf$phase=="pre"),]$sumNA
-PA_pre <- remitted_mf[which(remitted_mf$phase=="pre"),]$sumPA
-
-r_peri <- remitted_mf[which(remitted_mf$phase=="peri"),]$ruminating
-rlag1_peri <- remitted_mf[which(remitted_mf$phase=="peri"),]$ruminating_lag1
-NA_peri <- remitted_mf[which(remitted_mf$phase=="peri"),]$sumNA
-PA_peri <- remitted_mf[which(remitted_mf$phase=="peri"),]$sumPA
-
-#NA
-plot(r_pre, NA_pre, col = "red", main = "Remitted, mindfulness", ylab="Negative Affect", xlab="Rumination")
-points(r_peri, NA_peri, col = "green")
-legend("topleft", legend=c("Pre", "Peri"), col=c("red", "green"), pch=c(1,1))
-
-cor(r_pre, NA_pre, use = "complete.obs")
-reg_pre <- lm(r_pre ~ NA_pre)
-abline(reg_pre, col = "red")
-
-cor(r_peri, NA_peri, use = "complete.obs")
-reg_peri <- lm(r_peri ~ NA_peri)
-abline(reg_peri, col = "green")
-
-#with ruminating_lag1
-plot(rlag1_pre, NA_pre, col = "red", main = "Remitted, fantasizing", ylab="Negative Affect", xlab="Rumination (lag1)")
-points(rlag1_peri, NA_peri, col = "green")
-legend("topleft", legend=c("Pre", "Peri"), col=c("red", "green"), pch=c(1,1))
-
-cor(rlag1_pre, NA_pre, use = "complete.obs")
-reg_pre <- lm(rlag1_pre ~ NA_pre)
-abline(reg_pre, col = "red")
-
-cor(rlag1_peri, NA_peri, use = "complete.obs")
-reg_peri <- lm(rlag1_peri ~ NA_peri)
-abline(reg_peri, col = "green")
-
-#PA
-plot(r_pre, PA_pre, col = "red", main = "Remitted, fantasizing", ylab="Positive Affect", xlab="Rumination")
-points(r_peri, PA_peri, col = "green")
-legend("topleft", legend=c("Pre", "Peri"), col=c("red", "green"), pch=c(1,1))
-
-cor(r_pre, PA_pre, use = "complete.obs")
-reg_pre <- lm(r_pre ~ PA_pre)
-abline(reg_pre, col = "red")
-
-cor(r_peri, PA_peri, use = "complete.obs")
-reg_peri <- lm(r_peri ~ PA_peri)
-abline(reg_peri, col = "green")
-
-#with ruminating_lag1 and PA
-plot(rlag1_pre, PA_pre, col = "red", main = "Remitted, fantasizing", ylab="Positive Affect", xlab="Rumination")
-points(rlag1_peri, PA_peri, col = "green")
-legend("topleft", legend=c("Pre", "Peri"), col=c("red", "green"), pch=c(1,1))
-
-cor(rlag1_pre, PA_pre, use = "complete.obs")
-reg_pre <- lm(rlag1_pre ~ PA_pre)
-abline(reg_pre, col = "red")
-
-cor(rlag1_peri, PA_peri, use = "complete.obs")
-reg_peri <- lm(rlag1_peri ~ PA_peri)
-abline(reg_peri, col = "green")
-
+# #do the intervention lessen the relationship between negative affect and rumination?
+# controls_fa <- controls[which(controls$intervention=="fantasizing"),]
+# controls_mf <- controls[which(controls$intervention=="mindfulness"),]
+# remitted_fa <- remitted[which(remitted$intervention=="fantasizing"),]
+# remitted_mf <- remitted[which(remitted$intervention=="mindfulness"),]
+# 
+# r_pre <- remitted_fa[which(remitted_fa$phase=="pre"),]$ruminating
+# rlag1_pre <- remitted_fa[which(remitted_fa$phase=="pre"),]$ruminating_lag1
+# NA_pre <- remitted_fa[which(remitted_fa$phase=="pre"),]$sumNA
+# PA_pre <- remitted_fa[which(remitted_fa$phase=="pre"),]$sumPA
+# 
+# r_peri <- remitted_fa[which(remitted_fa$phase=="peri"),]$ruminating
+# rlag1_peri <- remitted_fa[which(remitted_fa$phase=="peri"),]$ruminating_lag1
+# NA_peri <- remitted_fa[which(remitted_fa$phase=="peri"),]$sumNA
+# PA_peri <- remitted_fa[which(remitted_fa$phase=="peri"),]$sumPA
+# 
+# #NA
+# plot(r_pre, NA_pre, col = "red", main = "Remitted, fantasizing", ylab="Negative Affect", xlab="Rumination")
+# points(r_peri, NA_peri, col = "green")
+# legend("topleft", legend=c("Pre", "Peri"), col=c("red", "green"), pch=c(1,1))
+# 
+# cor(r_pre, NA_pre, use = "complete.obs")
+# reg_pre <- lm(r_pre ~ NA_pre)
+# abline(reg_pre, col = "red")
+# 
+# cor(r_peri, NA_peri, use = "complete.obs")
+# reg_peri <- lm(r_peri ~ NA_peri)
+# abline(reg_peri, col = "green")
+# 
+# #PA
+# plot(r_pre, PA_pre, col = "red", main = "Remitted, fantasizing", ylab="Positive Affect", xlab="Rumination")
+# points(r_peri, PA_peri, col = "green")
+# legend("topleft", legend=c("Pre", "Peri"), col=c("red", "green"), pch=c(1,1))
+# 
+# cor(r_pre, PA_pre, use = "complete.obs")
+# reg_pre <- lm(r_pre ~ PA_pre)
+# abline(reg_pre, col = "red")
+# 
+# cor(r_peri, PA_peri, use = "complete.obs")
+# reg_peri <- lm(r_peri ~ PA_peri)
+# abline(reg_peri, col = "green")
+# 
+# #with ruminating_lag1 and NA
+# plot(rlag1_pre, PA_pre, col = "red", main = "Remitted, fantasizing", ylab="Positive Affect", xlab="Rumination (lag1)")
+# points(rlag1_peri, PA_peri, col = "green")
+# legend("topleft", legend=c("Pre", "Peri"), col=c("red", "green"), pch=c(1,1))
+# 
+# cor(rlag1_pre, PA_pre, use = "complete.obs")
+# reg_pre <- lm(rlag1_pre ~ PA_pre)
+# abline(reg_pre, col = "red")
+# 
+# cor(rlag1_peri, PA_peri, use = "complete.obs")
+# reg_peri <- lm(rlag1_peri ~ PA_peri)
+# abline(reg_peri, col = "green")
+# 
+# #with ruminating_lag1 and PA
+# plot(rlag1_pre, PA_pre, col = "red", main = "Remitted, fantasizing", ylab="Positive Affect", xlab="Rumination")
+# points(rlag1_peri, PA_peri, col = "green")
+# legend("topleft", legend=c("Pre", "Peri"), col=c("red", "green"), pch=c(1,1))
+# 
+# cor(rlag1_pre, PA_pre, use = "complete.obs")
+# reg_pre <- lm(rlag1_pre ~ PA_pre)
+# abline(reg_pre, col = "red")
+# 
+# cor(rlag1_peri, PA_peri, use = "complete.obs")
+# reg_peri <- lm(rlag1_peri ~ PA_peri)
+# abline(reg_peri, col = "green")
+# 
+# #for mindfulness group
+# r_pre <- remitted_mf[which(remitted_mf$phase=="pre"),]$ruminating
+# rlag1_pre <- remitted_mf[which(remitted_mf$phase=="pre"),]$ruminating_lag1
+# NA_pre <- remitted_mf[which(remitted_mf$phase=="pre"),]$sumNA
+# PA_pre <- remitted_mf[which(remitted_mf$phase=="pre"),]$sumPA
+# 
+# r_peri <- remitted_mf[which(remitted_mf$phase=="peri"),]$ruminating
+# rlag1_peri <- remitted_mf[which(remitted_mf$phase=="peri"),]$ruminating_lag1
+# NA_peri <- remitted_mf[which(remitted_mf$phase=="peri"),]$sumNA
+# PA_peri <- remitted_mf[which(remitted_mf$phase=="peri"),]$sumPA
+# 
+# #NA
+# plot(r_pre, NA_pre, col = "red", main = "Remitted, mindfulness", ylab="Negative Affect", xlab="Rumination")
+# points(r_peri, NA_peri, col = "green")
+# legend("topleft", legend=c("Pre", "Peri"), col=c("red", "green"), pch=c(1,1))
+# 
+# cor(r_pre, NA_pre, use = "complete.obs")
+# reg_pre <- lm(r_pre ~ NA_pre)
+# abline(reg_pre, col = "red")
+# 
+# cor(r_peri, NA_peri, use = "complete.obs")
+# reg_peri <- lm(r_peri ~ NA_peri)
+# abline(reg_peri, col = "green")
+# 
+# #with ruminating_lag1
+# plot(rlag1_pre, NA_pre, col = "red", main = "Remitted, fantasizing", ylab="Negative Affect", xlab="Rumination (lag1)")
+# points(rlag1_peri, NA_peri, col = "green")
+# legend("topleft", legend=c("Pre", "Peri"), col=c("red", "green"), pch=c(1,1))
+# 
+# cor(rlag1_pre, NA_pre, use = "complete.obs")
+# reg_pre <- lm(rlag1_pre ~ NA_pre)
+# abline(reg_pre, col = "red")
+# 
+# cor(rlag1_peri, NA_peri, use = "complete.obs")
+# reg_peri <- lm(rlag1_peri ~ NA_peri)
+# abline(reg_peri, col = "green")
+# 
+# #PA
+# plot(r_pre, PA_pre, col = "red", main = "Remitted, fantasizing", ylab="Positive Affect", xlab="Rumination")
+# points(r_peri, PA_peri, col = "green")
+# legend("topleft", legend=c("Pre", "Peri"), col=c("red", "green"), pch=c(1,1))
+# 
+# cor(r_pre, PA_pre, use = "complete.obs")
+# reg_pre <- lm(r_pre ~ PA_pre)
+# abline(reg_pre, col = "red")
+# 
+# cor(r_peri, PA_peri, use = "complete.obs")
+# reg_peri <- lm(r_peri ~ PA_peri)
+# abline(reg_peri, col = "green")
+# 
+# #with ruminating_lag1 and PA
+# plot(rlag1_pre, PA_pre, col = "red", main = "Remitted, fantasizing", ylab="Positive Affect", xlab="Rumination")
+# points(rlag1_peri, PA_peri, col = "green")
+# legend("topleft", legend=c("Pre", "Peri"), col=c("red", "green"), pch=c(1,1))
+# 
+# cor(rlag1_pre, PA_pre, use = "complete.obs")
+# reg_pre <- lm(rlag1_pre ~ PA_pre)
+# abline(reg_pre, col = "red")
+# 
+# cor(rlag1_peri, PA_peri, use = "complete.obs")
+# reg_peri <- lm(rlag1_peri ~ PA_peri)
+# abline(reg_peri, col = "green")
+# 
 
 #
 aggData <- with(data, aggregate(list(ruminating = ruminating, stickiness = stickiness,
@@ -384,51 +389,57 @@ block_PANA <- ddply(data, .(group, block, intervention, phase), plyr::summarize,
 #for some strange dplyr-ralted reason I need to do this to get melt() to work
 data <- as.data.frame(data)
 
-# check baseline assessment per group (Block 1, pre)
-meltData1 <- melt(data[which((data$phase=="pre") & (data$block==1)), c("group", "sumPA", "sumNA")], na.rm = TRUE)
-meltData2 <- melt(data[which((data$phase=="peri") & (data$block==1)), c("group", "sumPA", "sumNA")], na.rm = TRUE)
-meltData3 <- melt(data[which((data$phase=="pre") & (data$block==2)), c("group", "sumPA", "sumNA")], na.rm = TRUE)
-meltData4 <- melt(data[which((data$phase=="peri") & (data$block==2)), c("group", "sumPA", "sumNA")], na.rm = TRUE)
-
-p1 <- ggplot(meltData1, aes(factor(variable), value, fill = group)) 
-p1 <- p1 + geom_boxplot() + facet_wrap(~"block", scale="free") +
-  ggtitle("Block 1 - Pre") +
-  scale_fill_manual(values = c("green", "red")) +
-  theme(strip.text.x = element_text(margin = margin(2, 0, 2, 0)), legend.direction = "horizontal",
-        legend.position = c(1,1))
-
-p2 <- ggplot(meltData2, aes(factor(variable), value, fill = group)) 
-p2 <- p2 + geom_boxplot() + facet_wrap(~"block", scale="free") +
-  ggtitle("Block 1 - Peri") +
-  scale_fill_manual(values = c("green", "red")) +
-  theme(strip.text.x = element_text(margin = margin(2, 0, 2, 0)),
-        #strip.background = element_rect(fill = "lightblue"),
-        legend.position="None")
-
-p3 <- ggplot(meltData3, aes(factor(variable), value, fill = group)) 
-p3 <- p3 + geom_boxplot() + facet_wrap(~"block", scale="free") +
-  ggtitle("Block 2 - Pre") +
-  scale_fill_manual(values = c("green", "red")) +
-  theme(strip.text.x = element_text(margin = margin(2, 0, 2, 0)),
-        #strip.background = element_rect(fill = "lightblue"),
-        legend.position="None")
-
-p4 <- ggplot(meltData4, aes(factor(variable), value, fill = group)) 
-p4 <- p4 + geom_boxplot() + facet_wrap(~"block", scale="free") +
-  ggtitle("Block 2 - Peri") +
-  scale_fill_manual(values = c("green", "red")) +
-  theme(strip.text.x = element_text(margin = margin(2, 0, 2, 0)),
-        #strip.background = element_rect(fill = "lightblue"),
-        legend.position="None")
-
-legend <- get_legend(p1)
-p1 <- p1 + theme(legend.position="none")
-grid.arrange(p1, p2, p3, p4, legend, ncol=2, nrow = 3)
+# # check baseline assessment per group (Block 1, pre)
+# meltData1 <- melt(data[which((data$phase=="pre") & (data$block==1)), c("group", "sumPA", "sumNA")], na.rm = TRUE)
+# meltData2 <- melt(data[which((data$phase=="peri") & (data$block==1)), c("group", "sumPA", "sumNA")], na.rm = TRUE)
+# meltData3 <- melt(data[which((data$phase=="pre") & (data$block==2)), c("group", "sumPA", "sumNA")], na.rm = TRUE)
+# meltData4 <- melt(data[which((data$phase=="peri") & (data$block==2)), c("group", "sumPA", "sumNA")], na.rm = TRUE)
+# 
+# p1 <- ggplot(meltData1, aes(factor(variable), value, fill = group)) 
+# p1 <- p1 + geom_boxplot() + facet_wrap(~"block", scale="free") +
+#   ggtitle("Block 1 - Pre") +
+#   scale_fill_manual(values = c("green", "red")) +
+#   theme(strip.text.x = element_text(margin = margin(2, 0, 2, 0)), legend.direction = "horizontal",
+#         legend.position = c(1,1))
+# 
+# p2 <- ggplot(meltData2, aes(factor(variable), value, fill = group)) 
+# p2 <- p2 + geom_boxplot() + facet_wrap(~"block", scale="free") +
+#   ggtitle("Block 1 - Peri") +
+#   scale_fill_manual(values = c("green", "red")) +
+#   theme(strip.text.x = element_text(margin = margin(2, 0, 2, 0)),
+#         #strip.background = element_rect(fill = "lightblue"),
+#         legend.position="None")
+# 
+# p3 <- ggplot(meltData3, aes(factor(variable), value, fill = group)) 
+# p3 <- p3 + geom_boxplot() + facet_wrap(~"block", scale="free") +
+#   ggtitle("Block 2 - Pre") +
+#   scale_fill_manual(values = c("green", "red")) +
+#   theme(strip.text.x = element_text(margin = margin(2, 0, 2, 0)),
+#         #strip.background = element_rect(fill = "lightblue"),
+#         legend.position="None")
+# 
+# p4 <- ggplot(meltData4, aes(factor(variable), value, fill = group)) 
+# p4 <- p4 + geom_boxplot() + facet_wrap(~"block", scale="free") +
+#   ggtitle("Block 2 - Peri") +
+#   scale_fill_manual(values = c("green", "red")) +
+#   theme(strip.text.x = element_text(margin = margin(2, 0, 2, 0)),
+#         #strip.background = element_rect(fill = "lightblue"),
+#         legend.position="None")
+# 
+# legend <- get_legend(p1)
+# p1 <- p1 + theme(legend.position="none")
+# grid.arrange(p1, p2, p3, p4, legend, ncol=2, nrow = 3)
 
 #check per group, intervention and phase
 
 meltData <- melt(data, id.vars=c("group", "intervention", "phase", "block"),
-                 measure.vars = c("sumPA", "sumNA"), na.rm = TRUE)
+                 measure.vars = c("sumPA", "sumNA", "ruminating",
+                                  "sleepQuality", "restednessWakeup", "stickiness",
+                                  "anxious", "down", "irritated", "restless",
+                                  "wakeful", "energetic", "satisfied",
+                                  "listless", "distracted", "restOfDayPos", "thoughtsPleasant",
+                                  "companyPleasant", "alonePleasant", "posMax", "posIntensity",
+                                  "negMax", "negIntensity"), na.rm = TRUE)
 
 meltData$groupByInt <- factor(paste(meltData$group, meltData$intervention),
                               levels = c("controls mindfulness", "controls fantasizing",
@@ -436,29 +447,166 @@ meltData$groupByInt <- factor(paste(meltData$group, meltData$intervention),
 meltData$blockPhase <- factor(paste(meltData$phase, meltData$block, sep = " "),
                               levels = c("pre 1", "peri 1", "pre 2", "peri 2"))
 
-
-ggplot(data = meltData, aes(variable, y = value, fill = factor(group))) +
+#overview negative/positive affect
+ggplot(data = meltData[which((meltData$variable=="sumPA") | (meltData$variable=="sumNA")),],
+       aes(variable, y = value, fill = factor(group))) +
   geom_boxplot() + facet_grid(factor(intervention) ~ blockPhase, scale = "free") +
   labs(title = "Levels of PA and NA",
        subtitle = " by group, intervention, block and phase",
        y = "Raw score", x = "") + scale_fill_manual(values = c("green", "red"))
 
-#with change scores
-# meltChange <- melt(data, id.vars=c("group", "intervention", "phase", "block"),
-#                  measure.vars = c("sumPA_change", "sumNA_change"), na.rm = TRUE)
-# 
-# meltChange$groupByInt <- factor(paste(meltChange$group, meltChange$intervention),
-#                               levels = c("controls mindfulness", "controls fantasizing",
-#                                          "remitted mindfulness", "remitted fantasizing"))
-# meltChange$blockPhase <- factor(paste(meltChange$phase, meltChange$block, sep = " "),
-#                               levels = c("pre 1", "peri 1", "pre 2", "peri 2"))
-# 
-# 
-# ggplot(data = meltChange, aes(variable, y = value, fill = factor(group))) +
-#   geom_boxplot() + facet_grid(factor(intervention) ~ blockPhase, scale = "free") +
-#   labs(title = "Change Scores of PA and NA",
-#        subtitle = " by group, intervention, block and phase",
-#        y = "Raw score", x = "") + scale_fill_manual(values = c("green", "red"))
+#alternative view
+ggplot(data = meltData[which((meltData$variable=="sumPA") | (meltData$variable=="sumNA")),],
+       aes(variable, y = value, fill = factor(blockPhase))) +
+  geom_boxplot() + facet_grid(factor(intervention) ~ group, scale = "free") +
+  labs(title = "Levels of PA and NA",
+       subtitle = " by group, intervention, block and phase",
+       y = "Raw score", x = "")# + scale_fill_manual(values = c("green", "red", "blue", "purple"))
+
+#alternative view (blocks combined)
+ggplot(data = meltData[which((meltData$variable=="sumPA") | (meltData$variable=="sumNA")),],
+       aes(variable, y = value, fill = factor(phase))) +
+  geom_boxplot() + facet_grid(factor(intervention) ~ group, scale = "free") +
+  labs(title = "Levels of PA and NA",
+       subtitle = " by group, intervention, and phase",
+       y = "Raw score", x = "")# + scale_fill_manual(values = c("green", "red", "blue", "purple"))
+
+
+#splitting them into their respective components
+ggplot(data = meltData[which((meltData$variable=="sumPA") | (meltData$variable=="wakeful") |
+                               (meltData$variable=="satisfied") | (meltData$variable=="energetic")),],
+       aes(variable, y = value, fill = factor(phase))) +
+  geom_boxplot() + facet_grid(factor(intervention) ~ group, scale = "free") +
+  labs(title = "Levels of PA and its components",
+       subtitle = " by group, intervention, and phase",
+       y = "Raw score", x = "")# + scale_fill_manual(values = c("green", "red", "blue", "purple"))
+
+ggplot(data = meltData[which((meltData$variable=="sumNA") | (meltData$variable=="anxious") |
+                               (meltData$variable=="irritated") | (meltData$variable=="down") |
+                               (meltData$variable=="restless") ),],
+       aes(variable, y = value, fill = factor(phase))) +
+  geom_boxplot() + facet_grid(factor(intervention) ~ group, scale = "free") +
+  labs(title = "Levels of PA and its components",
+       subtitle = " by group, intervention, and phase",
+       y = "Raw score", x = "")# + scale_fill_manual(values = c("green", "red", "blue", "purple"))
+
+
+ggplot(data = meltData[which((meltData$variable=="anxious") |
+                               (meltData$variable=="irritated") | (meltData$variable=="down") |
+                               (meltData$variable=="restless") ),],
+       aes(variable, y = value, fill = factor(phase))) +
+  geom_boxplot() + facet_grid(factor(intervention) ~ group, scale = "free") +
+  labs(title = "Levels of NA and its components",
+       subtitle = " by group, intervention, and phase",
+       y = "Raw score", x = "")# + scale_fill_manual(values = c("green", "red", "blue", "purple"))
+
+#Rumination
+#overview of rumination levels by phase only (blocks combined)
+ggplot(data = meltData[which(meltData$variable=="ruminating"),],
+       aes(variable, y = value, fill = factor(phase))) +
+  geom_boxplot() + facet_grid(factor(intervention) ~ group, scale = "free") +
+  labs(title = "Levels of Rumination",
+       subtitle = " by group, intervention, and phase",
+       y = "Raw score", x = "")# + scale_fill_manual(values = c("green", "red"))
+
+ggplot(data = meltData[which(meltData$variable=="ruminating"),],
+       aes(x = value, fill = factor(phase))) +
+  geom_histogram(aes(y= after_stat(count / sum(count))), bins=25)
+
+
+#overview of sleepQuality by phase only (blocks combined)
+ggplot(data = meltData[which(meltData$variable=="sleepQuality"),],
+       aes(variable, y = value, fill = factor(phase))) +
+  geom_boxplot() + facet_grid(factor(intervention) ~ group, scale = "free") +
+  labs(title = "Sleep Quality",
+       subtitle = " by group, intervention, and phase",
+       y = "Raw score", x = "")# + scale_fill_manual(values = c("green", "red"))
+
+#overview of stickiness by phase only (blocks combined)
+ggplot(data = meltData[which(meltData$variable=="stickiness"),],
+       aes(variable, y = value, fill = factor(phase))) +
+  geom_boxplot() + facet_grid(factor(intervention) ~ group, scale = "free") +
+  labs(title = "Levels of Stickiness",
+       subtitle = " by group, intervention, block and phase",
+       y = "Raw score", x = "")# + scale_fill_manual(values = c("green", "red"))
+
+#overview of stickiness by phase only (blocks combined)
+ggplot(data = meltData[which((meltData$variable=="listless") | (meltData$variable=="distracted")),],
+       aes(variable, y = value, fill = factor(phase))) +
+  geom_boxplot() + facet_grid(factor(intervention) ~ group, scale = "free") +
+  labs(title = "Levels of Listlessness and Distraction",
+       subtitle = " by group, intervention, block and phase",
+       y = "Raw score", x = "")# + scale_fill_manual(values = c("green", "red"))
+
+
+ggplot(data = meltData[which((meltData$variable=="posMax") | (meltData$variable=="posIntensity")),],
+       aes(variable, y = value, fill = factor(phase))) +
+  geom_boxplot() + facet_grid(factor(intervention) ~ group, scale = "free") +
+  labs(title = "Pleasantness and Intensity of most pleasant event",
+       subtitle = " by group, intervention, block and phase",
+       y = "Raw score", x = "")# + scale_fill_manual(values = c("green", "red"))
+
+ggplot(data = meltData[which((meltData$variable=="negMax") | (meltData$variable=="negIntensity")),],
+       aes(variable, y = value, fill = factor(phase))) +
+  geom_boxplot() + facet_grid(factor(intervention) ~ group, scale = "free") +
+  labs(title = "Unpleasantness and Intensity of most unpleasant event",
+       subtitle = " by group, intervention, block and phase",
+       y = "Raw score", x = "")# + scale_fill_manual(values = c("green", "red"))
+
+ggplot(data = meltData[which((meltData$variable=="companyPleasant") | (meltData$variable=="alonePleasant")),],
+       aes(variable, y = value, fill = factor(phase))) +
+  geom_boxplot() + facet_grid(factor(intervention) ~ group, scale = "free") +
+  labs(title = "Enjoying current company or enjoying currently being alone",
+       subtitle = " by group, intervention, block and phase",
+       y = "Raw score", x = "")# + scale_fill_manual(values = c("green", "red"))
+
+ggplot(data = meltData[which((meltData$variable=="thoughtsPleasant") | (meltData$variable=="restOfDayPos")),],
+       aes(variable, y = value, fill = factor(phase))) +
+  geom_boxplot() + facet_grid(factor(intervention) ~ group, scale = "free") +
+  labs(title = "Pleasantness of thoughts and positivity of outlook for the rest of the day",
+       subtitle = " by group, intervention, block and phase",
+       y = "Raw score", x = "")# + scale_fill_manual(values = c("green", "red"))
+
+
+
+
+
+######################################### ANOVA ##########################################################################
+
+for(v in c("ruminating", "sumNA", "sumPA", "companyPleasant", "alonePleasant", "negMax", "negIntensity",
+           "posMax", "posIntensity", "stickiness", "anxious", "sleepQuality")){
+  print("###############################################################")
+  print(v)
+  one.way <- aov(data[[v]] ~ group * intervention, data = data)
+  print(eta_squared(one.way))
+  #print(summary(one.way))
+  print(TukeyHSD(one.way, "group"))
+}
+
+for(g in c("controls", "remitted")){
+  print("++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++")
+  print(g)
+  for(int in c("fantasizing", "mindfulness")){
+    print(int)
+    dat <- data[which((data$group==g) & (data$intervention==int)),]
+    for(v in c("ruminating", "sumNA", "sumPA", "companyPleasant", "alonePleasant", "negMax", "negIntensity",
+               "posMax", "posIntensity", "stickiness", "anxious")){
+      print(v)
+      one.way <- aov(dat[[v]] ~ phase, data = dat)
+      print(eta_squared(one.way))
+      #print(summary(one.way))
+      print(TukeyHSD(one.way))
+    }
+  }
+  print("###############################################################")
+}
+
+
+
+
+one.way <- aov(ruminating ~ phase, data = data[which((data$group=="controls") & (data$intervention=="fantasizing")),])
+summary(one.way)
+TukeyHSD(one.way)
 
 
 #Plotting changes against average baseline assessment values
@@ -919,6 +1067,8 @@ for(var in dependent_vars){
   
 }
 
+
+
 #################################### Correlation Matrix ####################################
 
 #creating a correlation matrix with numeric data
@@ -930,6 +1080,7 @@ res <- rcorr(corrMat, type = c("pearson"))
 corrplot(res$r, type = "upper", order = "hclust",
          tl.col = "black", tl.srt = 45, main = "All participants")
 
+corrplot(res$r, method = "number", order = 'alphabet', main = "All participants")
 
 #separately for remitted and controls
 corrMatRm <- as.matrix(data[data$group == "remitted", metricCols])
@@ -939,18 +1090,29 @@ corrMatCont <- as.matrix(data[data$group == "controls", metricCols])
 resRm <- rcorr(corrMatRm, type = c("pearson"))
 resCont <- rcorr(corrMatCont, type = c("pearson"))
 
-
+par(mfrow = c(1,2))
 corrplot(resRm$r, type = "upper", order = "hclust",
          tl.col = "black", tl.srt = 45, main = "Remitted")
 
 corrplot(resCont$r, type = "upper", order = "hclust",
          tl.col = "black", tl.srt = 45, main = "Controls")
 
-par(mfrow = c(1,2))
-corrplot(resRm$r, method = "number", order = 'alphabet', main = "Remitted")
-corrplot(resCont$r, method = "number", order = 'alphabet', main = "Controls")
-
 par(mfrow = c(1,1))
+
+
+metricCols <- c('wakeful', 'down', 'satisfied', 'irritated', 'energetic', 'restless',
+                'stressed', 'anxious', 'listless', 'ruminating', 'stickiness', 'thoughtsPleasant', 'distracted',
+                'restOfDayPos', 'posMax', 'posIntensity', 'negMax', 'negIntensity')
+
+data_copy <- copy(data)
+data_copy <- data_copy[which(is.na(data_copy$mindcog_db_non_response)),]
+data_copy %>% drop_na(metricCols)
+
+collin.fnc(data_copy, metricCols)$cnumber
+
+
+HC = hclust(dist(data[,metricCols[4:6]]))
+plot(data[,], pch=20, col=cutree(HC,3))
 
 #################################### Individual plots ####################################
 

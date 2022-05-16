@@ -385,6 +385,75 @@ block_PANA <- ddply(data, .(group, block, intervention, phase), plyr::summarize,
                     Neg = mean(sumNA, na.rm = TRUE),
                     sdNA = sd(sumNA, na.rm = TRUE))
 
+#Metric columns
+metricCols <- c('ruminating', 'stickiness', 'sumNA', 'sumPA')
+
+#'wakeful', 'down', 'satisfied', 'irritated', 'energetic', 'restless',
+#'stressed', 'anxious', 'listless', 
+#, 'thoughtsPleasant', 'distracted',
+#'restOfDayPos', 'posMax', 'posIntensity', 'negMax', 'negIntensity'
+
+#analyzing potential changes in variance
+df <- data.frame(matrix(ncol = 2, nrow = 10000))
+x <- c("pre", "peri")
+colnames(df) <- x
+for(g in c("controls", "remitted")){
+  for(int in c("fantasizing", "mindfulness")){
+
+    for(col in metricCols){
+      i <- 1
+      phase_var <- list(rep(NA,2))
+      phase_sd <- list(rep(NA,2))
+      df[,"pre"] <- NA
+      df[,"peri"] <- NA
+      
+      for(p in c("pre", "peri")){
+      dat <- data[which((data$group==g) & (data$intervention==int) & (data$phase==p)),]
+      df[[p]] <- dat[[col]]
+      phase_var[i] <- round(var(dat[[col]], na.rm=TRUE), 2)
+      phase_sd[i] <- round(sd(dat[[col]], na.rm=TRUE), 2)
+      i <- i + 1
+      }
+      print("")
+      print("###############################################################################")
+      print(paste(g,int,col, sep = " | "))
+      print("Variance:")
+      print(paste("Pre:", phase_var[[1]], sep=" "))
+      print(paste("Peri:", phase_var[[2]], sep=" "))
+      print(paste("Change (Peri - Pre):", round(phase_var[[2]] - phase_var[[1]], 2), sep=" "))
+      print(var.test(df[,"pre"], df[,"peri"]))
+      
+      #print(paste("Change in %:", round((phase_var[[2]] - phase_var[[1]])/phase_var[[1]], 2)))
+      
+      # print("Standard Deviation:")
+      # print(paste("Pre:", phase_sd[[1]], sep=" "))
+      # print(paste("Peri:", phase_sd[[2]], sep=" "))
+      # print(paste("Change (Peri - Pre):", round(phase_sd[[2]] - phase_sd[[1]], 2), sep=" "))
+    }
+  }
+}
+
+var.test(data[which((data$group=="controls") & (data$intervention=="fantasizing") & (data$phase=="pre")),]$ruminating,
+         data[which((data$group=="controls") & (data$intervention=="mindfulness") & (data$phase=="peri")),]$ruminating)
+
+# Histograms and density lines
+par(mfrow=c(2, 2))
+for(g in c("controls", "remitted")){
+  for(col in metricCols) {
+    for(int in c("fantasizing", "mindfulness")){
+      for(p in c("pre", "peri")){
+        hist(data[which((data$group==g) & (data$intervention==int) & (data$phase==p)),col], xlim=c(0, 310), breaks=seq(0, 310, 10),
+             main=paste(g,int,p, sep = " | "), probability=TRUE, col="gray", border="white", xlab = col)
+        d <- density(data[which((data$group==g) & (data$intervention==int)),col], na.rm = TRUE)
+        lines(d, col="red")
+      }
+
+    }
+  }
+}
+par(mfrow=c(1,1))
+
+
 
 #for some strange dplyr-ralted reason I need to do this to get melt() to work
 data <- as.data.frame(data)
@@ -832,10 +901,6 @@ grp_avgs <- ddply(data, .(group), plyr::summarize,
                  response_delay_avg = round(mean(response_delay, na.rm = TRUE), 2),
                  response_duration_avg = round(mean(response_duration, na.rm = TRUE), 2))
 
-#Metric columns
-metricCols <- c('wakeful', 'down', 'satisfied', 'irritated', 'energetic', 'restless',
-                'stressed', 'anxious', 'listless', 'ruminating', 'stickiness', 'thoughtsPleasant', 'distracted',
-                'restOfDayPos', 'posMax', 'posIntensity', 'negMax', 'negIntensity')
 
 #boxplot comparisons
 meltData1 <- melt(data[which((data$phase=="pre") & (data$block==1)), c("group", metricCols[1:9])])
@@ -1082,6 +1147,14 @@ corrplot(res$r, type = "upper", order = "hclust",
 
 corrplot(res$r, method = "number", order = 'alphabet', main = "All participants")
 
+#combine negative affect and positive affect measures, respectively
+corrCols <- c('stressed', 'listless', 'ruminating', 'stickiness', 'thoughtsPleasant', 'distracted',
+              'restOfDayPos', 'posMax', 'posIntensity', 'negMax', 'negIntensity', 'sumNA', 'sumPA')
+corrMat <- as.matrix(data[, corrCols])
+#calculate the correlations
+res <- rcorr(corrMat, type = c("pearson"))
+corrplot(res$r, method = "number", order = 'alphabet', main = "All participants")
+
 #separately for remitted and controls
 corrMatRm <- as.matrix(data[data$group == "remitted", metricCols])
 corrMatCont <- as.matrix(data[data$group == "controls", metricCols])
@@ -1100,19 +1173,87 @@ corrplot(resCont$r, type = "upper", order = "hclust",
 par(mfrow = c(1,1))
 
 
-metricCols <- c('wakeful', 'down', 'satisfied', 'irritated', 'energetic', 'restless',
-                'stressed', 'anxious', 'listless', 'ruminating', 'stickiness', 'thoughtsPleasant', 'distracted',
-                'restOfDayPos', 'posMax', 'posIntensity', 'negMax', 'negIntensity')
+################################################## Checking for collinearity #########################################################
+#Source: http://www.sfs.uni-tuebingen.de/~hbaayen/publications/baayenCUPstats.pdf
 
-data_copy <- copy(data)
+#a condition number of around 30 is considered potentially harmful
+
+data_copy <- data.table::copy(data)
 data_copy <- data_copy[which(is.na(data_copy$mindcog_db_non_response)),]
-data_copy %>% drop_na(metricCols)
+data_copy <- data_copy[,metricCols]
+data_copy <- data_copy[complete.cases(data_copy), ]
 
-collin.fnc(data_copy, metricCols)$cnumber
+#with ruminating but without sumNA, sumPA
+collin.fnc(data_copy[,-c(19, 20)])$cnumber #~26 --> at least close to problematic collinearity
+plot(varclus(as.matrix(data_copy[,-c(19, 20)])))
+
+#without ruminating, sumNA, sumPA
+collin.fnc(data_copy[,-c(10, 19, 20)])$cnumber #~25 --> at least close to problematic collinearity
+plot(varclus(as.matrix(data_copy[,-c(10, 19, 20)])))
+
+#including sumNA, sumPA instead of their individual components
+collin.fnc(data_copy[,-c(10, 1,2,3,4,5,6,8)])$cnumber #~22 --> better but still not great
+plot(varclus(as.matrix(data_copy[,-c(10, 1,2,3,4,5,6,8)])))
+
+#The plot indicates that e.g. restOfDayPos and sumPA are strongly correlated (thoughtsPleasant also but less so). 
+#Therefore, we may exclude restOfDayPos
+#negMax and negIntensity are (unsurprisingly) also correlated strongly --> we could combine them (sum?)
+#though its not reflected in the plot, we might wanna think about doing the same with posMax and posIntensity
+#stressed may also be redundant as it correlates with sumNA strongly
+
+#one way to deal with collinearity is to only pick one predictor per cluster. This is not preferred however!
+#instead we turn one or more of the clusters of predictors into PCAs, reducing the number of predictors
 
 
-HC = hclust(dist(data[,metricCols[4:6]]))
-plot(data[,], pch=20, col=cutree(HC,3))
+items.pca = prcomp(data_copy[,-c(10, 19, 20)], center = T, scale = T)
+summary(items.pca) #17 PCAs
+sum((items.pca$sdev^2/sum(items.pca$sdev^2))[1:11]) #11 pcas explain about 90% of the variance
+collin.fnc(items.pca$x)$cnumb #condition number of 1 --> they are indeed perfectly uncorrelated
+
+pcaMat = as.data.frame(items.pca$rotation[,1:11])
+#pcaMat[order(pcaMat$PC1), ] #the first PCA distinguishes between positive and negative variables
+data_copy$PC1 = items.pca$x[,1]
+data_copy$PC2 = items.pca$x[,2]
+data_copy$PC3 = items.pca$x[,3]
+data_copy$PC4 = items.pca$x[,4]
+data_copy$PC5 = items.pca$x[,5]
+data_copy$PC6 = items.pca$x[,6]
+data_copy$PC7 = items.pca$x[,7]
+data_copy$PC8 = items.pca$x[,8]
+data_copy$PC9 = items.pca$x[,9]
+data_copy$PC10 = items.pca$x[,10]
+data_copy$PC11 = items.pca$x[,11]
+data_copy$PC12 = items.pca$x[,12]
+
+responseRows <- which(is.na(data$mindcog_db_non_response))
+nonNARows <- which(complete.cases(data[responseRows,metricCols]))
+
+data$PC1 <- NA
+data$PC2 <- NA
+data$PC3 <- NA
+data$PC4 <- NA
+data$PC5 <- NA
+data$PC6 <- NA
+data$PC7 <- NA
+data$PC8 <- NA
+data$PC9 <- NA
+data$PC10 <- NA
+data$PC11 <- NA
+data$PC12 <- NA
+data[nonNARows,"PC1"] <- data_copy$PC1
+data[nonNARows,"PC2"] <- data_copy$PC2
+data[nonNARows,"PC3"] <- data_copy$PC3
+data[nonNARows,"PC4"] <- data_copy$PC4
+data[nonNARows,"PC5"] <- data_copy$PC5
+data[nonNARows,"PC6"] <- data_copy$PC6
+data[nonNARows,"PC7"] <- data_copy$PC7
+data[nonNARows,"PC8"] <- data_copy$PC8
+data[nonNARows,"PC9"] <- data_copy$PC9
+data[nonNARows,"PC10"] <- data_copy$PC10
+data[nonNARows,"PC11"] <- data_copy$PC11
+data[nonNARows,"PC12"] <- data_copy$PC12
+
+
 
 #################################### Individual plots ####################################
 
@@ -1233,6 +1374,214 @@ pc_thinkingOf_int <- drop_na(pc_thinkingOf_int, intervention)
 
 #pc_summary <- Reduce(function(x, y) merge(x, y, all=TRUE), list(pc_time, pc_val, pc_object, pc_thinkingOf))
 
+
+
+meltData <- melt(data, id.vars=c("group", "thoughtsTime"),
+                 measure.vars = c("sumPA", "sumNA", "ruminating",
+                                  "sleepQuality", "restednessWakeup", "stickiness",
+                                  "anxious", "down", "irritated", "restless",
+                                  "wakeful", "energetic", "satisfied",
+                                  "listless", "distracted", "restOfDayPos", "thoughtsPleasant",
+                                  "companyPleasant", "alonePleasant", "posMax", "posIntensity",
+                                  "negMax", "negIntensity"), na.rm = TRUE)
+
+thoughtsTime_names <- c(
+  `1` = "Past",
+  `2` = "Present",
+  `3` = "Future"
+)
+
+#overview negative/positive affect
+ggplot(data = meltData[which((meltData$variable=="sumPA") | (meltData$variable=="sumNA")),],
+       aes(variable, y = value, fill = factor(group))) +
+  geom_boxplot() + facet_grid(thoughtsTime~., scale = "free", labeller=as_labeller(thoughtsTime_names)) +
+  labs(title = "Levels of PA and NA",
+       subtitle = " by group and time-orientation of current thoughts",
+       y = "Raw score", x = "") + scale_fill_manual(values = c("green", "red"))
+
+#overview rumination
+ggplot(data = meltData[which(meltData$variable=="ruminating"),],
+       aes(variable, y = value, fill = factor(group))) +
+  geom_boxplot() + facet_grid(thoughtsTime~., scale = "free", labeller = as_labeller(thoughtsTime_names)) +
+  labs(title = "Levels of Rumination",
+       subtitle = " by group and time-orientation of current thoughts",
+       y = "Raw score", x = "") + scale_fill_manual(values = c("green", "red"))
+
+
+ggplot(data = meltData[which(meltData$variable=="stickiness"),],
+       aes(variable, y = value, fill = factor(group))) +
+  geom_boxplot() + facet_grid(thoughtsTime~., scale = "free", labeller = as_labeller(thoughtsTime_names)) +
+  labs(title = "Levels of Stickiness",
+       subtitle = " by group and time-orientation of current thoughts",
+       y = "Raw score", x = "") + scale_fill_manual(values = c("green", "red"))
+
+
+#with thoughtsValence
+meltData <- melt(data, id.vars=c("group", "thoughtsValence"),
+                 measure.vars = c("sumPA", "sumNA", "ruminating",
+                                  "sleepQuality", "restednessWakeup", "stickiness",
+                                  "anxious", "down", "irritated", "restless",
+                                  "wakeful", "energetic", "satisfied",
+                                  "listless", "distracted", "restOfDayPos", "thoughtsPleasant",
+                                  "companyPleasant", "alonePleasant", "posMax", "posIntensity",
+                                  "negMax", "negIntensity"), na.rm = TRUE)
+
+thoughtsValence_names <- c(
+  `1` = "Negative",
+  `2` = "Neutral",
+  `3` = "Positive"
+)
+
+#overview negative/positive affect
+ggplot(data = meltData[which((meltData$variable=="sumPA") | (meltData$variable=="sumNA")),],
+       aes(variable, y = value, fill = factor(group))) +
+  geom_boxplot() + facet_grid(thoughtsValence~., scale = "free", labeller=as_labeller(thoughtsValence_names)) +
+  labs(title = "Levels of PA and NA",
+       subtitle = " by group and valence of current thoughts",
+       y = "Raw score", x = "") + scale_fill_manual(values = c("green", "red"))
+
+#overview rumination
+ggplot(data = meltData[which(meltData$variable=="ruminating"),],
+       aes(variable, y = value, fill = factor(group))) +
+  geom_boxplot() + facet_grid(thoughtsValence~., scale = "free", labeller = as_labeller(thoughtsValence_names)) +
+  labs(title = "Levels of Rumination",
+       subtitle = " by group and valence of current thoughts",
+       y = "Raw score", x = "") + scale_fill_manual(values = c("green", "red"))
+
+
+ggplot(data = meltData[which(meltData$variable=="stickiness"),],
+       aes(variable, y = value, fill = factor(group))) +
+  geom_boxplot() + facet_grid(thoughtsValence~., scale = "free", labeller = as_labeller(thoughtsValence_names)) +
+  labs(title = "Levels of Stickiness",
+       subtitle = " by group and valence of current thoughts",
+       y = "Raw score", x = "") + scale_fill_manual(values = c("green", "red"))
+
+
+#with thoughtsObject
+meltData <- melt(data, id.vars=c("group", "thoughtsObject"),
+                 measure.vars = c("sumPA", "sumNA", "ruminating",
+                                  "sleepQuality", "restednessWakeup", "stickiness",
+                                  "anxious", "down", "irritated", "restless",
+                                  "wakeful", "energetic", "satisfied",
+                                  "listless", "distracted", "restOfDayPos", "thoughtsPleasant",
+                                  "companyPleasant", "alonePleasant", "posMax", "posIntensity",
+                                  "negMax", "negIntensity"), na.rm = TRUE)
+
+thoughtsObject_names <- c(
+  `1` = "Myself",
+  `2` = "Someone else",
+  `3` = "Neither"
+)
+
+#overview negative/positive affect
+ggplot(data = meltData[which((meltData$variable=="sumPA") | (meltData$variable=="sumNA")),],
+       aes(variable, y = value, fill = factor(group))) +
+  geom_boxplot() + facet_grid(thoughtsObject~., scale = "free", labeller=as_labeller(thoughtsObject_names)) +
+  labs(title = "Levels of PA and NA",
+       subtitle = " by group and object of current thoughts",
+       y = "Raw score", x = "") + scale_fill_manual(values = c("green", "red"))
+
+#overview rumination
+ggplot(data = meltData[which(meltData$variable=="ruminating"),],
+       aes(variable, y = value, fill = factor(group))) +
+  geom_boxplot() + facet_grid(thoughtsObject~., scale = "free", labeller = as_labeller(thoughtsObject_names)) +
+  labs(title = "Levels of Rumination",
+       subtitle = " by group and object of current thoughts",
+       y = "Raw score", x = "") + scale_fill_manual(values = c("green", "red"))
+
+
+ggplot(data = meltData[which(meltData$variable=="stickiness"),],
+       aes(variable, y = value, fill = factor(group))) +
+  geom_boxplot() + facet_grid(thoughtsObject~., scale = "free", labeller = as_labeller(thoughtsObject_names)) +
+  labs(title = "Levels of Stickiness",
+       subtitle = " by group and object of current thoughts",
+       y = "Raw score", x = "") + scale_fill_manual(values = c("green", "red"))
+
+#with thinkingOf
+meltData <- melt(data, id.vars=c("group", "thinkingOf"),
+                 measure.vars = c("sumPA", "sumNA", "ruminating",
+                                  "sleepQuality", "restednessWakeup", "stickiness",
+                                  "anxious", "down", "irritated", "restless",
+                                  "wakeful", "energetic", "satisfied",
+                                  "listless", "distracted", "restOfDayPos", "thoughtsPleasant",
+                                  "companyPleasant", "alonePleasant", "posMax", "posIntensity",
+                                  "negMax", "negIntensity"), na.rm = TRUE)
+
+thinkingOf_names <- c(
+  `1` = "Current Activity",
+  `2` = "External Stimuli",
+  `3` = "Current Feelings",
+  `4` = "Personal Concerns",
+  `5` = "Daydreaming",
+  `6` = "Other"
+)
+
+#overview negative/positive affect
+ggplot(data = meltData[which((meltData$variable=="sumPA") | (meltData$variable=="sumNA")),],
+       aes(variable, y = value, fill = factor(group))) +
+  geom_boxplot() + facet_grid(thinkingOf~., scale = "free", labeller=as_labeller(thinkingOf_names)) +
+  labs(title = "Levels of PA and NA",
+       subtitle = " by group and object of current thoughts",
+       y = "Raw score", x = "") + scale_fill_manual(values = c("green", "red"))
+
+#overview rumination
+ggplot(data = meltData[which(meltData$variable=="ruminating"),],
+       aes(variable, y = value, fill = factor(group))) +
+  geom_boxplot() + facet_grid(thinkingOf~., scale = "free", labeller = as_labeller(thinkingOf_names)) +
+  labs(title = "Levels of Rumination",
+       subtitle = " by group and object of current thoughts",
+       y = "Raw score", x = "") + scale_fill_manual(values = c("green", "red"))
+
+
+ggplot(data = meltData[which(meltData$variable=="stickiness"),],
+       aes(variable, y = value, fill = factor(group))) +
+  geom_boxplot() + facet_grid(thinkingOf~., scale = "free", labeller = as_labeller(thinkingOf_names)) +
+  labs(title = "Levels of Stickiness",
+       subtitle = " by group and content of current thoughts",
+       y = "Raw score", x = "") + scale_fill_manual(values = c("green", "red"))
+
+
+#with aloneCompany
+meltData <- melt(data, id.vars=c("group", "aloneCompany"),
+                 measure.vars = c("sumPA", "sumNA", "ruminating",
+                                  "sleepQuality", "restednessWakeup", "stickiness",
+                                  "anxious", "down", "irritated", "restless",
+                                  "wakeful", "energetic", "satisfied",
+                                  "listless", "distracted", "restOfDayPos", "thoughtsPleasant",
+                                  "companyPleasant", "alonePleasant", "posMax", "posIntensity",
+                                  "negMax", "negIntensity"), na.rm = TRUE)
+
+aloneCompany_names <- c(
+  `1` = "Alone",
+  `2` = "in Company"
+)
+
+#overview negative/positive affect
+ggplot(data = meltData[which((meltData$variable=="sumPA") | (meltData$variable=="sumNA")),],
+       aes(variable, y = value, fill = factor(group))) +
+  geom_boxplot() + facet_grid(aloneCompany~., scale = "free", labeller=as_labeller(aloneCompany_names)) +
+  labs(title = "Levels of PA and NA",
+       subtitle = " by group and social context",
+       y = "Raw score", x = "") + scale_fill_manual(values = c("green", "red"))
+
+#overview rumination
+ggplot(data = meltData[which(meltData$variable=="ruminating"),],
+       aes(variable, y = value, fill = factor(group))) +
+  geom_boxplot() + facet_grid(aloneCompany~., scale = "free", labeller = as_labeller(aloneCompany_names)) +
+  labs(title = "Levels of Rumination",
+       subtitle = " by group and social context",
+       y = "Raw score", x = "") + scale_fill_manual(values = c("green", "red"))
+
+
+ggplot(data = meltData[which(meltData$variable=="stickiness"),],
+       aes(variable, y = value, fill = factor(group))) +
+  geom_boxplot() + facet_grid(aloneCompany~., scale = "free", labeller = as_labeller(aloneCompany_names)) +
+  labs(title = "Levels of Stickiness",
+       subtitle = " by group and social context",
+       y = "Raw score", x = "") + scale_fill_manual(values = c("green", "red"))
+
+
+##################################################### Not so interesting plots ###########################################################
 #per Assessment day
 #create a df with only the relevant variables
 meltChange <- melt(data[which(data$phase=="peri"),], id.vars=c("group", "intervention", "phase", "block", "phaseAssessmentDay"),

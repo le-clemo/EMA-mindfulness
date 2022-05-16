@@ -14,6 +14,7 @@ library(plyr)
 library(lmerTest) #to more quickly be able to see significance
 library(plotfunctions)
 library(gratia)
+library(rms)
 
 R.version.string
 packageVersion("mgcv")
@@ -157,6 +158,8 @@ m1 <- bam(ruminating_lag1 ~ group * intervention * blockPhase * thoughtsObject *
             data = sc_data, family = "scat")
 
 summary(m1)
+
+fastbw(m1) #give it a try...
 
 plot_smooth(m1, view="beepNum", 
             plot_all="group")

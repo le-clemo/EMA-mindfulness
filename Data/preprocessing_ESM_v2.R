@@ -308,7 +308,7 @@ item33 <- which( colnames(data)=="mindcog_db_33" )#last item of interest
 colNamesOld <- setNames(data.frame(colnames(data[, item1:item33])), "columns")
 
 colNamesNew <- c('firstEntry', 'sleepQuality', 'toBedHour', 'toBedMinute', 'trySleepHour', 'trySleepMinute',
-                 'durationFallAsleep', 'wakeupHour', 'wakeupMinute', 'restednessWakeup', 'wakeful',
+                 'sleepLatency', 'wakeupHour', 'wakeupMinute', 'restednessWakeup', 'wakeful',
                  'down', 'satisfied', 'irritated', 'energetic', 'restless', 'stressed', 'anxious',
                  'listless', 'thinkingOf', 'ruminating', 'stickiness', 'thoughtsPleasant',
                  'thoughtsTime', 'thoughtsValence', 'thoughtsObject', 'distracted',
@@ -316,6 +316,17 @@ colNamesNew <- c('firstEntry', 'sleepQuality', 'toBedHour', 'toBedMinute', 'tryS
                  'posIntensity', 'negMax', 'negIntensity', 'comments')
 
 setnames(data, old = colNamesOld$columns, new = colNamesNew)
+
+################################### Sleep Measures ####################################
+data$xNightDate <- as.POSIXct("2000-01-01", format = "%Y-%m-%d") #arbitrary date (earlier day)
+data$toBedTime <- as.POSIXct(paste(data$xNightDate, paste(data$toBedHour, data$toBedMinute, "00", sep = ":"), sep = " "),
+                             format = "%Y-%m-%d %H:%M:%S")
+
+data$xMorningDate <- as.POSIXct("2000-01-02", format = "%Y-%m-%d") #arbitrary date ('next' day)
+data$outOfBedTime <- as.POSIXct(paste(data$xMorningDate, paste(data$wakeupHour, data$wakeupMinute, "00", sep = ":"), sep = " "),
+                             format = "%Y-%m-%d %H:%M:%S")
+
+data$sleepDuration <- difftime(data$outOfBedTime, data$toBedTime)
 
 ################################### Positive / Negative Affect ####################################
 
@@ -649,15 +660,15 @@ for(id in subject_IDs){ #every participant
   }
 }
 
-
 ############################## Some changes for convenience ################################
 #drop unnecessary columns and reorder columns for convenience
 columnNames <- c(colnames(data))
 data <- data %>% select(patient_id, id, subject, group, intervention, phase, block, respondent_id,
                         #18 = db_open_from; 23 = db_date; 26:61 = firstEntry:comments; 67:76
-                        columnNames[18:23], columnNames[26:61], sumPA, sumNA,
+                        columnNames[18:23], firstEntry, sleepQuality, sleepLatency, sleepDuration,
+                        restednessWakeup, columnNames[36:61], sumPA, sumNA, 
                         #67:78 = response measures
-                        columnNames[76:87])
+                        columnNames[81:92])
 
 # data <- subset(data, select = -c(roqua_id, hide_pii_from_researchers, gender, birth_year,
 #                                  hide_values_from_professionals, respondent_label, respondent_type,

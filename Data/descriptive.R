@@ -34,6 +34,7 @@ data$group <- factor(data$group, levels = c("controls", "remitted"))
 data$intervention <- factor(data$intervention, levels = c("mindfulness", "fantasizing"))
 data$phase <- factor(data$phase, levels = c("pre", "peri"))
 
+
 ################################# response-related measures #####################################
 # #group by id and count the number of nonresponses
 participant_responses <- ddply(data, .(subject), plyr::summarise,
@@ -386,12 +387,12 @@ block_PANA <- ddply(data, .(group, block, intervention, phase), plyr::summarize,
                     sdNA = sd(sumNA, na.rm = TRUE))
 
 #Metric columns
-metricCols <- c('ruminating', 'stickiness', 'sumNA', 'sumPA')
+metricCols <- c('ruminating', 'stickiness', 'sumNA', 'sumPA', 'wakeful', 'down', 'satisfied',
+                'irritated', 'energetic', 'restless', 'stressed', 'anxious', 'listless', 
+                'thoughtsPleasant', 'distracted', 'restOfDayPos', 'posMax', 'posIntensity',
+                'negMax', 'negIntensity')
 
-#'wakeful', 'down', 'satisfied', 'irritated', 'energetic', 'restless',
-#'stressed', 'anxious', 'listless', 
-#, 'thoughtsPleasant', 'distracted',
-#'restOfDayPos', 'posMax', 'posIntensity', 'negMax', 'negIntensity'
+
 
 #analyzing potential changes in variance
 df <- data.frame(matrix(ncol = 2, nrow = 10000))
@@ -1178,25 +1179,92 @@ par(mfrow = c(1,1))
 
 #a condition number of around 30 is considered potentially harmful
 
+
+#same for sleepQuality
+for(id in unique(data$subject)){
+  respondent_rows <- which(data$subject == id)
+  current_day <- 0
+  for(row in respondent_rows){
+    if((data$assessmentDay[row] != current_day) & (!is.na(data$sleepQuality[row]))){
+      sleep_quality <- data$sleepQuality[row]
+      current_day <- data$assessmentDay[row]
+    } else if((data$assessmentDay[row] == current_day) & (is.na(data$sleepQuality[row]))){
+      data$sleepQuality[row] <- sleep_quality
+    }
+  }
+}
+
+
+#same for sleepDuration
+for(id in unique(data$subject)){
+  respondent_rows <- which(data$subject == id)
+  current_day <- 0
+  for(row in respondent_rows){
+    if((data$assessmentDay[row] != current_day) & (!is.na(data$sleepDuration[row]))){
+      sleep_duration <- data$sleepDuration[row]
+      current_day <- data$assessmentDay[row]
+    } else if((data$assessmentDay[row] == current_day) & (is.na(data$sleepDuration[row]))){
+      data$sleepDuration[row] <- sleep_duration
+    }
+  }
+}
+#aaaaaaand for sleepLatency
+for(id in unique(data$subject)){
+  respondent_rows <- which(data$subject == id)
+  current_day <- 0
+  for(row in respondent_rows){
+    if((data$assessmentDay[row] != current_day) & (!is.na(data$sleepLatency[row]))){
+      sleep_latency <- data$sleepLatency[row]
+      current_day <- data$assessmentDay[row]
+    } else if((data$assessmentDay[row] == current_day) & (is.na(data$sleepLatency[row]))){
+      data$sleepLatency[row] <- sleep_latency
+    }
+  }
+}
+
+#aaaaaaand for restednessWakeup
+for(id in unique(data$subject)){
+  respondent_rows <- which(data$subject == id)
+  current_day <- 0
+  for(row in respondent_rows){
+    if((data$assessmentDay[row] != current_day) & (!is.na(data$restednessWakeup[row]))){
+      restedness <- data$restednessWakeup[row]
+      current_day <- data$assessmentDay[row]
+    } else if((data$assessmentDay[row] == current_day) & (is.na(data$restednessWakeup[row]))){
+      data$restednessWakeup[row] <- restedness
+    }
+  }
+}
+
+
+
+metricCols <- c('ruminating', 'stickiness', 'sumNA', 'sumPA', 'wakeful', 'down', 'satisfied',
+                'irritated', 'energetic', 'restless', 'anxious', 'stressed', 'listless', 
+                'thoughtsPleasant', 'distracted', 'restOfDayPos', 'posMax', 'posIntensity',
+                'negMax', 'negIntensity', "sleepQuality", "sleepLatency", "sleepDuration", "restednessWakeup")#, "companyPleasant", "alonePleasant")
+
 data_copy <- data.table::copy(data)
 data_copy <- data_copy[which(is.na(data_copy$mindcog_db_non_response)),]
 data_copy <- data_copy[,metricCols]
+# data_copy[which(is.na(data_copy$companyPleasant)),]$companyPleasant <- 0
+# data_copy[which(is.na(data_copy$alonePleasant)),]$alonePleasant <- 0
+
 data_copy <- data_copy[complete.cases(data_copy), ]
 
 #with ruminating but without sumNA, sumPA
-collin.fnc(data_copy[,-c(19, 20)])$cnumber #~26 --> at least close to problematic collinearity
-plot(varclus(as.matrix(data_copy[,-c(19, 20)])))
+collin.fnc(data_copy[,-c(3, 4)])$cnumber #~29.6 --> at least close to problematic collinearity
+plot(varclus(as.matrix(data_copy[,-c(3, 4)])))
 
 #without ruminating, sumNA, sumPA
-collin.fnc(data_copy[,-c(10, 19, 20)])$cnumber #~25 --> at least close to problematic collinearity
-plot(varclus(as.matrix(data_copy[,-c(10, 19, 20)])))
+collin.fnc(data_copy[,-c(1, 3, 4)])$cnumber #~29 --> at least close to problematic collinearity
+plot(varclus(as.matrix(data_copy[,-c(1, 3, 4)])))
 
 #including sumNA, sumPA instead of their individual components
-collin.fnc(data_copy[,-c(10, 1,2,3,4,5,6,8)])$cnumber #~22 --> better but still not great
-plot(varclus(as.matrix(data_copy[,-c(10, 1,2,3,4,5,6,8)])))
+collin.fnc(data_copy[,-c(1, 5,6,7,8,9,10,11)])$cnumber #~22 --> better but still not great
+plot(varclus(as.matrix(data_copy[,-c(1, 5,6,7,8,9,10,11)])))
 
 #The plot indicates that e.g. restOfDayPos and sumPA are strongly correlated (thoughtsPleasant also but less so). 
-#Therefore, we may exclude restOfDayPos
+#Therefore, we may exclude restOfDayPos (and thoughtsPleeasant)
 #negMax and negIntensity are (unsurprisingly) also correlated strongly --> we could combine them (sum?)
 #though its not reflected in the plot, we might wanna think about doing the same with posMax and posIntensity
 #stressed may also be redundant as it correlates with sumNA strongly
@@ -1295,10 +1363,30 @@ figure
 
 
 #################################### Exploratory rumination analysis ##################################
+ans_q0 <- c(
+  `1` = "Past",
+  `2` = "Present",
+  `3` = "Future"
+)
 
-#Rumination averages and changes compared to baseline
-# add here!!!!!!!!!!!!!!!!11
-#!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+melt_q0 <- melt(data, id.vars=c( "group","thoughtsTime"), measure.vars=c("ruminating"))
+melt_q0 <- melt_q0[which(!is.na(melt_q0$thoughtsTime)),]
+
+ggplot(melt_q0) +
+  geom_boxplot(aes(x=thoughtsTime, y=value, color=group)) +
+  facet_grid(. ~ thoughtsTime, scale = "free", labeller = as_labeller(ans_q0)) +
+  labs(title = "Rumination and time-orientation of thoughts", x = "", y = "Rumination") + 
+  theme(axis.title.x=element_blank(),
+        axis.text.x=element_blank(),
+        axis.ticks.x=element_blank())
+
+
+
+pc_time1 <- ddply(data, .(group), plyr::summarize,
+                 N = length(group[which(!is.na(thoughtsTime))]),
+                 past = round(length(group[which(thoughtsTime == 1)])/N, 2),
+                 present = round(length(group[which(thoughtsTime == 2)])/N, 2),
+                 future = round(length(group[which(thoughtsTime == 3)])/N, 2))
 
 #time spent thinking about the past / present / future by group, phase and block
 pc_time <- ddply(data, .(group, phase, block), plyr::summarize,
@@ -1322,6 +1410,23 @@ pc_val <- ddply(data, .(group, phase, block), plyr::summarize,
                     negative = round(length(group[which(thoughtsValence == 1)])/N, 2),
                     neutral = round(length(group[which(thoughtsValence == 2)])/N, 2),
                     positive = round(length(group[which(thoughtsValence == 3)])/N, 2))
+
+ans_q0 <- c(
+  `1` = "Negative",
+  `2` = "Neutral",
+  `3` = "Positive"
+)
+
+melt_q0 <- melt(data, id.vars=c( "group","thoughtsValence"), measure.vars=c("ruminating"))
+melt_q0 <- melt_q0[which(!is.na(melt_q0$thoughtsValence)),]
+
+ggplot(melt_q0) +
+  geom_boxplot(aes(x=thoughtsValence, y=value, color=group)) +
+  facet_grid(. ~ thoughtsValence, scale = "free", labeller = as_labeller(ans_q0)) +
+  labs(title = "Rumination and valence of thoughts", x = "", y = "Rumination") + 
+  theme(axis.title.x=element_blank(),
+        axis.text.x=element_blank(),
+        axis.ticks.x=element_blank())
 
 #same with intervention
 pc_val_int <- ddply(data, .(group, intervention, phase), plyr::summarize,
@@ -1348,6 +1453,25 @@ pc_object_int <- ddply(data, .(group, intervention, phase), plyr::summarize,
 
 pc_object_int <- drop_na(pc_object_int, intervention)
 
+
+ans_q0 <- c(
+  `1` = "Myself",
+  `2` = "Someone else",
+  `3` = "Other"
+)
+
+melt_q0 <- melt(data, id.vars=c( "group","thoughtsObject"), measure.vars=c("sumNA"))
+melt_q0 <- melt_q0[which(!is.na(melt_q0$thoughtsObject)),]
+
+ggplot(melt_q0) +
+  geom_boxplot(aes(x=thoughtsObject, y=value, color=group)) +
+  facet_grid(. ~ thoughtsObject, scale = "free", labeller = as_labeller(ans_q0)) +
+  labs(title = "Rumination and time-orientation of thoughts", x = "", y = "Rumination") + 
+  theme(axis.title.x=element_blank(),
+        axis.text.x=element_blank(),
+        axis.ticks.x=element_blank())
+
+
 #what are they thinking about?
 pc_thinkingOf <- ddply(data, .(group, phase), plyr::summarize,
                        N = length(group[which(!is.na(thinkingOf))]),
@@ -1369,6 +1493,26 @@ pc_thinkingOf_int <- ddply(data, .(group, intervention, phase), plyr::summarize,
                    other = round(length(group[which(thinkingOf == 6)])/N, 2))
 
 pc_thinkingOf_int <- drop_na(pc_thinkingOf_int, intervention)
+
+ans_q0 <- c(
+  `1` = "Activity",
+  `2` = "Surroundings",
+  `3` = "Feelings",
+  `4` = "Concerns",
+  `5` = "Daydreaming",
+  `6` = "Other"
+)
+
+melt_q0 <- melt(data, id.vars=c( "group","thinkingOf"), measure.vars=c("ruminating"))
+melt_q0 <- melt_q0[which(!is.na(melt_q0$thinkingOf)),]
+
+ggplot(melt_q0) +
+  geom_boxplot(aes(x=thinkingOf, y=value, color=group)) +
+  facet_grid(. ~ thinkingOf, scale = "free", labeller = as_labeller(ans_q0)) +
+  labs(title = "Rumination and current focus", x = "", y = "Rumination") + 
+  theme(axis.title.x=element_blank(),
+        axis.text.x=element_blank(),
+        axis.ticks.x=element_blank())
 
 #merge(pc_time, pc_val, pc_object, pc_thinkingOf, by = c(group, intervention, phase, block))
 

@@ -1417,7 +1417,7 @@ ans_q0 <- c(
   `3` = "Positive"
 )
 
-melt_q0 <- melt(data, id.vars=c( "group","thoughtsValence"), measure.vars=c("ruminating"))
+melt_q0 <- melt(data, id.vars=c( "subject", "group","thoughtsValence"), measure.vars=c("ruminating"))
 melt_q0 <- melt_q0[which(!is.na(melt_q0$thoughtsValence)),]
 
 ggplot(melt_q0) +

@@ -21,7 +21,7 @@ library(igraph)
 library(qgraph)
 
 #read in data
-data <- read.csv('mindcog_db_2022-04-12.csv', sep = ";") 
+data <- read.csv('mindcog_db_2022-05-19.csv', sep = ";") 
 
 
 ################################# load Medoq info and clean up #################################################
@@ -30,7 +30,7 @@ data <- read.csv('mindcog_db_2022-04-12.csv', sep = ";")
 mylist <- lapply(excel_sheets('Medoq_informatie_2.xlsx'), read_excel, path = 'Medoq_informatie_2.xlsx')
 
 # name the dataframes
-names(mylist) <- c("matchingMindfulness", "matchingFantasizing")
+names(mylist) <- c("matchingFantasizing", "matchingMindfulness")
 
 # Bring the dataframes to the global environment
 list2env(mylist ,.GlobalEnv)
@@ -553,7 +553,7 @@ data <- data[!(data$subject == "s108" & data$block == 2 ),]
 #adding half days per phase
 data$phaseHalfDay <- NA #adding an empty column for assessment days
 for(id in subject_IDs){
-  print(id)
+ # print(id)
   numBlocks <- max(data[which(data$subject==id),]$block)
   for(b in 1:numBlocks){
     phases <- unique(data[which((data$subject==id) & (data$block==b)),]$phase)
@@ -564,8 +564,8 @@ for(id in subject_IDs){
         half_day <- half_day + 1 #increment half_day by 1
         respondent_rows <- which((data$subject == id) & (data$phaseAssessmentDay==d) & (data$block==b) & (data$phase==p))#row indices of rows associated with respondent
         numEntries <- length(respondent_rows) #how many entries are associated with that day?
-        print(d)
-        print(numEntries)
+       # print(d)
+       # print(numEntries)
         # print(respondent_rows)
         if(numEntries > 5){ #if there are more than 5 (a normal day has 10 assessments)
           data[respondent_rows[1:5],]$phaseHalfDay <- half_day #set the first half of the day 
@@ -591,7 +591,7 @@ for(id in subject_IDs){
 #adding half days per block
 data$blockHalfDay <- NA #adding an empty column for assessment days
 for(id in subject_IDs){
-  print(id)
+ # print(id)
   numBlocks <- max(data[which(data$subject==id),]$block)
   for(b in 1:numBlocks){
     half_day <- 0 
@@ -600,8 +600,8 @@ for(id in subject_IDs){
       half_day <- half_day + 1 #increment half_day by 1
       respondent_rows <- which((data$subject == id) & (data$blockAssessmentDay==d) & (data$block==b))#row indices of rows associated with respondent
       numEntries <- length(respondent_rows) #how many entries are associated with that day?
-      print(d)
-      print(numEntries)
+      #print(d)
+     # print(numEntries)
       # print(respondent_rows)
       if(numEntries > 5){ #if there are more than 5 (a normal day has 10 assessments)
         data[respondent_rows[1:5],]$blockHalfDay <- half_day #set the first half of the day 
@@ -720,49 +720,49 @@ for(id in subject_IDs){
   }
 }
 
-############################################ Change scores ####################################################
-
-cols <- c('wakeful', 'down', 'satisfied', 'irritated', 'energetic', 'restless', 'stressed', 'anxious',
-          'listless', 'ruminating', 'stickiness', 'thoughtsPleasant',  'thoughtsObject', 'distracted', 'restOfDayPos',
-          'companyPleasant', 'alonePleasant', 'posMax', 'posIntensity', 'negMax', 'negIntensity',
-          'sumPA', 'sumNA')
-
-#creating a vector with new "lagged" column names
-changeCols <- c()
-for(col in cols) {
-  changeCols <- c(changeCols, paste(col, "change", sep = "_"))
-}
-
-#adding empty columns with "lagged" names
-data[, changeCols] <- NA
-
-#zipping current and lagged column names for the for loop
-colZip <- mapply(c, cols, changeCols, SIMPLIFY = FALSE)
-
-#for loop to add the lagged values to their corresponding new columns
-for(id in subject_IDs){
-  respondent_rows <- which(data$subject == id) #one respondent at a time
-  
-  for(col in colZip) { #looping over the zipped column name pairs
-    prev_value <- 0
-    change_score <- NA #previous value starts out as NA for every column
-    current_day <- 1 #current day at the beginning of every column per respondent is 1
-    
-    for(row in respondent_rows) { #looping over the rows associated with the current respondent
-      
-      if(data$assessmentDay[row] == current_day) { #if the assessment day matches the current day
-        change_score <- data[row, col[1]] - prev_value #calculate next change score
-        data[row, col[2]] <- change_score #add the change_score as the value for the lagged column
-        prev_value <- data[row, col[1]] #update the previous value
-        
-      } else { #if assessment day and current day do not match
-        data[row, col[2]] <- NA #then the change score should be NA (new day!)
-        current_day <- data$assessmentDay[row] #update the current day (could also just be +1)
-        prev_value <- data[row, col[1]] #update previous value
-      }
-    } 
-  }
-}
+# ############################################ Change scores ####################################################
+# 
+# cols <- c('wakeful', 'down', 'satisfied', 'irritated', 'energetic', 'restless', 'stressed', 'anxious',
+#           'listless', 'ruminating', 'stickiness', 'thoughtsPleasant',  'thoughtsObject', 'distracted', 'restOfDayPos',
+#           'companyPleasant', 'alonePleasant', 'posMax', 'posIntensity', 'negMax', 'negIntensity',
+#           'sumPA', 'sumNA')
+# 
+# #creating a vector with new "lagged" column names
+# changeCols <- c()
+# for(col in cols) {
+#   changeCols <- c(changeCols, paste(col, "change", sep = "_"))
+# }
+# 
+# #adding empty columns with "lagged" names
+# data[, changeCols] <- NA
+# 
+# #zipping current and lagged column names for the for loop
+# colZip <- mapply(c, cols, changeCols, SIMPLIFY = FALSE)
+# 
+# #for loop to add the lagged values to their corresponding new columns
+# for(id in subject_IDs){
+#   respondent_rows <- which(data$subject == id) #one respondent at a time
+#   
+#   for(col in colZip) { #looping over the zipped column name pairs
+#     prev_value <- 0
+#     change_score <- NA #previous value starts out as NA for every column
+#     current_day <- 1 #current day at the beginning of every column per respondent is 1
+#     
+#     for(row in respondent_rows) { #looping over the rows associated with the current respondent
+#       
+#       if(data$assessmentDay[row] == current_day) { #if the assessment day matches the current day
+#         change_score <- data[row, col[1]] - prev_value #calculate next change score
+#         data[row, col[2]] <- change_score #add the change_score as the value for the lagged column
+#         prev_value <- data[row, col[1]] #update the previous value
+#         
+#       } else { #if assessment day and current day do not match
+#         data[row, col[2]] <- NA #then the change score should be NA (new day!)
+#         current_day <- data$assessmentDay[row] #update the current day (could also just be +1)
+#         prev_value <- data[row, col[1]] #update previous value
+#       }
+#     } 
+#   }
+# }
 
 # test <- subset(data, select = c(subject, phase, down, down_change, assessmentDay))
 # View(test)

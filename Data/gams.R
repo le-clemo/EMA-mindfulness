@@ -1147,6 +1147,32 @@ if(FALSE){
   load("m4sc.rda")
 }
 
+qqnorm(resid(m4sc))
+qqline(resid(m4sc))
+
+resid_m4sc <- resid(m4sc)
+match(c(min(resid_m4sc),max(resid_m4sc)),resid_m4sc) #1980, 621
+
+
+x <- resid(m4sc)
+h <- hist(x, col = "red", breaks = 40)
+xfit<-seq(min(x),max(x),length=40)
+yfit<-dnorm(xfit,mean=mean(x),sd=sd(x))
+yfit <- yfit*diff(h$mids[1:2])*length(x)
+lines(xfit, yfit, col="black", lwd=2)
+
+# PLOT 2:
+plot(fitted(m4sc), resid(m4sc))
+abline(h=0)
+
+acf_resid(m4sc)
+data_ar <- data
+data_ar$Time <- data$beepNum
+data_ar <- start_event(data_ar, event=c("subject"))
+#dat_ar <- droplevels(dat_ar[order(dat$Subject, dat_ar$Month, dat_ar$Time),])
+ar <- acf_resid(m4sc, plot = FALSE)
+
+ar[2] #autocorrelation of ~0.126
 
 
 

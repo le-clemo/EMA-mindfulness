@@ -105,10 +105,11 @@ for(row in 1:nrow(matchingData)){
   }
 }
 
-#s3_g1_m3 and s3_g1_m4 have duplicate entries in MatchingData (once without corrected dates) --> remove wrong one
-#View(matchingData[which((matchingData$id=="s3_g1_m3") | (matchingData$id=="s3_g1_m4") ),])
-matchingData <- matchingData[!(matchingData$id == "s3_g1_m3" & is.na(matchingData$recordedDates)),]
-matchingData <- matchingData[!(matchingData$id == "s3_g1_m4" & is.na(matchingData$recordedDates)),]
+
+# #s3_g1_m3 and s3_g1_m4 have duplicate entries in MatchingData (once without corrected dates) --> remove wrong one
+# #View(matchingData[which((matchingData$id=="s3_g1_m3") | (matchingData$id=="s3_g1_m4") ),])
+# matchingData <- matchingData[!(matchingData$id == "s3_g1_m3" & is.na(matchingData$recordedDates)),]
+# matchingData <- matchingData[!(matchingData$id == "s3_g1_m4" & is.na(matchingData$recordedDates)),]
 ##################################### combine data ####################################
 #performing a "vlookup" of the md... numbers and adding corresponding columns
 #from matchingData to data
@@ -213,7 +214,7 @@ data <- drop_na(data, patient_id)
 
 #View(data[which(is.na(data$phase)),])
 
-############################# Handle issue with diverging dates ###########################
+############################# Handle issue with diverging dates (1/2) ###########################
 #fix problem with dates (whether entry belongs to pre- or peri-intervention phase)
 # error_demo <- ddply(data[which(data$subject=="s3"),],
 #                     .(subject, id, phase, block, mindcog_db_date, recordedStart, recordedEnd,
@@ -243,6 +244,22 @@ for(row in 1:nrow(data)){ #first extract year from the mindcog_db_date column
   }
 }
 
+
+############################### add actual dates to matching Data for later use with SART data ####################
+for(i in 1:nrow(data)){
+  for(j in 1:nrow(matchingData)){
+    if(data$patient_id[i] == matchingData$meeting_id[j]){
+      matchingData$baselineStart[j] <- data$baselineStart[i]
+      matchingData$baselineEnd[j] <- data$baselineEnd[i]
+      matchingData$interventionStart[j] <- data$interventionStart[i]
+      matchingData$interventionEnd[j] <- data$interventionEnd[i]
+    }
+  }
+}
+
+write.csv(matchingData, file = "matchingData.csv")
+
+############################# Handle issue with diverging dates (2/2) ###########################
 pre_to_peri <- c() #empty lists for row indices of faulty entries
 peri_to_pre <- c()
 i <- 1 #to add to the lists (in a computationally efficient way)
@@ -318,15 +335,96 @@ colNamesNew <- c('firstEntry', 'sleepQuality', 'toBedHour', 'toBedMinute', 'tryS
 setnames(data, old = colNamesOld$columns, new = colNamesNew)
 
 ################################### Sleep Measures ####################################
-data$xNightDate <- as.POSIXct("2000-01-01", format = "%Y-%m-%d") #arbitrary date (earlier day)
-data$toBedTime <- as.POSIXct(paste(data$xNightDate, paste(data$toBedHour, data$toBedMinute, "00", sep = ":"), sep = " "),
-                             format = "%Y-%m-%d %H:%M:%S")
+# data$xNightDate <- as.POSIXct("2000-01-01", format = "%Y-%m-%d") #arbitrary date (earlier day)
+# data$toBedTime <- as.POSIXct(paste(data$xNightDate, paste(data$toBedHour, data$toBedMinute, "00", sep = ":"), sep = " "),
+#                              format = "%Y-%m-%d %H:%M:%S")
+# 
+# data$xMorningDate <- as.POSIXct("2000-01-02", format = "%Y-%m-%d") #arbitrary date ('next' day)
+# data$outOfBedTime <- as.POSIXct(paste(data$xMorningDate, paste(data$wakeupHour, data$wakeupMinute, "00", sep = ":"), sep = " "),
+#                              format = "%Y-%m-%d %H:%M:%S")
+# 
+# data$sleepDuration <- difftime(data$outOfBedTime, data$toBedTime)
 
-data$xMorningDate <- as.POSIXct("2000-01-02", format = "%Y-%m-%d") #arbitrary date ('next' day)
-data$outOfBedTime <- as.POSIXct(paste(data$xMorningDate, paste(data$wakeupHour, data$wakeupMinute, "00", sep = ":"), sep = " "),
-                             format = "%Y-%m-%d %H:%M:%S")
+# Code von Clara Schier
+data <- data %>% add_column(sleepDuration = NA)
+data <- data %>% add_column(sleepDuration2 = NA)
+data <- data %>% add_column(actualSleepDuration = NA)
 
-data$sleepDuration <- difftime(data$outOfBedTime, data$toBedTime)
+
+# iterate through ESM file
+for (i in 1:nrow(data)) {
+  if ((data$firstEntry[i] != 1) || (is.na(data$firstEntry[i]))){
+    # skip rows if they do not contain the 1st entry per day
+    next
+  }
+  
+  # copy relevant sleep data
+  bedtimeHour <- data$toBedHour[i]
+  bedtimeMinute <- data$toBedMinute[i]
+  sleepHour <- data$trySleepHour[i]
+  sleepMinute <- data$trySleepMinute[i]
+  gotupHour <- data$wakeupHour[i]
+  gotupMinute <- data$wakeupMinute[i]
+  sleepLatency <- data$sleepLatency[i] #sleepLatency
+  
+  # if people used PM time format for bedtime
+  # assuming they usually go to be some time between 9pm and 9am, otherwise this could create a mistake
+  # if (bedtimeHour > 8 && bedtimeHour < 13) {
+  #   bedtimeHour <- bedtimeHour+12
+  # }
+  # if (sleepHour > 8 && sleepHour < 13) {
+  #   sleepHour <- sleepHour+12
+  # }
+  # 
+  # calculate bed/sleep times
+  bedtimeAll <- bedtimeHour*60 + bedtimeMinute
+  sleepAll <- sleepHour*60 + sleepMinute
+  gotupAll <- gotupHour*60 + gotupMinute
+  
+  sleepDuration <- NA
+  sleepDuration2 <- NA
+  
+  # calculate sleep/bed time duration
+  # if bedtime after midnight
+  if (gotupAll > bedtimeAll) {
+    sleepDuration <- gotupAll - bedtimeAll
+  } else {
+    # if bedtime before midnight
+    gotupAll <- gotupAll+1440
+    sleepDuration <- gotupAll - bedtimeAll
+  }
+  
+  # reset gotupAll
+  gotupAll <- gotupHour*60 + gotupMinute
+  
+  # if bedtime after midnight
+  if (gotupAll > sleepAll) {
+    sleepDuration2 <- gotupAll - sleepAll
+  } else {
+    # if bedtime before midnight
+    gotupAll <- gotupAll+1440
+    sleepDuration2 <- gotupAll - sleepAll
+  }
+  
+  
+  # if someone put in a wrong time accidentally and bedtime and tryfallasleep don't match up 
+  if(sleepDuration2 - sleepDuration > 500){
+    sleepDuration2 <- sleepDuration
+  } else if(sleepDuration - sleepDuration2 > 500){
+    sleepDuration <- sleepDuration2
+  }
+  
+  # total sleep time: sleep duration minus sleep latency
+  actualSleepDuration <- sleepDuration2-sleepLatency
+  
+  data$sleepDuration[i] <- sleepDuration
+  data$sleepDuration2[i] <- sleepDuration2
+  data$actualSleepDuration[i] <- actualSleepDuration
+  
+}
+
+
+
 
 ################################### Positive / Negative Affect ####################################
 
@@ -516,7 +614,7 @@ data <- data[!(data$subject == "s163" & data$block ==2 ),]
 #                      "phaseAssessmentDay", "mindcog_db_open_from", "mindcog_db_non_response", "mindcog_db_date",
 #                      "baselineStart", "baselineEnd", "interventionStart", "interventionEnd")))
 
-data <- data[!(data$id == "s81_g1_m3" & data$blockAssessmentDay ==1 ),]
+# data <- data[!(data$id == "s81_g1_m3" & data$blockAssessmentDay ==1 ),]
 #adjust assessmentDay column
 data[((data$subject == "s81") &
         (data$block == 2)),]$assessmentDay = data[((data$subject == "s81") &
@@ -547,7 +645,7 @@ data[((data$subject == "s24") &
 #                      "phaseAssessmentDay", "mindcog_db_open_from", "mindcog_db_non_response", "mindcog_db_date",
 #                      "baselineStart", "baselineEnd", "interventionStart", "interventionEnd")))
 
-data <- data[!(data$subject == "s108" & data$block == 2 ),]
+# data <- data[!(data$subject == "s108" & data$block == 2 ),]
 
 ################################################## adding half days (must be done after above issues are fixed) ##########################################
 #adding half days per phase
@@ -662,13 +760,15 @@ for(id in subject_IDs){ #every participant
 
 ############################## Some changes for convenience ################################
 #drop unnecessary columns and reorder columns for convenience
+data$sleepDuration <- data$actualSleepDuration
+
 columnNames <- c(colnames(data))
 data <- data %>% select(patient_id, id, subject, group, intervention, phase, block, respondent_id,
                         #18 = db_open_from; 23 = db_date; 26:61 = firstEntry:comments; 67:76
                         columnNames[18:23], firstEntry, sleepQuality, sleepLatency, sleepDuration,
                         restednessWakeup, columnNames[36:61], sumPA, sumNA, 
                         #67:78 = response measures
-                        columnNames[81:92])
+                        columnNames[79:90])
 
 # data <- subset(data, select = -c(roqua_id, hide_pii_from_researchers, gender, birth_year,
 #                                  hide_values_from_professionals, respondent_label, respondent_type,

@@ -1,3 +1,95 @@
+rm(list = ls()) #clean all up
+
+setwd("C:/Users/cleme/Documents/Education/RUG/Thesis/EMA-mindfulness/Data/ESM/mindcog_v202204")
+
+#setwd("~/Documents/RUG/Thesis/EMA-mindfulness/Data/ESM/mindcog_v202204")
+library(tidyverse)
+library(plyr)
+library(dplyr)
+library(data.table)
+library(ggplot2)
+library(itsadug)
+library(mgcv)
+library(tidyr)           # Simplify R code
+
+#read in data
+data <- read.csv('preprocessed_data.csv') 
+
+
+
+#same for sleepQuality
+for(id in unique(data$subject)){
+  respondent_rows <- which(data$subject == id)
+  current_day <- 0
+  for(row in respondent_rows){
+    if((data$assessmentDay[row] != current_day) & (!is.na(data$sleepQuality[row]))){
+      sleep_quality <- data$sleepQuality[row]
+      current_day <- data$assessmentDay[row]
+    } else if((data$assessmentDay[row] == current_day) & (is.na(data$sleepQuality[row]))){
+      data$sleepQuality[row] <- sleep_quality
+    }
+  }
+}
+
+#same for sleepDuration
+for(id in unique(data$subject)){
+  respondent_rows <- which(data$subject == id)
+  current_day <- 0
+  for(row in respondent_rows){
+    if((data$assessmentDay[row] != current_day) & (!is.na(data$sleepDuration[row]))){
+      sleep_duration <- data$sleepDuration[row]
+      current_day <- data$assessmentDay[row]
+    } else if((data$assessmentDay[row] == current_day) & (is.na(data$sleepDuration[row]))){
+      data$sleepDuration[row] <- sleep_duration
+    }
+  }
+}
+#aaaaaaand for sleepLatency
+for(id in unique(data$subject)){
+  respondent_rows <- which(data$subject == id)
+  current_day <- 0
+  for(row in respondent_rows){
+    if((data$assessmentDay[row] != current_day) & (!is.na(data$sleepLatency[row]))){
+      sleep_latency <- data$sleepLatency[row]
+      current_day <- data$assessmentDay[row]
+    } else if((data$assessmentDay[row] == current_day) & (is.na(data$sleepLatency[row]))){
+      data$sleepLatency[row] <- sleep_latency
+    }
+  }
+}
+
+#aaaaaaand for restednessWakeup
+for(id in unique(data$subject)){
+  respondent_rows <- which(data$subject == id)
+  current_day <- 0
+  for(row in respondent_rows){
+    if((data$assessmentDay[row] != current_day) & (!is.na(data$restednessWakeup[row]))){
+      restedness <- data$restednessWakeup[row]
+      current_day <- data$assessmentDay[row]
+    } else if((data$assessmentDay[row] == current_day) & (is.na(data$restednessWakeup[row]))){
+      data$restednessWakeup[row] <- restedness
+    }
+  }
+}
+
+data$group <- factor(data$group, levels = c("controls", "remitted"))
+data$intervention <- factor(data$intervention, levels = c("mindfulness", "fantasizing"))
+data$phase <- factor(data$phase, levels = c("pre", "peri"))
+data$grInt <- as.factor(paste(data$group, data$intervention, sep = "."))
+data$blockPhase <- as.factor(paste(data$phase, data$block, sep = "."))
+
+
+met.vars <- c('ruminating', 'stickiness', 'sumNA',  'down', 'irritated', 'restless', 'anxious',
+              'sumPA', 'wakeful', 'satisfied', 'energetic',
+              'stressed', 'listless',  'distracted',
+              'thoughtsPleasant', 'restOfDayPos',
+              'posMax', 'posIntensity', 'negMax', 'negIntensity',
+              "sleepQuality", "sleepLatency", "sleepDuration", "restednessWakeup")
+
+sc_data <- copy(data)
+sc_data[met.vars] <- scale(sc_data[met.vars])
+sc_data$subjB <- interaction(sc_data$subject, sc_data$block, drop = TRUE)
+
 
 #number of participants so far
 length(unique(sc_data$subjB)) #62 subjB (same subject, different block --> viewed as separate)
@@ -9,14 +101,30 @@ responses_block <- ddply(sc_data, .(subjB), plyr::summarise,
                                numDays = max(assessmentDay))
 
 
-meanResponseRate_block <- mean(responses_block$responseRate) #the mean response rate is ~67.5%
-length(unique(responses_block[which(responses_block$responseRate >= meanResponseRate_block),]$subjB)) #34
-length(unique(responses_block[which(responses_block$responseRate >= 0.6),]$subjB)) #43
-length(unique(responses_block[which(responses_block$responseRate >= 0.5),]$subjB)) #51
+meanResponseRate_block <- mean(responses_block$responseRate) #the mean response rate is ~67.6%
+length(unique(responses_block[which(responses_block$responseRate >= meanResponseRate_block),]$subjB)) #36
+length(unique(responses_block[which(responses_block$responseRate >= 0.6),]$subjB)) #45
+length(unique(responses_block[which(responses_block$responseRate >= 0.5),]$subjB)) #53
 
 #removing participants with a response rate lower than 60%
-# pp <- unique(responses_block[which(responses_block$responseRate >= 0.6),]$subjB)
-# sc_data <- sc_data[which(sc_data$subjB %in% pp),]
+pp <- unique(responses_block[which(responses_block$responseRate >= 0.6),]$subjB)
+sc_data <- sc_data[which(sc_data$subjB %in% pp),]
+
+
+################################### simple model #################################################
+
+s1 <- gam(ruminating ~ s(blockBeepNum) + group * intervention * phase + s(blockBeepNum, by=grInt) +
+            s(blockBeepNum, by = subjB, bs="fs", m=1),
+           data=sc_data, family = "scat")
+
+
+
+
+
+
+
+
+
 
 
 ################################ blocks combined #############################
@@ -1134,7 +1242,7 @@ for(g in c("controls", "remitted")){
 
 
 if(FALSE){
-  m4sc <- gam(ruminating ~ s(beepNum) + group * intervention * blockPhase * thoughtsObject_lag1 *
+  m4sc <- gam(ruminating ~ s(blockBeepNum) + group * intervention * phase * thoughtsObject_lag1 *
                 thoughtsTime_lag1 * thoughtsValence_lag1 + aloneCompany_lag1 +
                 s(sumNA_lag1) + s(posMax_lag1) + s(sleepQuality) +
                 s(stickiness_lag1) + s(negMax_lag1) +

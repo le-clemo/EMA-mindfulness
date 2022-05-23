@@ -25,13 +25,13 @@ for (i in 1:nrow(ESM_output)) {
   
   # if people used PM time format for bedtime
   # assuming they usually go to be some time between 9pm and 9am, otherwise this could create a mistake
-  if (bedtimeHour > 8 && bedtimeHour < 13) {
-    bedtimeHour <- bedtimeHour+12
-  }
-  if (sleepHour > 8 && sleepHour < 13) {
-    sleepHour <- sleepHour+12
-  }
-  
+  # if (bedtimeHour > 8 && bedtimeHour < 13) {
+  #   bedtimeHour <- bedtimeHour+12
+  # }
+  # if (sleepHour > 8 && sleepHour < 13) {
+  #   sleepHour <- sleepHour+12
+  # }
+  # 
   # calculate bed/sleep times
   bedtimeAll <- bedtimeHour*60 + bedtimeMinute
   sleepAll <- sleepHour*60 + sleepMinute

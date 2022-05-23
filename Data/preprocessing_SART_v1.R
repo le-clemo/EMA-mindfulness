@@ -34,6 +34,7 @@ list2env(mylist ,.GlobalEnv)
 
 #load preprocessed ESM data for matching
 esm <- read_csv('ESM/mindcog_v202204/preprocessed_data.csv')
+matchingData <- read_csv('ESM/mindcog_v202204/matchingData.csv')
 
 # esm$group <- factor(esm$group, levels = c("controls", "remitted"))
 # esm$intervention <- factor(esm$intervention, levels = c("mindfulness", "fantasizing"))
@@ -56,9 +57,21 @@ for(row in 1:nrow(wander_all)) {
   }
 }
 
+#at least one column includes a comment in brackets in the id column --> we need to remove it
+wander_all$Nr_Dagboek_voormeting1 <- gsub(r"{\s*\([^\)]+\)}","",as.character(wander_all$Nr_Dagboek_voormeting1))
+wander_all$Nr_Dagboek_Interventie1 <- gsub(r"{\s*\([^\)]+\)}","",as.character(wander_all$Nr_Dagboek_Interventie1))
+wander_all$Nr_Dagboek_voormeting2 <- gsub(r"{\s*\([^\)]+\)}","",as.character(wander_all$Nr_Dagboek_voormeting2))
+wander_all$Nr_Dagboek_Interventie2 <- gsub(r"{\s*\([^\)]+\)}","",as.character(wander_all$Nr_Dagboek_Interventie2))
+
+
 #View(wander_all[which(wander_all$wander_id_block1=="628825449"),])
 
 ##################################### combine data ####################################
+
+#handling duplicate entries
+games <- games %>%
+  distinct(userID, gameSessionID, time, .keep_all = TRUE)
+
 #from wander_all to games, numbers, questions
 length(unique(wander_all$Proefpersoon)) #34 participants
 
@@ -68,6 +81,7 @@ games$dagboek_peri1 <- NA
 games$dagboek_pre2 <- NA
 games$dagboek_peri2 <- NA
 games$group <- NA
+games$block <- NA
 games$wander1 <- FALSE
 games$wander2 <- FALSE
 games$audio1 <- FALSE
@@ -116,7 +130,10 @@ for(i in 1:nrow(games)){
   }
 }
 
-length(games[(which(!is.na(games$subject))),]$subject) #3399 games associated with participant
+length(games[(which(!is.na(games$subject))),]$subject) #685 games associated with participant
+
+#userIDs that are missing from wander_all (Preofpersonen)
+table(games[which(is.na(games$subject)),]$userID)
 
 ################################## Inspecting games ###################################
 length(unique(games$userID)) #72 (participants that took part in both blocks are counted twice!)
@@ -129,13 +146,44 @@ games$intervention <- NA
 games$phase <- NA
 games$block <- NA
 games$fullID <- NA
+
+
+for(row in 1:nrow(matchingData)){
+  meetingID <- matchingData$meeting_id[row]
+  respondentID <- matchingData$`Respondent ID`[row]
+  int <- matchingData$intervention[row]
+  subjectID <- matchingData$id[row]
+  
+  pre1_meet <- which(games$dagboek_pre1==meetingID)
+  pre1_resp <- which(games$dagboek_pre1==respondentID)
+  peri1_meet <- which(games$dagboek_peri1==meetingID)
+  peri1_resp <- which(games$dagboek_peri1==respondentID)
+  
+  pre2_meet <- which(games$dagboek_pre2==meetingID)
+  pre2_resp <- which(games$dagboek_pre2==respondentID)
+  peri2_meet <- which(games$dagboek_peri2==meetingID)
+  peri2_resp <- which(games$dagboek_peri2==respondentID)
+  
+  if(length(pre1_meet) > 0){
+    games$fullID[pre1_meet] <- subjectID
+    
+    
+  }
+}
+
+
+
+
+
+
+
 ivec <- rep(NA,nrow(games)) #creating vectors of needed size (is more efficient)
 pvec <- rep(NA,nrow(games))
 bvec <- rep(NA,nrow(games))
 idvec <- rep(NA,nrow(games))
 g_ind <- which(!is.na(games$subject)) #only loop over relevant rows
 for(i in g_ind){
-  g_date <- format(games$time[i], format = "%Y-%m-%d") #remove time (only date)
+  g_date <- format(games$time[i], format = "%Y-%m-%d") #remove time (only date necessary)
   subj <- games$subject[i] #the current subject
   e_ind <- which(esm$subject==subj) #only loop over esm data of current subject
   for(j in e_ind){

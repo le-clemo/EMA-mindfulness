@@ -18,19 +18,7 @@ library(mgm)
 data <- read.csv('preprocessed_data.csv') 
 
 
-#set sleepScore for every assessment per day
-for(id in unique(data$subject)){
-  respondent_rows <- which(data$subject == id)
-  current_day <- 0
-  for(row in respondent_rows){
-    if((data$assessmentDay[row] != current_day) & (!is.na(data$sleepScore[row]))){
-      sleep_score <- data$sleepScore[row]
-      current_day <- data$assessmentDay[row]
-    } else if((data$assessmentDay[row] == current_day) & (is.na(data$sleepScore[row]))){
-      data$sleepScore[row] <- sleep_score
-    }
-  }
-}
+
 #same for sleepQuality
 for(id in unique(data$subject)){
   respondent_rows <- which(data$subject == id)

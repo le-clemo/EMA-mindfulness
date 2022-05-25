@@ -17,8 +17,6 @@ library(ggplot2)
 library(reshape)
 library(ggpubr)
 library(lubridate)
-library(igraph)
-library(qgraph)
 library(gridExtra)
 library(ggpubr)
 library(RColorBrewer)
@@ -32,6 +30,12 @@ data <- read.csv('preprocessed_data.csv')
 data$group <- factor(data$group, levels = c("controls", "remitted"))
 data$intervention <- factor(data$intervention, levels = c("mindfulness", "fantasizing"))
 data$phase <- factor(data$phase, levels = c("pre", "peri"))
+data$subjB <- interaction(data$subject, data$block, drop = TRUE) #unique identifier for subject per block
+
+
+unique(responses_block[which(responses_block$responseRate >= 0.6),]$subjB)
+falseDays <- which(data$phaseAssessmentDay==0)
+data <- data[-falseDays,]
 
 
 ################################# response-related measures #####################################
@@ -99,6 +103,29 @@ for(g in groups){
   }
 } #response rates are always worse in peri
 
+
+#to remove participants below a certain threshold (response rate)
+responses_block <- ddply(data, .(subjB), plyr::summarise,
+                         numCompleted = length(mindcog_db_open_from),
+                         noResponse = length(unique(mindcog_db_non_response)),
+                         response = numCompleted - noResponse,
+                         responseRate = round(response/numCompleted,2),
+                         numDays = max(assessmentDay))
+
+pp <- unique(responses_block[which(responses_block$responseRate >= 0.6),]$subjB)
+cut_data <- data[which(data$subjB %in% pp),]
+
+
+################################################ Missed assessments ##################################################
+
+missedAssessments <- ddply(data, .(group, intervention, phase, blockAssessmentDay), plyr::summarize,
+                           nBeeps = length(subjB),
+                           nMissed =  length(unique(mindcog_db_non_response)),
+                           propMissed = round(nMissed/nBeeps, 2))
+
+
+ggplot(missedAssessments, aes(x=blockAssessmentDay, y=propMissed, color=interaction(group, intervention))) +
+  geom_line() + geom_point() + geom_vline(xintercept = 7.5, lty = "dashed")
 
 
 ########################################### T.tests ##########################################################
@@ -174,20 +201,30 @@ for(g in c("controls", "remitted")){
 
 
 ##################################### Daily avg per individual ########################################
-
 melt.dat <- melt(data, id.vars=c("subject", "group", "assessmentDay"),
-              measure.vars = c("ruminating", "sumPA", "sumNA"), na.rm = TRUE)
+                 measure.vars = c("ruminating", "sumPA", "sumNA"), na.rm = TRUE)
 melt.dat <- aggregate(melt.dat$value, by=list(subject=melt.dat$subject, assessmentDay=melt.dat$assessmentDay,
                                               group=melt.dat$group, variable=melt.dat$variable), FUN=mean)
 
 ggplot(melt.dat[which((melt.dat$variable=="ruminating") & (melt.dat$assessmentDay<=7)),],
-       aes(x=assessmentDay, y=x, group=subject, color=group)) +
-  geom_line() + geom_point() #+ geom_vline(xintercept=14)
+       aes(x=assessmentDay, y=x, group=subject, color=group, fill = group)) + theme_bw() +
+  geom_line(alpha = 0.3) +#+ stat_summary(fun = mean, na.rm = TRUE, geom ='line', group="group", lwd = 1) +
+  stat_summary(fun = mean, na.rm = TRUE, geom = "point", lwd = 3, group = "") +
+  stat_summary(fun = mean, na.rm = TRUE, geom = "line", group = "group") + ylab("Rumination")
 
 
 
+melt.dat <- melt(data, id.vars=c("subjB", "group", "intervention", "phase", "blockAssessmentDay"),
+                 measure.vars = c("ruminating", "sumPA", "sumNA"), na.rm = TRUE)
+melt.dat <- aggregate(melt.dat$value, by=list(subject=melt.dat$subjB, blockAssessmentDay=melt.dat$blockAssessmentDay,
+                                              group=melt.dat$group, intervention=melt.dat$intervention,
+                                              phase=melt.dat$phase, variable=melt.dat$variable), FUN=mean)
 
-
+ggplot(melt.dat[which(melt.dat$variable=="ruminating"),],
+       aes(x=blockAssessmentDay, y=x, group=subject, color=interaction(group, intervention))) + theme_bw() +
+  geom_line(alpha = 0.3) +#+ stat_summary(fun = mean, na.rm = TRUE, geom ='line', group="group", lwd = 1) +
+  stat_summary(fun = mean, na.rm = TRUE, geom = "point", lwd = 3, group = "") +
+  stat_summary(fun = mean, na.rm = TRUE, geom = "line", group = "group") + ylab("Rumination")
 
 
 

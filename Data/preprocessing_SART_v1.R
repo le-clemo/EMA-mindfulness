@@ -147,36 +147,6 @@ games$phase <- NA
 games$block <- NA
 games$fullID <- NA
 
-
-for(row in 1:nrow(matchingData)){
-  meetingID <- matchingData$meeting_id[row]
-  respondentID <- matchingData$`Respondent ID`[row]
-  int <- matchingData$intervention[row]
-  subjectID <- matchingData$id[row]
-  
-  pre1_meet <- which(games$dagboek_pre1==meetingID)
-  pre1_resp <- which(games$dagboek_pre1==respondentID)
-  peri1_meet <- which(games$dagboek_peri1==meetingID)
-  peri1_resp <- which(games$dagboek_peri1==respondentID)
-  
-  pre2_meet <- which(games$dagboek_pre2==meetingID)
-  pre2_resp <- which(games$dagboek_pre2==respondentID)
-  peri2_meet <- which(games$dagboek_peri2==meetingID)
-  peri2_resp <- which(games$dagboek_peri2==respondentID)
-  
-  if(length(pre1_meet) > 0){
-    games$fullID[pre1_meet] <- subjectID
-    
-    
-  }
-}
-
-
-
-
-
-
-
 ivec <- rep(NA,nrow(games)) #creating vectors of needed size (is more efficient)
 pvec <- rep(NA,nrow(games))
 bvec <- rep(NA,nrow(games))
@@ -374,7 +344,7 @@ for(subj in subject_IDs){
     #print(subj)
     next
   } else { #else get all the userIDs for this subject
-    print(subj)
+    #print(subj)
     user_IDs <- unique(numbers[which(numbers$subject==subj),]$userID)
   }
 
@@ -480,6 +450,120 @@ for(subj in subject_IDs){
     }
   }
 }
+
+numbers[which(numbers$responseTime==0),]$responseTime <- NA #turning 0 RTs into NAs
+
+numbers$meanRT <- NA
+numbers$meanRT_Go <- NA
+numbers$meanRT_NoGo <- NA
+numbers$propCor <- NA
+numbers$propCor_Go <- NA
+numbers$propCor_NoGo <- NA
+
+numbers$meanRT_cycle <- NA
+numbers$meanRT_Go_cycle <- NA
+numbers$meanRT_NoGo_cycle <- NA
+numbers$propCor_cycle <- NA
+numbers$propCor_Go_cycle <- NA
+numbers$propCor_NoGo_cycle <- NA
+
+for(subj in subject_IDs){
+  if(is.na(subj)){ #if it's NA --> skip iteration
+    #print(subj)
+    next
+  } else { #else get all the userIDs for this subject
+    
+    user_IDs <- unique(numbers[which(numbers$subject==subj),]$userID)
+  }
+  for(id in user_IDs){ #for each userID get all game sessions
+    game_ids <- unique(numbers[which((numbers$userID==id) & (numbers$subject==subj)),]$gameSessionID)
+    
+    
+    # meanRT_list <- list(rep(NA, length(n_rows)))
+    # meanRT_Go_list <- list(rep(NA, length(n_rows)))
+    # meanRT_NoGo_list <- list(rep(NA, length(n_rows)))
+    # pc_list <- list(rep(NA, length(n_rows)))
+    # pc_Go_list <- list(rep(NA, length(n_rows)))
+    # pc_NoGo_list <- list(rep(NA, length(n_rows)))
+    
+    for(gid in game_ids){
+      n_rows <- which((numbers$userID==id) & (numbers$subject==subj) & (numbers$gameSessionID==gid))
+      
+      num_cycles <- max(numbers[n_rows,]$cycle)
+      
+      meanRT <- mean(numbers[n_rows,]$responseTime, na.rm = TRUE)#meanRT per cycle overall
+      
+      meanRT_Go <- mean(numbers[which((numbers$userID==id) & (numbers$gameSessionID==gid) & (numbers$subject==subj) &
+                                             (numbers$cycle==i) & (numbers$isGo==TRUE)),]$responseTime, na.rm = TRUE)#meanRT per cycle for Go trials
+      
+      meanRT_NoGo <- mean(numbers[which((numbers$userID==id) & (numbers$gameSessionID==gid) & (numbers$subject==subj) &
+                                               (numbers$cycle==i) & (numbers$isGo==FALSE)),]$responseTime, na.rm = TRUE)#meanRT per cycle for No-Go trials
+      
+      propCor <- round(length(numbers[which((numbers$userID==id) & (numbers$gameSessionID==gid) & (numbers$subject==subj) &
+                                            (numbers$cycle==i) & (numbers$correct==TRUE)),]$id) / 
+                              length(numbers[which((numbers$userID==id) & (numbers$gameSessionID==gid) & (numbers$subject==subj) &
+                                              (numbers$cycle==i)),]$id), 2)
+      
+      propCor_Go <- length(numbers[which((numbers$userID==id) & (numbers$gameSessionID==gid) & (numbers$subject==subj) &
+                                               (numbers$cycle==i) & (numbers$isGo==TRUE) & (numbers$correct==TRUE)),]$id) / 
+                           length(numbers[which((numbers$userID==id) & (numbers$gameSessionID==gid) & (numbers$subject==subj) &
+                                                 (numbers$cycle==i) & (numbers$isGo==TRUE)),]$id)
+      
+      propCor_NoGo <- round(length(numbers[which((numbers$userID==id) & (numbers$gameSessionID==gid) & (numbers$subject==subj) &
+                                                 (numbers$cycle==i) & (numbers$isGo==FALSE) & (numbers$correct==TRUE)),]$id) / 
+                                   length(numbers[which((numbers$userID==id) & (numbers$gameSessionID==gid) & (numbers$subject==subj) &
+                                                   (numbers$cycle==i) & (numbers$isGo==FALSE)),]$id), 2)
+      
+      numbers[n_rows, ]$meanRT <- meanRT
+      numbers[n_rows, ]$meanRT_Go <- meanRT_Go
+      numbers[n_rows, ]$meanRT_NoGo <- meanRT_NoGo
+      numbers[n_rows, ]$propCor <- propCor
+      numbers[n_rows, ]$propCor_Go <- propCor_Go
+      numbers[n_rows, ]$propCor_NoGo <- propCor_NoGo
+      
+    }
+    if(is.na(num_cycles)){
+      next
+    } else {
+      for(i in 1:num_cycles){
+        
+        c_rows <- which((numbers$userID==id) & (numbers$gameSessionID==gid) & (numbers$subject==subj) &
+                          (numbers$cycle==i))
+        
+        meanRT_cycle <- mean(numbers[c_rows,]$responseTime, na.rm = TRUE)#meanRT per cycle overall
+        
+        meanRT_Go_cycle <- mean(numbers[which((numbers$userID==id) & (numbers$gameSessionID==gid) & (numbers$subject==subj) &
+                                                (numbers$cycle==i) & (numbers$isGo==TRUE)),]$responseTime, na.rm = TRUE)#meanRT per cycle for Go trials
+        
+        meanRT_NoGo_cycle <- mean(numbers[which((numbers$userID==id) & (numbers$gameSessionID==gid) & (numbers$subject==subj) &
+                                                  (numbers$cycle==i) & (numbers$isGo==FALSE)),]$responseTime, na.rm = TRUE)#meanRT per cycle for No-Go trials
+        
+        propCor_cycle <- length(numbers[which((numbers$userID==id) & (numbers$gameSessionID==gid) & (numbers$subject==subj) &
+                                                (numbers$cycle==i) & (numbers$correct==TRUE)),]$id) / 
+                                  length(numbers[which((numbers$userID==id) & (numbers$gameSessionID==gid) & (numbers$subject==subj) &
+                                                  (numbers$cycle==i)),]$id)
+        
+        propCor_Go_cycle <- length(numbers[which((numbers$userID==id) & (numbers$gameSessionID==gid) & (numbers$subject==subj) &
+                                                   (numbers$cycle==i) & (numbers$isGo==TRUE) & (numbers$correct==TRUE)),]$id) / 
+                                     length(numbers[which((numbers$userID==id) & (numbers$gameSessionID==gid) & (numbers$subject==subj) &
+                                                     (numbers$cycle==i) & (numbers$isGo==TRUE)),]$id)
+        
+        propCor_NoGo_cycle <- length(numbers[which((numbers$userID==id) & (numbers$gameSessionID==gid) & (numbers$subject==subj) &
+                                                     (numbers$cycle==i) & (numbers$isGo==FALSE) & (numbers$correct==TRUE)),]$id) / 
+                                       length(numbers[which((numbers$userID==id) & (numbers$gameSessionID==gid) & (numbers$subject==subj) &
+                                                       (numbers$cycle==i) & (numbers$isGo==FALSE)),]$id)
+        
+        numbers[c_rows, ]$meanRT_cycle <- meanRT_cycle
+        numbers[c_rows, ]$meanRT_Go_cycle <- meanRT_Go_cycle
+        numbers[c_rows, ]$meanRT_NoGo_cycle <- meanRT_NoGo_cycle
+        numbers[c_rows, ]$propCor_cycle <- propCor_cycle
+        numbers[c_rows, ]$propCor_Go_cycle <- propCor_Go_cycle
+        numbers[c_rows, ]$propCor_NoGo_cycle <- propCor_NoGo_cycle
+      }
+    }
+  }
+}
+
 
 numbers_q0 <- ddply(numbers, .(group, Q0), summarise,
                               nSubj = length(unique(subject)),

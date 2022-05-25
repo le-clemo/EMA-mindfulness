@@ -11,6 +11,8 @@ library(ggplot2)
 library(itsadug)
 library(mgcv)
 library(tidyr)           # Simplify R code
+library(car)
+library(MASS)
 
 #read in data
 data <- read.csv('preprocessed_data.csv') 
@@ -77,7 +79,8 @@ data$intervention <- factor(data$intervention, levels = c("mindfulness", "fantas
 data$phase <- factor(data$phase, levels = c("pre", "peri"))
 data$grInt <- as.factor(paste(data$group, data$intervention, sep = "."))
 data$blockPhase <- as.factor(paste(data$phase, data$block, sep = "."))
-
+data$grIntPhase <- as.factor(interaction(data$group, data$intervention, data$phase, drop = TRUE))
+data$subjB <- interaction(data$subject, data$block, drop = TRUE)
 
 met.vars <- c('ruminating', 'stickiness', 'sumNA',  'down', 'irritated', 'restless', 'anxious',
               'sumPA', 'wakeful', 'satisfied', 'energetic',
@@ -88,7 +91,7 @@ met.vars <- c('ruminating', 'stickiness', 'sumNA',  'down', 'irritated', 'restle
 
 sc_data <- copy(data)
 sc_data[met.vars] <- scale(sc_data[met.vars])
-sc_data$subjB <- interaction(sc_data$subject, sc_data$block, drop = TRUE)
+
 
 
 #number of participants so far
@@ -111,11 +114,151 @@ pp <- unique(responses_block[which(responses_block$responseRate >= 0.6),]$subjB)
 sc_data <- sc_data[which(sc_data$subjB %in% pp),]
 
 
+##################################### Distribution ###############################################
+qqnorm(data$ruminating)
+qqline(data$ruminating)
+
+
+qqp(data$ruminating, "norm")
+qqp(data$ruminating, "lnorm")
+
+t.dist <- fitdistr(test$ruminating, "t")
+qqp(test$ruminating, "t", df=1)
+
+
+nbinom <- fitdistr(test$ruminating, "Negative Binomial")
+qqp(test$ruminating, "nbinom", size = nbinom$estimate[[1]], mu = nbinom$estimate[[2]])
+
+gamma <- fitdistr(test$ruminating, "gamma")
+qqp(test$ruminating, "gamma", shape = gamma$estimate[[1]], rate = gamma$estimate[[2]])
+
+
+test <- data[which(!is.na(data$ruminating)),]
+test$ruminating <- test$ruminating + 1
+
+g1 <- gam(ruminating ~ s(blockBeepNum) + group * intervention * phase + s(blockBeepNum, by=group) +
+            s(blockBeepNum, by = subjB, bs="fs", m=1),
+          data=test, family = "Gamma")
 ################################### simple model #################################################
 
-s1 <- gam(ruminating ~ s(blockBeepNum) + group * intervention * phase + s(blockBeepNum, by=grInt) +
-            s(blockBeepNum, by = subjB, bs="fs", m=1),
-           data=sc_data, family = "scat")
+if(FALSE){
+  s1 <- gam(ruminating ~ s(blockBeepNum) + group * intervention * phase + s(blockBeepNum, by=group) +
+              s(blockBeepNum, by = subjB, bs="fs", m=1),
+            data=sc_data, family = "scat")
+  
+  summary_s1 <- summary(s1)
+  
+  save(s1, summary_s1, file="s1.rda", compress="xz")
+} else {
+  load("s1.rda")
+}
+
+
+plot_smooth(s1, view="blockBeepNum", plot_all = "group")
+
+plot_diff(s1, view = "blockBeepNum", comp = list(group = c("controls", "remitted")))
+
+qqnorm(resid(s1))
+qqline(resid(s1))
+
+resid_s1 <- resid(s1)
+match(c(min(resid_s1),max(resid_s1)), resid_s1) #1980, 621
+
+
+x <- resid(s1)
+h <- hist(x, col = "red", breaks = 40)
+xfit<-seq(min(x),max(x),length=40)
+yfit<-dnorm(xfit,mean=mean(x),sd=sd(x))
+yfit <- yfit*diff(h$mids[1:2])*length(x)
+lines(xfit, yfit, col="black", lwd=2)
+
+# PLOT 2:
+plot(fitted(s1), resid(s1))
+abline(h=0)
+
+acf_resid(s1)
+
+
+
+
+
+if(FALSE){
+  s1b <- gam(ruminating ~ s(blockBeepNum) + grIntPhase + s(blockBeepNum, by=grIntPhase) +
+               s(blockBeepNum, by = subjB, bs="fs", m=1),
+             data=sc_data, family = "scat")
+  
+  summary_s1b <- summary(s1b)
+  
+  save(s1b, summary_s1b, file="s1b.rda", compress="xz")
+} else {
+  load("s1b.rda")
+}
+
+
+plot_smooth(s1b, view="blockBeepNum", 
+            plot_all="grIntPhase")
+
+for(g in c("controls", "remitted")){
+  for(int in c("fantasizing", "mindfulness")){
+    g1 <- paste(g, int, "peri", sep = ".")
+    g2 <- paste(g, int, "pre", sep = ".")
+    print(plot_diff(s1b, view="blockBeepNum", 
+                    comp=list(grIntPhase=c(g1, g2))))
+  }
+}
+
+
+
+
+if(FALSE){
+  m1 <- gam(ruminating ~ s(blockBeepNum) + group * intervention * phase + s(blockBeepNum, by=group) +
+              s(blockBeepNum, by = subjB, bs="fs", m=1),
+            data=sc_data)
+  
+  summary_m1 <- summary(m1)
+  
+  save(m1, summary_m1, file="m1.rda", compress="xz")
+} else {
+  load("m1.rda")
+}
+
+plot_smooth(m1, view="blockBeepNum", plot_all = "group")
+
+plot_diff(m1, view = "blockBeepNum", comp = list(group = c("controls", "remitted")))
+
+qqnorm(resid(m1))
+qqline(resid(m1))
+
+plot(fitted(m1), resid(m1))
+abline(h=0)
+
+
+
+if(FALSE){
+  
+  m1b <- gam(ruminating ~ s(blockBeepNum) + grIntPhase + s(blockBeepNum, by=grIntPhase) +
+               s(blockBeepNum, by = subjB, bs="fs", m=1),
+             data=sc_data)
+  
+  summary_m1b <- summary(m1b)
+  
+  save(m1b, summary_m1b, file="m1b.rda", compress="xz")
+} else {
+  load("m1b.rda")
+}
+
+
+plot_smooth(m1b, view="blockBeepNum", 
+            plot_all="grIntPhase")
+
+for(g in c("controls", "remitted")){
+  for(int in c("fantasizing", "mindfulness")){
+    g1 <- paste(g, int, "peri", sep = ".")
+    g2 <- paste(g, int, "pre", sep = ".")
+    print(plot_diff(m1b, view="blockBeepNum", 
+                    comp=list(grIntPhase=c(g1, g2))))
+  }
+}
 
 
 
@@ -124,6 +267,33 @@ s1 <- gam(ruminating ~ s(blockBeepNum) + group * intervention * phase + s(blockB
 
 
 
+# m1c <- gam(ruminating ~ s(blockBeepNum) + group * intervention * phase + s(blockBeepNum, by=group) +
+#             s(blockBeepNum, by = subjB, bs="fs", m=1),
+#           data=data)
+# 
+# 
+# summary_m1c <- summary(m1c)
+# 
+# save(m1c, summary_m1c, file="m1c_unscaled.rda", compress="xz")
+# 
+# 
+# plot(fitted(m1c), resid(m1c))
+# abline(h=0)
+# 
+# 
+# #excluding non responses
+# m1d <- gam(ruminating ~ s(blockBeepNum) + group * intervention * phase + s(blockBeepNum, by=group) +
+#              s(blockBeepNum, by = subjB, bs="fs", m=1),
+#            data=data[which(is.na(data$mindcog_db_non_response)),])
+# 
+# 
+# summary_m1d <- summary(m1d)
+# 
+# save(m1d, summary_m1d, file="m1d_unscaled_exclNonResp.rda", compress="xz")
+# 
+# 
+# plot(fitted(m1d), resid(m1d))
+# abline(h=0)
 
 
 

@@ -261,7 +261,7 @@ for(g in c("controls", "remitted")){
 }
 
 
-
+par(mfrow=c(1,1))
 
 
 

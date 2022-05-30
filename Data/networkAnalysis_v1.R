@@ -267,10 +267,7 @@ alpha <- 0.05
 # Variables to investigate:
 # vars <- c("Q1","Q2","Q3","Q4","Q5","Q6","Q7","Q8","Q9","Q10","Q11","Q12","Q13","Q14","Q15","Q16","Q17","Q18")
 
-# nodeVars <- c('ruminating', 'wakeful', 'down', 'satisfied',
-#               'irritated', 'energetic', 'restless', 'anxious', 'stressed', 'listless', 
-#               'thoughtsPleasant', 'distracted', 'restOfDayPos', 'posIntensity',
-#               'negIntensity', "sleepQuality")
+
 
 nodeVars <- c('ruminating', 'wakeful', 'down', 'satisfied',
               'irritated', 'energetic', 'restless', 'anxious', 'stressed', 
@@ -396,19 +393,22 @@ for (v in seq_along(nodeVars)){
 
 
 
-
+nodeVars <- c('ruminating', 'wakeful', 'down', 'satisfied',
+              'irritated', 'energetic', 'restless', 'anxious', 'stressed', 'listless',
+              'thoughtsPleasant', 'distracted', 'restOfDayPos', 'posIntensity',
+              'negIntensity', "sleepQuality")
 
 
 
 # xData <- data[which(is.na(data$mindcog_db_non_response)),]
 
 groups_list <- list(NegativeAffect = c(3,5,7,8), PositiveAffect = c(2,4,6),
-                    Cognition = c(1), OtherNegative = c(9,10,12),
-                    OtherPositive = c(11))
-groups_colors <- c("#d60000", "#149F36", "#53B0CF", "#f66a6a", "#72CF53")
+                    Cognition = c(1), OtherNegative = c(9,10,12,15),
+                    OtherPositive = c(11,13,14), Sleep=c(16))
+groups_colors <- c("#d60000", "#149F36", "#53B0CF", "#f66a6a", "#72CF53", "#B94B7B")
 
 # Estimate network using multilevel VAR model
-res <- mlVAR(xData,
+res <- mlVAR(data,
              vars=nodeVars,
              idvar="subject",
              dayvar="assessmentDay",

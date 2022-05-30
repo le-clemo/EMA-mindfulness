@@ -72,6 +72,13 @@ group_responses <- ddply(data, .(group), plyr::summarise,
                                 response = numCompleted - noResponse,
                                 responseRate = round(response/numCompleted,2))
 
+group_responses_baseline <- ddply(data[which(data$phase=="pre"),], .(group), plyr::summarise,
+                         nSubj = length(unique(subject)),
+                         numCompleted = length(mindcog_db_open_from),
+                         noResponse = length(unique(mindcog_db_non_response)),
+                         response = numCompleted - noResponse,
+                         responseRate = round(response/numCompleted,2))
+
 #recreacting with assessment days per group
 intervention_responses <- ddply(data, .(group, intervention), plyr::summarise,
                          nSubj = length(unique(subject)),
@@ -91,6 +98,9 @@ responses_by_phase <- ddply(data, .(group, intervention, phase), plyr::summarise
 #group difference?
 chisq.test(group_responses[,c("noResponse", "response")]) #significant difference
 #x-sq = 12.5, p = 0.0004
+
+chisq.test(group_responses_baseline[,c("noResponse", "response")]) #significant difference
+#X-squared = 7.0587, df = 1, p-value = 0.007888
 
 #difference by phase (groupXintervention)?
 groups <- c("controls", "remitted")

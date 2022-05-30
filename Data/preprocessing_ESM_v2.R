@@ -744,7 +744,6 @@ for(id in subject_IDs){ #every participant
       }
     }
   }
-
 }
 
 #beep number per block

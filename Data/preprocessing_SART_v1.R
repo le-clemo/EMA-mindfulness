@@ -675,7 +675,138 @@ numbers_q3 <- ddply(numbers, .(group, Q3), summarise,
                     meanRT = round(mean(responseTime),2),
                     sdRT = round(sd(responseTime),2))
 
+##################################### Merging with ESM data ###############################################
+#first we add daily averages
+agg_numbers <- ddply(numbers, .(userID, subject, date), plyr::summarise,
+                     meanRT = meanRT_date,
+                     meanRT_Go = meanRT_Go_date,
+                     meanRT_NoGo = meanRT_NoGo_date,
+                     propCor = propCor_date,
+                     propCor_Go = propCor_Go_date,
+                     propCor_NoGo = propCor_NoGo_date)
 
+agg_numbers <- agg_numbers[which(!is.na(agg_numbers$subject)),]
+
+agg_numbers <- agg_numbers %>%
+  distinct(userID, subject, date, .keep_all = TRUE)
+
+esm$meanRT_day <- NA
+esm$meanRT_Go_day <- NA
+esm$meanRT_NoGo_day <- NA
+esm$propCor_day <- NA
+esm$propCor_Go_day <- NA
+esm$propCor_NoGo_day <- NA
+
+for(row in 1:nrow(agg_numbers)){
+  subj <- agg_numbers$subject[row]
+  d <- agg_numbers$date[row]
+  
+  matched_rows <- which((esm$subject==subj) & (esm$mindcog_db_date==d))
+  
+  esm$meanRT_day[matched_rows] <- agg_numbers$meanRT[row]
+  esm$meanRT_Go_day[matched_rows] <- agg_numbers$meanRT_Go[row]
+  esm$meanRT_NoGo_day[matched_rows] <- agg_numbers$meanRT_NoGo[row]
+  esm$propCor_day[matched_rows] <- agg_numbers$propCor[row]
+  esm$propCor_Go_day[matched_rows] <- agg_numbers$propCor[row]
+  esm$propCor_NoGo_day[matched_rows] <- agg_numbers$propCor_NoGo[row]
+}
+
+# View(subset(esm[which(esm$dayBeepNum==5),], select=c("subject", "mindcog_db_open_from", "dayBeepNum", "time")))
+# View(subset(esm[which(esm$dayBeepNum==6),], select=c("subject", "mindcog_db_open_from", "dayBeepNum", "time")))
+
+#matched with the closest assessment time
+meanTimes <- ddply(numbers, .(userID, subject, gameSessionID), dplyr::summarize,
+                     date = date,
+                     time = mean(time),
+                     meanRT_ = meanRT,
+                     meanRT_Go = meanRT_Go,
+                     meanRT_NoGo = meanRT_NoGo,
+                     propCor = propCor,
+                     propCor_Go = propCor_Go,
+                     propCor_NoGo = propCor_NoGo)
+
+meanTimes <- meanTimes[which(!is.na(meanTimes$subject)),]
+
+meanTimes <- meanTimes %>%
+  distinct(userID, subject, time, .keep_all = TRUE)
+
+meanTimes <- data.table(meanTimes)
+setkey(meanTimes, time)
+
+esm <- data.table(esm)
+setkey(esm, mindcog_db_started_at)
+
+
+
+esm$meanRT <- NA
+# esm$meanRT_Go <- NA
+# esm$meanRT_NoGo <- NA
+# esm$propCor <- NA
+# esm$propCor_Go <- NA
+# esm$propCor_NoGo <- NA
+# esm$timeDiff <- NA
+
+for(row in 1:nrow(meanTimes)){
+  subj <- meanTimes$subject[row]
+  x <- meanTimes$time[row]
+  d <- meanTimes$date[row]
+  # print(subj)
+  # #matched_rows <- which((esm$subject==subj) & (esm$mindcog_db_date==d))
+  # # subj_dates <- esm[which(esm$subject==subj),]$mindcog_db_open_from
+  # 
+  # esm$timeDiff <- as.numeric(abs(esm$mindcog_db_started_at[row]-x))
+  # 
+  # 
+  # matched_row <- which((esm$timeDiff == as.numeric(min(abs(esm$mindcog_db_started_at-x),na.rm=TRUE))) & 
+  #                        (esm$mindcog_db_date==d) & (esm$subject==subj))
+  # 
+  # 
+  # print(matched_row)
+  # 
+  # esm$meanRT[matched_row] <- meanTimes$meanRT[row]
+  # esm$meanRT_Go[matched_row] <- meanTimes$meanRT_Go[row]
+  # esm$meanRT_NoGo[matched_row] <- meanTimes$meanRT_NoGo[row]
+  # esm$propCor[matched_row] <- meanTimes$propCor[row]
+  # esm$propCor_Go[matched_row] <- meanTimes$propCor[row]
+  # esm$propCor_NoGo[matched_row] <- meanTimes$propCor_NoGo[row]
+  
+  s_df <- esm[which((esm$subject==subj) & (esm$mindcog_db_date==d)),]
+  print(subj)
+  if(length(s_df$subject) > 0){
+    t_df <- meanTimes[which((meanTimes$subject==subj) & (meanTimes$date==d))]
+    print("t_df created")
+    combined <- s_df[ t_df, roll = "nearest"]
+    print("combined created")
+    
+    for(r in 1:nrow(combined)){
+      idx <- which((esm$subject==subj) & (esm$mindcog_db_date==d) & (esm$beepNum==combined$beepNum[r]))
+      print(idx)
+      esm$meanRT[idx] <- combined$meanRT_[r]
+      print(combined$meanRT_[r])
+    } 
+  } else {
+    print("empty")
+  }
+  #esm <- merge(esm, combined, by = c("subject", "mindcog_db_started_at"))
+}
+
+View(subset(esm[which((esm$subject=="s53") & (esm$mindcog_db_date=="2022-02-26")),], select = c("subject", "mindcog_db_open_from", "meanRT")))
+
+
+
+indx <- setDT(numbers)[esm, roll = "nearest", which = TRUE, on = "mindcog_db_open_from"]
+
+setDT(numbers)[esm, refvalue, roll = "nearest", on = "mindcog_db_open_from"]
+
+esm$refValue <- NA
+numbers$refvalue <- esm$refvalue[
+  findInterval( esm$mindcog_db_open_from, 
+                c(-Inf, head(numbers$time,-1))+
+                  c(0, diff(as.numeric(numbers$time))/2 )) ]
+
+
+
+######################################## Data exploration #################################################
 dat_text <- data.frame(
   label = c("100% | 97%", "93% | 94%", "97% | 97%", "93% | 96%", "94% | 95%", "95% | 99%"),
   # label = c("N=261 | 100%", "N=161 | 93%", "N=110 | 97%", "N=184 | 93%", "N=36 | 94%", "N=43 | 95%",

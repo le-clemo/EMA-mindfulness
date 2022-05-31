@@ -757,6 +757,25 @@ for(id in subject_IDs){ #every participant
   }
 }
 
+
+#add dayBeepNum
+subject_IDs <- unique(data$subject)
+data$dayBeepNum <- NA
+for(id in subject_IDs){ #every participant
+  print(id)
+  numDays <- max(data[which(data$subject==id),]$assessmentDay) #some participants dropped out after the first block
+  print(numDays)
+  for(i in 1:numDays){
+    day_rows <- which((data$subject == id) & (data$assessmentDay==i)) #row indices of rows associated with respondent    
+    data[day_rows,]$dayBeepNum <- 1:length(day_rows)
+  }
+}
+#figure out levels (time window per dayBeepNum)
+data$time <- strftime(data$mindcog_db_open_from, format="%H:%M:%S")
+timesPerBeep <- ddply(data, .(dayBeepNum), summarize,
+                      minTime = min(time),
+                      maxTime = max(time))
+
 ############################## Some changes for convenience ################################
 #drop unnecessary columns and reorder columns for convenience
 data$sleepDuration <- data$actualSleepDuration
@@ -767,7 +786,7 @@ data <- data %>% select(patient_id, id, subject, group, intervention, phase, blo
                         columnNames[18:23], firstEntry, sleepQuality, sleepLatency, sleepDuration,
                         restednessWakeup, columnNames[36:61], sumPA, sumNA, 
                         #67:78 = response measures
-                        columnNames[79:90])
+                        columnNames[79:92])
 
 # data <- subset(data, select = -c(roqua_id, hide_pii_from_researchers, gender, birth_year,
 #                                  hide_values_from_professionals, respondent_label, respondent_type,

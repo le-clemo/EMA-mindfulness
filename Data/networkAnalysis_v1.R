@@ -274,20 +274,21 @@ nodeVars <- c('ruminating', 'wakeful', 'down', 'satisfied',
               'distracted', 'posIntensity',
               'negIntensity')
 
-#add dayBeepNum
-subject_IDs <- unique(data$subject)
-data$dayBeepNum <- NA
-for(id in subject_IDs){ #every participant
-  print(id)
-  numDays <- max(data[which(data$subject==id),]$assessmentDay) #some participants dropped out after the first block
-  print(numDays)
-  for(i in 1:numDays){
-    day_rows <- which((data$subject == id) & (data$assessmentDay==i)) #row indices of rows associated with respondent    
-      data[day_rows,]$dayBeepNum <- 1:length(day_rows)
-  }
-}
-#figure out levels (time window per dayBeepNum)
-data$time <- strftime(data$mindcog_db_open_from, format="%H:%M:%S")
+# #add dayBeepNum
+# subject_IDs <- unique(data$subject)
+# data$dayBeepNum <- NA
+# for(id in subject_IDs){ #every participant
+#   print(id)
+#   numDays <- max(data[which(data$subject==id),]$assessmentDay) #some participants dropped out after the first block
+#   print(numDays)
+#   for(i in 1:numDays){
+#     day_rows <- which((data$subject == id) & (data$assessmentDay==i)) #row indices of rows associated with respondent    
+#       data[day_rows,]$dayBeepNum <- 1:length(day_rows)
+#   }
+# }
+
+# #figure out levels (time window per dayBeepNum)
+# data$time <- strftime(data$mindcog_db_open_from, format="%H:%M:%S")
 timesPerBeep <- ddply(data, .(dayBeepNum), summarize,
       minTime = min(time),
       maxTime = max(time))

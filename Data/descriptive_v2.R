@@ -224,17 +224,26 @@ ggplot(melt.dat[which((melt.dat$variable=="ruminating") & (melt.dat$assessmentDa
 
 
 
-melt.dat <- melt(data, id.vars=c("subjB", "group", "intervention", "phase", "blockAssessmentDay"),
+melt.dat <- melt(data, id.vars=c("subjB", "group", "intervention", "phase", "block", "phaseAssessmentDay"),
                  measure.vars = c("ruminating", "sumPA", "sumNA"), na.rm = TRUE)
-melt.dat <- aggregate(melt.dat$value, by=list(subject=melt.dat$subjB, blockAssessmentDay=melt.dat$blockAssessmentDay,
-                                              group=melt.dat$group, intervention=melt.dat$intervention,
+melt.dat <- aggregate(melt.dat$value, by=list(subject=melt.dat$subjB, phaseAssessmentDay=melt.dat$phaseAssessmentDay,
+                                              group=melt.dat$group, intervention=melt.dat$intervention, block=melt.dat$block,
                                               phase=melt.dat$phase, variable=melt.dat$variable), FUN=mean)
 
-ggplot(melt.dat[which(melt.dat$variable=="ruminating"),],
-       aes(x=blockAssessmentDay, y=x, group=subject, color=interaction(group, intervention))) + theme_bw() +
+
+#same for baseline2 (pre2)
+ggplot(melt.dat[which((melt.dat$variable=="ruminating") & (melt.dat$phase=="pre") & (melt.dat$block==2)),],
+       aes(x=phaseAssessmentDay, y=x, group=subject, color=group, fill = group)) + theme_bw() +
   geom_line(alpha = 0.3) +#+ stat_summary(fun = mean, na.rm = TRUE, geom ='line', group="group", lwd = 1) +
   stat_summary(fun = mean, na.rm = TRUE, geom = "point", lwd = 3, group = "") +
   stat_summary(fun = mean, na.rm = TRUE, geom = "line", group = "group") + ylab("Rumination")
+
+#looking at group X intervention
+# ggplot(melt.dat[which(melt.dat$variable=="ruminating"),],
+#        aes(x=blockAssessmentDay, y=x, group=subject, color=interaction(group, intervention))) + theme_bw() +
+#   geom_line(alpha = 0.3) +#+ stat_summary(fun = mean, na.rm = TRUE, geom ='line', group="group", lwd = 1) +
+#   stat_summary(fun = mean, na.rm = TRUE, geom = "point", lwd = 3, group = "") +
+#   stat_summary(fun = mean, na.rm = TRUE, geom = "line", group = "group") + ylab("Rumination")
 
 
 

@@ -20,9 +20,9 @@ library(igraph)
 library(qgraph)
 
 #read in data
-games <- read_csv('SART/SART_games_110422.csv') 
-numbers <- read_csv('SART/SART_numbers_110422.csv') 
-questions <- read_csv('SART/SART_questions_110422.csv') 
+games <- read_csv('SART/SART_games_030622.csv') 
+numbers <- read_csv('SART/SART_numbers_030622.csv') 
+questions <- read_csv('SART/SART_questions_030622.csv') 
 
 mylist <- lapply(excel_sheets('SART/Proefpersonen_Link_ID_Meting.xlsx'), read_excel, path = 'SART/Proefpersonen_Link_ID_Meting.xlsx')
 
@@ -317,7 +317,8 @@ numbers <- numbers %>%
 
 
 numbers_summary <- ddply(numbers, .(group), plyr::summarise,
-                         nGames = length(unique(gameSessionID)),
+                         nGames = length(unique(interaction(gameSessionID, userID))),
+                         nSubj = length(unique(subject)),
                          nTrials = length(correct),
                          proportionCorrect = round(length(correct[which(correct == TRUE)]) / nTrials,2),
                          meanRT = round(mean(responseTime),2),
@@ -501,7 +502,7 @@ for(subj in subject_IDs){
   if(is.na(subj)){ #if it's NA --> skip iteration
     next
   } else { #else get all the userIDs for this subject
-    print(subj)
+    #print(subj)
     
     user_IDs <- unique(numbers[which(numbers$subject==subj),]$userID)
   }
@@ -628,10 +629,10 @@ for(subj in subject_IDs){
                                                          (numbers$cycle==i) & (numbers$isGo==FALSE) & (numbers$correct==TRUE)),]$id) / 
               length(numbers[which((numbers$userID==id) & (numbers$gameSessionID==gid) & (numbers$subject==subj) &
                                      (numbers$cycle==i) & (numbers$isGo==FALSE)),]$id)
-            if(subj=="s15"){
-              print(meanRT_cycle)
-              print(propCor_cycle)
-            }
+            # if(subj=="s15"){
+            #   print(meanRT_cycle)
+            #   print(propCor_cycle)
+            # }
             #and add to the relevant rows
             numbers[c_rows, ]$meanRT_cycle <- round(meanRT_cycle, 2)
             numbers[c_rows, ]$meanRT_Go_cycle <- round(meanRT_Go_cycle, 2)
@@ -719,11 +720,11 @@ meanTimes <- ddply(numbers, .(userID, subject, gameSessionID), dplyr::summarize,
                      date = date,
                      time = mean(time),
                      meanRT_ = meanRT,
-                     meanRT_Go = meanRT_Go,
-                     meanRT_NoGo = meanRT_NoGo,
-                     propCor = propCor,
-                     propCor_Go = propCor_Go,
-                     propCor_NoGo = propCor_NoGo)
+                     meanRT_Go_ = meanRT_Go,
+                     meanRT_NoGo_ = meanRT_NoGo,
+                     propCor_ = propCor,
+                     propCor_Go_ = propCor_Go,
+                     propCor_NoGo_ = propCor_NoGo)
 
 meanTimes <- meanTimes[which(!is.na(meanTimes$subject)),]
 
@@ -736,74 +737,55 @@ setkey(meanTimes, time)
 esm <- data.table(esm)
 setkey(esm, mindcog_db_started_at)
 
-
-
 esm$meanRT <- NA
-# esm$meanRT_Go <- NA
-# esm$meanRT_NoGo <- NA
-# esm$propCor <- NA
-# esm$propCor_Go <- NA
-# esm$propCor_NoGo <- NA
-# esm$timeDiff <- NA
+esm$meanRT_Go <- NA
+esm$meanRT_NoGo <- NA
+esm$propCor <- NA
+esm$propCor_Go <- NA
+esm$propCor_NoGo <- NA
 
 for(row in 1:nrow(meanTimes)){
   subj <- meanTimes$subject[row]
   x <- meanTimes$time[row]
   d <- meanTimes$date[row]
-  # print(subj)
-  # #matched_rows <- which((esm$subject==subj) & (esm$mindcog_db_date==d))
-  # # subj_dates <- esm[which(esm$subject==subj),]$mindcog_db_open_from
-  # 
-  # esm$timeDiff <- as.numeric(abs(esm$mindcog_db_started_at[row]-x))
-  # 
-  # 
-  # matched_row <- which((esm$timeDiff == as.numeric(min(abs(esm$mindcog_db_started_at-x),na.rm=TRUE))) & 
-  #                        (esm$mindcog_db_date==d) & (esm$subject==subj))
-  # 
-  # 
-  # print(matched_row)
-  # 
-  # esm$meanRT[matched_row] <- meanTimes$meanRT[row]
-  # esm$meanRT_Go[matched_row] <- meanTimes$meanRT_Go[row]
-  # esm$meanRT_NoGo[matched_row] <- meanTimes$meanRT_NoGo[row]
-  # esm$propCor[matched_row] <- meanTimes$propCor[row]
-  # esm$propCor_Go[matched_row] <- meanTimes$propCor[row]
-  # esm$propCor_NoGo[matched_row] <- meanTimes$propCor_NoGo[row]
   
   s_df <- esm[which((esm$subject==subj) & (esm$mindcog_db_date==d)),]
-  print(subj)
   if(length(s_df$subject) > 0){
     t_df <- meanTimes[which((meanTimes$subject==subj) & (meanTimes$date==d))]
-    print("t_df created")
+
     combined <- s_df[ t_df, roll = "nearest"]
-    print("combined created")
     
     for(r in 1:nrow(combined)){
       idx <- which((esm$subject==subj) & (esm$mindcog_db_date==d) & (esm$beepNum==combined$beepNum[r]))
-      print(idx)
       esm$meanRT[idx] <- combined$meanRT_[r]
-      print(combined$meanRT_[r])
+      esm$meanRT_Go[idx] <- combined$meanRT_Go_[r]
+      esm$meanRT_NoGo[idx] <- combined$meanRT_NoGo_[r]
+      esm$propCor[idx] <- combined$propCor_[r]
+      esm$propCor_Go[idx] <- combined$propCor_Go_[r]
+      esm$propCor_NoGo[idx] <- combined$propCor_NoGo_[r]
     } 
-  } else {
-    print("empty")
   }
   #esm <- merge(esm, combined, by = c("subject", "mindcog_db_started_at"))
 }
 
-View(subset(esm[which((esm$subject=="s53") & (esm$mindcog_db_date=="2022-02-26")),], select = c("subject", "mindcog_db_open_from", "meanRT")))
+#View(subset(esm[which((esm$subject=="s53") & (esm$mindcog_db_date=="2022-02-26")),], select = c("subject", "mindcog_db_open_from", "meanRT")))
 
+# > length(unique(numbers$gameSessionID))
+# [1] 47
+# > length(unique(interaction(numbers$userID, numbers$gameSessionID)))
+# [1] 992
 
+# > length(esm[which(!is.na(esm$meanRT)),]$meanRT)
+# [1] 661
+# > length(esm[which(!is.na(esm$meanRT_day)),]$meanRT_day)
+# [1] 3067
 
-indx <- setDT(numbers)[esm, roll = "nearest", which = TRUE, on = "mindcog_db_open_from"]
+missing_links <- data.frame(table(games[which(is.na(games$subject)),]$userID))
+colnames(missing_links) <-  c("userID", "gamesPlayed")
+missing_links <- missing_links[with(missing_links, order(-gamesPlayed)), ]
 
-setDT(numbers)[esm, refvalue, roll = "nearest", on = "mindcog_db_open_from"]
-
-esm$refValue <- NA
-numbers$refvalue <- esm$refvalue[
-  findInterval( esm$mindcog_db_open_from, 
-                c(-Inf, head(numbers$time,-1))+
-                  c(0, diff(as.numeric(numbers$time))/2 )) ]
-
+write.csv(missing_links, file = "missing_links.csv")
+write.csv(esm, file = "merged_data.csv")
 
 
 ######################################## Data exploration #################################################

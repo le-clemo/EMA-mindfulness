@@ -1252,16 +1252,20 @@ data_copy <- data_copy[,metricCols]
 data_copy <- data_copy[complete.cases(data_copy), ]
 
 #with ruminating but without sumNA, sumPA
-collin.fnc(data_copy[,-c(3, 4)])$cnumber #~29.6 --> at least close to problematic collinearity
+collin.fnc(data_copy[,-c(3, 4)])$cnumber #~31.5 --> potentially problematic collinearity
 plot(varclus(as.matrix(data_copy[,-c(3, 4)])))
 
 #without ruminating, sumNA, sumPA
-collin.fnc(data_copy[,-c(1, 3, 4)])$cnumber #~29 --> at least close to problematic collinearity
+collin.fnc(data_copy[,-c(1, 3, 4)])$cnumber #~30.9 --> still potentially problematic collinearity
 plot(varclus(as.matrix(data_copy[,-c(1, 3, 4)])))
 
 #including sumNA, sumPA instead of their individual components
-collin.fnc(data_copy[,-c(1, 5,6,7,8,9,10,11)])$cnumber #~22 --> better but still not great
+collin.fnc(data_copy[,-c(1, 5,6,7,8,9,10,11)])$cnumber #~27 --> better but still not great
 plot(varclus(as.matrix(data_copy[,-c(1, 5,6,7,8,9,10,11)])))
+
+#based on the collinearites exibhited by the last plot, we remove several variables that seem too highly correlated / redundant
+collin.fnc(data_copy[,-c(1, 5, 6, 7, 8, 9, 10, 11, 12, 14, 16, 17, 19, 22, 23, 24)])$cnumber #~15.7 --> shouldn't be an issue
+plot(varclus(as.matrix(data_copy[,-c(1, 5, 6, 7, 8, 9, 10, 11, 12, 14, 16, 17, 19, 22, 23, 24)])))
 
 #The plot indicates that e.g. restOfDayPos and sumPA are strongly correlated (thoughtsPleasant also but less so). 
 #Therefore, we may exclude restOfDayPos (and thoughtsPleeasant)

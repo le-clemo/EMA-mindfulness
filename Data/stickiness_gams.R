@@ -221,30 +221,40 @@ plot2
 sticky.max <- bam(stickiness_gam ~ s(phaseBeepNum) + group * intervention +
                     s(companyPleasant_gam) +
                     s(phaseBeepNum, by=group) + s(phaseBeepNum, by=intervention) +
-                    s(ruminating_gam) + s(sumNA_gam) +
+                    s(ruminating_gam) + s(sumNA_gam) + s(sumPA_gam) + ti(sumNA_gam, sumPA_gam) +
                     s(negIntensity_gam) + s(posIntensity_gam) + ti(negIntensity_gam, posIntensity_gam) +
-                    s(stickiness_gam) + s(distracted_gam) + s(listless_gam) + s(sleepQuality_gam) +
+                    s(distracted_gam) + s(listless_gam) + s(sleepQuality_gam) +
                     s(phaseBeepNum, by = subject, bs="fs", m=1),
                   data = sc_data, method = "ML")
 
 #Maximum model with REML
-sticky.max.reml <- bam(stickiness_gam ~ s(phaseBeepNum) + group * intervention * thoughtsValence * thoughtsTime +
-                      aloneCompany + s(phaseBeepNum, by=group) + s(phaseBeepNum, by=intervention) +
-                      s(ruminating_gam) + s(sumNA_gam) + s(sumPA_gam) + ti(sumNA_gam, sumPA_gam) +
-                      s(negIntensity_gam) + s(posIntensity_gam) + ti(negIntensity_gam, posIntensity_gam) +
-                      s(distracted_gam) + s(listless_gam) + s(sleepQuality_gam) +
-                      s(phaseBeepNum, by = subject, bs="fs", m=1),
-                      data = sc_data)
+sticky.max.reml <- bam(stickiness_gam ~ s(phaseBeepNum) + group * intervention +
+                         s(companyPleasant_gam) +
+                         s(phaseBeepNum, by=group) + s(phaseBeepNum, by=intervention) +
+                         s(ruminating_gam) + s(sumNA_gam) + s(sumPA_gam) + ti(sumNA_gam, sumPA_gam) +
+                         s(negIntensity_gam) + s(posIntensity_gam) + ti(negIntensity_gam, posIntensity_gam) +
+                         s(distracted_gam) + s(listless_gam) + s(sleepQuality_gam) +
+                         s(phaseBeepNum, by = subject, bs="fs", m=1),
+                       data = sc_data)
 
 summary.sticky.max.reml <- summary(sticky.max.reml)
 
 save(sticky.max, sticky.max.reml, summary.sticky.max.reml, file = "models_stickiness/sticky_max.rda")
 
+sticky.max1 <- bam(stickiness_gam ~ s(phaseBeepNum) + s(phaseBeepNum, by=interaction(group,intervention)) + group * intervention +
+                    s(companyPleasant_gam) +
+                    s(ruminating_gam) + s(sumNA_gam) + s(sumPA_gam) + ti(sumNA_gam, sumPA_gam) +
+                    s(negIntensity_gam) + s(posIntensity_gam) + ti(negIntensity_gam, posIntensity_gam) +
+                    s(distracted_gam) + s(listless_gam) + s(sleepQuality_gam) +
+                    s(phaseBeepNum, by = subject, bs="fs", m=1),
+                  data = sc_data, method = "ML")
 
+compareML(sticky.max, sticky.max1) # sticky.max preferred
 
-#removing aloneCompany
-sticky1 <- bam(stickiness_gam ~ s(phaseBeepNum) + group * intervention * thoughtsValence * thoughtsTime +
-                 s(phaseBeepNum, by=group) + s(phaseBeepNum, by=intervention) +
+#removing s(phaseBeepNum, by=intervention)
+sticky1 <- bam(stickiness_gam ~ s(phaseBeepNum) + group * intervention +
+                 s(companyPleasant_gam) +
+                 s(phaseBeepNum, by=group) +
                  s(ruminating_gam) + s(sumNA_gam) + s(sumPA_gam) + ti(sumNA_gam, sumPA_gam) +
                  s(negIntensity_gam) + s(posIntensity_gam) + ti(negIntensity_gam, posIntensity_gam) +
                  s(distracted_gam) + s(listless_gam) + s(sleepQuality_gam) +
@@ -253,12 +263,12 @@ sticky1 <- bam(stickiness_gam ~ s(phaseBeepNum) + group * intervention * thought
 
 save(sticky1, file = "models_stickiness/sticky1_gam.rda")
 
-compareML(sticky.max, sticky1) #no significant difference --> sticky1 preferred
+compareML(sticky.max, sticky1) #no significant difference --> sticky1 preferred  
 
 
-#removing s(phaseBeepNum, by=intervention)
-sticky2 <- bam(stickiness_gam ~ s(phaseBeepNum) + group * intervention * thoughtsValence * thoughtsTime +
-                 s(phaseBeepNum, by=group) +
+#removing s(phaseBeepNum, by=group)
+sticky2 <- bam(stickiness_gam ~ s(phaseBeepNum) + group * intervention +
+                 s(companyPleasant_gam) +
                  s(ruminating_gam) + s(sumNA_gam) + s(sumPA_gam) + ti(sumNA_gam, sumPA_gam) +
                  s(negIntensity_gam) + s(posIntensity_gam) + ti(negIntensity_gam, posIntensity_gam) +
                  s(distracted_gam) + s(listless_gam) + s(sleepQuality_gam) +
@@ -270,9 +280,8 @@ save(sticky2, file = "models_stickiness/sticky2_gam.rda")
 compareML(sticky1, sticky2) #no significant difference --> sticky2 preferred  
 
 
-
-#removing s(phaseBeepNum, by=group)
-sticky3 <- bam(stickiness_gam ~ s(phaseBeepNum) + group * intervention * thoughtsValence * thoughtsTime +
+#removing s(companyPleasant_gam) +
+sticky3 <- bam(stickiness_gam ~ s(phaseBeepNum) + group * intervention +
                  s(ruminating_gam) + s(sumNA_gam) + s(sumPA_gam) + ti(sumNA_gam, sumPA_gam) +
                  s(negIntensity_gam) + s(posIntensity_gam) + ti(negIntensity_gam, posIntensity_gam) +
                  s(distracted_gam) + s(listless_gam) + s(sleepQuality_gam) +
@@ -281,28 +290,29 @@ sticky3 <- bam(stickiness_gam ~ s(phaseBeepNum) + group * intervention * thought
 
 save(sticky3, file = "models_stickiness/sticky3_gam.rda")
 
-compareML(sticky2, sticky3) #no significant difference --> sticky3 preferred 
+compareML(sticky2, sticky3) #significant difference --> sticky2 preferred  
 
 
-#removing thoughtsTime:intervention
-sticky4 <- bam(stickiness_gam ~ s(phaseBeepNum) + group * intervention * thoughtsValence + thoughtsTime +
-                 thoughtsTime:group + thoughtsTime:thoughtsValence +
+#removing ti(negIntensity_gam, posIntensity_gam)
+sticky4 <- bam(stickiness_gam ~ s(phaseBeepNum) + group * intervention +
+                 s(companyPleasant_gam) +
                  s(ruminating_gam) + s(sumNA_gam) + s(sumPA_gam) + ti(sumNA_gam, sumPA_gam) +
-                 s(negIntensity_gam) + s(posIntensity_gam) + ti(negIntensity_gam, posIntensity_gam) +
+                 s(negIntensity_gam) + s(posIntensity_gam) +
                  s(distracted_gam) + s(listless_gam) + s(sleepQuality_gam) +
                  s(phaseBeepNum, by = subject, bs="fs", m=1),
                data = sc_data, method = "ML")
 
 save(sticky4, file = "models_stickiness/sticky4_gam.rda")
 
-compareML(sticky3, sticky4) #no significant difference --> sticky4 preferred 
+compareML(sticky2, sticky4) #no significant difference --> sticky4 preferred 
 
 
-#removing thoughtsTime:thoughtsValence
-sticky5 <- bam(stickiness_gam ~ s(phaseBeepNum) + group * intervention * thoughtsValence + thoughtsTime +
-                 thoughtsTime:group +
+
+#removing  s(posIntensity_gam) +
+sticky5 <- bam(stickiness_gam ~ s(phaseBeepNum) + group * intervention +
+                 s(companyPleasant_gam) +
                  s(ruminating_gam) + s(sumNA_gam) + s(sumPA_gam) + ti(sumNA_gam, sumPA_gam) +
-                 s(negIntensity_gam) + s(posIntensity_gam) + ti(negIntensity_gam, posIntensity_gam) +
+                 s(negIntensity_gam) +
                  s(distracted_gam) + s(listless_gam) + s(sleepQuality_gam) +
                  s(phaseBeepNum, by = subject, bs="fs", m=1),
                data = sc_data, method = "ML")
@@ -312,10 +322,10 @@ save(sticky5, file = "models_stickiness/sticky5_gam.rda")
 compareML(sticky4, sticky5) #no significant difference --> sticky5 preferred 
 
 
-#removing thoughtsTime:group
-sticky6 <- bam(stickiness_gam ~ s(phaseBeepNum) + group * intervention * thoughtsValence + thoughtsTime +
+#removing  s(negIntensity_gam) +
+sticky6 <- bam(stickiness_gam ~ s(phaseBeepNum) + group * intervention +
+                 s(companyPleasant_gam) +
                  s(ruminating_gam) + s(sumNA_gam) + s(sumPA_gam) + ti(sumNA_gam, sumPA_gam) +
-                 s(negIntensity_gam) + s(posIntensity_gam) + ti(negIntensity_gam, posIntensity_gam) +
                  s(distracted_gam) + s(listless_gam) + s(sleepQuality_gam) +
                  s(phaseBeepNum, by = subject, bs="fs", m=1),
                data = sc_data, method = "ML")
@@ -324,167 +334,108 @@ save(sticky6, file = "models_stickiness/sticky6_gam.rda")
 
 compareML(sticky5, sticky6) #significant difference --> sticky5 preferred 
 
-
-#removing thoughtsValence:intervention
-sticky7 <- bam(stickiness_gam ~ s(phaseBeepNum) + group * intervention + thoughtsValence + thoughtsTime +
-                 thoughtsTime:group + thoughtsValence:group + thoughtsValence:thoughtsTime +
-                 s(ruminating_gam) + s(sumNA_gam) + s(sumPA_gam) + ti(sumNA_gam, sumPA_gam) +
-                 s(negIntensity_gam) + s(posIntensity_gam) + ti(negIntensity_gam, posIntensity_gam) +
-                 s(distracted_gam) + s(listless_gam) + s(sleepQuality_gam) +
-                 s(phaseBeepNum, by = subject, bs="fs", m=1),
-               data = sc_data, method = "ML")
+#removing s(sleepQuality_gam)
+sticky7 <- bam(stickiness_gam ~ s(phaseBeepNum) + group * intervention +
+                  s(companyPleasant_gam) +
+                  s(ruminating_gam) + s(sumNA_gam) + s(sumPA_gam) + ti(sumNA_gam, sumPA_gam) +
+                  s(negIntensity_gam) +
+                  s(distracted_gam) + s(listless_gam) +
+                  s(phaseBeepNum, by = subject, bs="fs", m=1),
+                data = sc_data, method = "ML")
 
 save(sticky7, file = "models_stickiness/sticky7_gam.rda")
 
 compareML(sticky5, sticky7) #significant difference --> sticky5 preferred
 
 
-#removing thoughtsValence:thoughtsTime
-sticky8 <- bam(stickiness_gam ~ s(phaseBeepNum) + group * intervention + thoughtsValence + thoughtsTime +
-                 thoughtsTime:group + thoughtsValence:group + thoughtsValence:intervention +
+#removing s(listless_gam)
+sticky8 <- bam(stickiness_gam ~ s(phaseBeepNum) + group * intervention +
+                 s(companyPleasant_gam) +
                  s(ruminating_gam) + s(sumNA_gam) + s(sumPA_gam) + ti(sumNA_gam, sumPA_gam) +
-                 s(negIntensity_gam) + s(posIntensity_gam) + ti(negIntensity_gam, posIntensity_gam) +
-                 s(distracted_gam) + s(listless_gam) + s(sleepQuality_gam) +
+                 s(negIntensity_gam) +
+                 s(distracted_gam) + s(sleepQuality_gam) +
                  s(phaseBeepNum, by = subject, bs="fs", m=1),
                data = sc_data, method = "ML")
 
 save(sticky8, file = "models_stickiness/sticky8_gam.rda")
 
-compareML(sticky5, sticky8) #significant difference --> sticky5 preferred
+compareML(sticky5, sticky8) #no significant difference --> sticky8 preferred
 
 
-#removing thoughtsValence:group
-sticky9 <- bam(stickiness_gam ~ s(phaseBeepNum) + group * intervention + thoughtsValence + thoughtsTime +
-                 thoughtsTime:group + thoughtsValence:thoughtsTime + thoughtsValence:intervention +
-                 s(ruminating_gam) + s(sumNA_gam) + s(sumPA_gam) + ti(sumNA_gam, sumPA_gam) +
-                 s(negIntensity_gam) + s(posIntensity_gam) + ti(negIntensity_gam, posIntensity_gam) +
-                 s(distracted_gam) + s(listless_gam) + s(sleepQuality_gam) +
-                 s(phaseBeepNum, by = subject, bs="fs", m=1),
-               data = sc_data, method = "ML")
+#removing s(distracted_gam)
+sticky9 <- bam(stickiness_gam ~ s(phaseBeepNum) + group * intervention +
+                  s(companyPleasant_gam) +
+                  s(ruminating_gam) + s(sumNA_gam) + s(sumPA_gam) + ti(sumNA_gam, sumPA_gam) +
+                  s(negIntensity_gam) +
+                  s(sleepQuality_gam) +
+                  s(phaseBeepNum, by = subject, bs="fs", m=1),
+                data = sc_data, method = "ML")
 
 save(sticky9, file = "models_stickiness/sticky9_gam.rda")
 
-compareML(sticky5, sticky9) #significant difference --> sticky5 preferred
+compareML(sticky8, sticky9) #significant difference --> sticky8 preferred
 
 
 
-#removing ti(negIntensity_gam, posIntensity_gam)
-sticky10 <- bam(stickiness_gam ~ s(phaseBeepNum) + group * intervention * thoughtsValence + thoughtsTime +
-                 thoughtsTime:group + thoughtsValence:thoughtsTime +
-                 s(ruminating_gam) + s(sumNA_gam) + s(sumPA_gam) + ti(sumNA_gam, sumPA_gam) +
-                 s(negIntensity_gam) + s(posIntensity_gam) +
-                 s(distracted_gam) + s(listless_gam) + s(sleepQuality_gam) +
-                 s(phaseBeepNum, by = subject, bs="fs", m=1),
-               data = sc_data, method = "ML")
+#removing ti(sumNA_gam, sumPA_gam)
+sticky10 <- bam(stickiness_gam ~ s(phaseBeepNum) + group * intervention +
+                  s(companyPleasant_gam) +
+                  s(ruminating_gam) + s(sumNA_gam) + s(sumPA_gam) +
+                  s(negIntensity_gam) +
+                  s(distracted_gam) + s(sleepQuality_gam) +
+                  s(phaseBeepNum, by = subject, bs="fs", m=1),
+                data = sc_data, method = "ML")
 
 save(sticky10, file = "models_stickiness/sticky10_gam.rda")
 
-compareML(sticky5, sticky10) #no significant difference --> sticky10 preferred
+compareML(sticky8, sticky10) #no significant difference --> sticky10 preferred
 
 
-
-#removing s(sleepQuality_gam)
-sticky11 <- bam(stickiness_gam ~ s(phaseBeepNum) + group * intervention * thoughtsValence + thoughtsTime +
-                  thoughtsTime:group + thoughtsValence:thoughtsTime +
-                  s(ruminating_gam) + s(sumNA_gam) + s(sumPA_gam) + ti(sumNA_gam, sumPA_gam) +
-                  s(negIntensity_gam) + s(posIntensity_gam) +
-                  s(distracted_gam) + s(listless_gam) +
+#removing  s(sumPA_gam) +
+sticky11 <- bam(stickiness_gam ~ s(phaseBeepNum) + group * intervention +
+                  s(companyPleasant_gam) +
+                  s(ruminating_gam) + s(sumNA_gam) +
+                  s(negIntensity_gam) +
+                  s(distracted_gam) + s(sleepQuality_gam) +
                   s(phaseBeepNum, by = subject, bs="fs", m=1),
                 data = sc_data, method = "ML")
 
 save(sticky11, file = "models_stickiness/sticky11_gam.rda")
 
-compareML(sticky10, sticky11) #significant difference --> sticky10 preferred
+compareML(sticky10, sticky11) #no significant difference --> sticky11 preferred
 
-
-#removing s(listless_gam)
-sticky12 <- bam(stickiness_gam ~ s(phaseBeepNum) + group * intervention * thoughtsValence + thoughtsTime +
-                  thoughtsTime:group + thoughtsValence:thoughtsTime +
-                  s(ruminating_gam) + s(sumNA_gam) + s(sumPA_gam) + ti(sumNA_gam, sumPA_gam) +
-                  s(negIntensity_gam) + s(posIntensity_gam) +
+#removing  s(sumNA_gam) +
+sticky12 <- bam(stickiness_gam ~ s(phaseBeepNum) + group * intervention +
+                  s(companyPleasant_gam) +
+                  s(ruminating_gam) +
+                  s(negIntensity_gam) +
                   s(distracted_gam) + s(sleepQuality_gam) +
                   s(phaseBeepNum, by = subject, bs="fs", m=1),
                 data = sc_data, method = "ML")
 
 save(sticky12, file = "models_stickiness/sticky12_gam.rda")
 
-compareML(sticky10, sticky12) #no significant difference --> sticky12 preferred
+compareML(sticky11, sticky12) #significant difference --> sticky11 preferred
 
-
-#removing s(distracted_gam)
-sticky13 <- bam(stickiness_gam ~ s(phaseBeepNum) + group * intervention * thoughtsValence + thoughtsTime +
-                  thoughtsTime:group + thoughtsValence:thoughtsTime +
-                  s(ruminating_gam) + s(sumNA_gam) + s(sumPA_gam) + ti(sumNA_gam, sumPA_gam) +
-                  s(negIntensity_gam) + s(posIntensity_gam) +
-                  s(sleepQuality_gam) +
+#removing  s(ruminating_gam) +
+sticky13 <- bam(stickiness_gam ~ s(phaseBeepNum) + group * intervention +
+                  s(companyPleasant_gam) +
+                  s(sumNA_gam) +
+                  s(negIntensity_gam) +
+                  s(distracted_gam) + s(sleepQuality_gam) +
                   s(phaseBeepNum, by = subject, bs="fs", m=1),
                 data = sc_data, method = "ML")
 
 save(sticky13, file = "models_stickiness/sticky13_gam.rda")
 
-compareML(sticky12, sticky13) #significant difference --> sticky12 preferred
+compareML(sticky11, sticky13) #significant difference --> sticky11 preferred
 
 
+#sticky11 is the winner
 
-#removing ti(sumNA_gam, sumPA_gam)
-sticky14 <- bam(stickiness_gam ~ s(phaseBeepNum) + group * intervention * thoughtsValence + thoughtsTime +
-                  thoughtsTime:group + thoughtsValence:thoughtsTime +
-                  s(ruminating_gam) + s(sumNA_gam) + s(sumPA_gam) +
-                  s(negIntensity_gam) + s(posIntensity_gam) +
-                  s(distracted_gam) + s(sleepQuality_gam) +
-                  s(phaseBeepNum, by = subject, bs="fs", m=1),
-                data = sc_data, method = "ML")
-
-save(sticky14, file = "models_stickiness/sticky14_gam.rda")
-
-compareML(sticky12, sticky14) #no significant difference --> sticky14 preferred
-
-
-#removing  s(posIntensity_gam)
-sticky15 <- bam(stickiness_gam ~ s(phaseBeepNum) + group * intervention * thoughtsValence + thoughtsTime +
-                  thoughtsTime:group + thoughtsValence:thoughtsTime +
-                  s(ruminating_gam) + s(sumNA_gam) + s(sumPA_gam) +
-                  s(negIntensity_gam) +
-                  s(distracted_gam) + s(sleepQuality_gam) +
-                  s(phaseBeepNum, by = subject, bs="fs", m=1),
-                data = sc_data, method = "ML")
-
-save(sticky15, file = "models_stickiness/sticky15_gam.rda")
-
-compareML(sticky14, sticky15) #no significant difference --> sticky15 preferred
-
-
-#removing s(negIntensity_gam)
-sticky16 <- bam(stickiness_gam ~ s(phaseBeepNum) + group * intervention * thoughtsValence + thoughtsTime +
-                  thoughtsTime:group + thoughtsValence:thoughtsTime +
-                  s(ruminating_gam) + s(sumNA_gam) + s(sumPA_gam) +
-                  s(distracted_gam) + s(sleepQuality_gam) +
-                  s(phaseBeepNum, by = subject, bs="fs", m=1),
-                data = sc_data, method = "ML")
-
-save(sticky16, file = "models_stickiness/sticky16_gam.rda")
-
-compareML(sticky15, sticky16) #significant difference --> sticky15 preferred
-
-
-#removing s(ruminating_gam)
-sticky17 <- bam(stickiness_gam ~ s(phaseBeepNum) + group * intervention * thoughtsValence + thoughtsTime +
-                  thoughtsTime:group + thoughtsValence:thoughtsTime +
-                  s(sumNA_gam) + s(sumPA_gam) +
-                  s(negIntensity_gam) +
-                  s(distracted_gam) + s(sleepQuality_gam) +
-                  s(phaseBeepNum, by = subject, bs="fs", m=1),
-                data = sc_data, method = "ML")
-
-save(sticky17, file = "models_stickiness/sticky17_gam.rda")
-
-compareML(sticky15, sticky17) #nsignificant difference --> sticky15 preferred
-
-#sticky15 is the winner
-
-sticky.m1 <- bam(stickiness_gam ~ s(phaseBeepNum) + group * intervention * thoughtsValence + thoughtsTime +
-                   thoughtsTime:group + thoughtsValence:thoughtsTime +
-                   s(ruminating_gam) + s(sumNA_gam) + s(sumPA_gam) +
+sticky.m1 <- bam(stickiness_gam ~ s(phaseBeepNum) + group * intervention +
+                   s(companyPleasant_gam) +
+                   s(ruminating_gam) + s(sumNA_gam) +
                    s(negIntensity_gam) +
                    s(distracted_gam) + s(sleepQuality_gam) +
                    s(phaseBeepNum, by = subject, bs="fs", m=1),
@@ -519,4 +470,4 @@ plot_diff(sticky.m1, view="phaseBeepNum", comp=list( group=c("controls", "contro
 sticky.int <- bam(stickiness_gam ~ 1 + s(phaseBeepNum, by=subject, bs="fs", m=1), data=sc_data, method="ML")
 summary(sticky.int)
 
-compareML(sticky.int, sticky15) #g17 clearly outperforms the intercept model
+compareML(sticky.int, sticky11) #sticky11 clearly outperforms the intercept model

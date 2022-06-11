@@ -103,7 +103,7 @@ data$weekday <- as.factor(data$weekday)
 met.vars <- c('ruminating', 'stickiness', 'sumNA',  'down', 'irritated', 'restless', 'anxious',
               'sumPA', 'wakeful', 'satisfied', 'energetic',
               'stressed', 'listless',  'distracted',
-              'thoughtsPleasant', 'restOfDayPos',
+              'thoughtsPleasant', 'restOfDayPos', 'companyPleasant', 'alonePleasant',
               'posMax', 'posIntensity', 'negMax', 'negIntensity',
               "sleepQuality", "sleepLatency", "sleepDuration", "restednessWakeup")
 
@@ -219,7 +219,7 @@ plot2
 
 #Maximum model with ML
 pa.max <- bam(sumPA_gam ~ s(phaseBeepNum) + group * intervention +
-                s(companyPleasant) +
+                s(companyPleasant_gam) +
                 s(phaseBeepNum, by=group) + s(phaseBeepNum, by=intervention) +
                 s(ruminating_gam) + s(sumNA_gam) +
                 s(negIntensity_gam) + s(posIntensity_gam) + ti(negIntensity_gam, posIntensity_gam) +
@@ -229,7 +229,7 @@ pa.max <- bam(sumPA_gam ~ s(phaseBeepNum) + group * intervention +
 
 
 pa.max1 <- bam(sumPA_gam ~ s(phaseBeepNum, by = interaction(group, intervention)) + group * intervention +
-                s(companyPleasant) +
+                s(companyPleasant_gam) +
                 s(ruminating_gam) + s(sumNA_gam) +
                 s(negIntensity_gam) + s(posIntensity_gam) + ti(negIntensity_gam, posIntensity_gam) +
                 s(stickiness_gam) + s(distracted_gam) + s(listless_gam) + s(sleepQuality_gam) +
@@ -237,7 +237,7 @@ pa.max1 <- bam(sumPA_gam ~ s(phaseBeepNum, by = interaction(group, intervention)
               data = sc_data, method = "ML")
 
 pa.max2 <- bam(sumPA_gam ~ s(phaseBeepNum) + s(phaseBeepNum, by = interaction(group, intervention)) + group * intervention +
-                 s(companyPleasant) +
+                 s(companyPleasant_gam) +
                  s(ruminating_gam) + s(sumNA_gam) +
                  s(negIntensity_gam) + s(posIntensity_gam) + ti(negIntensity_gam, posIntensity_gam) +
                  s(stickiness_gam) + s(distracted_gam) + s(listless_gam) + s(sleepQuality_gam) +
@@ -250,7 +250,7 @@ compareML(pa.max1, pa.max2) #pa.max1 is slightly preferred
 
 #Maximum model with REML
 pa.max.reml <- bam(sumPA_gam ~ s(phaseBeepNum) + group * intervention +
-                     s(companyPleasant) +
+                     s(companyPleasant_gam) +
                      s(phaseBeepNum, by=group) + s(phaseBeepNum, by=intervention) +
                      s(ruminating_gam) + s(sumNA_gam) +
                      s(negIntensity_gam) + s(posIntensity_gam) + ti(negIntensity_gam, posIntensity_gam) +
@@ -263,7 +263,7 @@ summary.pa.max <- summary(pa.max)
 summary.pa.max.reml <- summary(pa.max.reml)
 
 pa.max1.reml <- bam(sumPA_gam ~ s(phaseBeepNum, by = interaction(group, intervention)) + group * intervention +
-                 s(companyPleasant) +
+                 s(companyPleasant_gam) +
                  s(ruminating_gam) + s(sumNA_gam) +
                  s(negIntensity_gam) + s(posIntensity_gam) + ti(negIntensity_gam, posIntensity_gam) +
                  s(stickiness_gam) + s(distracted_gam) + s(listless_gam) + s(sleepQuality_gam) +
@@ -277,7 +277,7 @@ save(pa.max1, pa.max.reml1, file = "models_pa/pa_Max.rda")
 
 #removing s(phaseBeepNum, by=interaction(intervention))
 pa2 <- bam(sumPA_gam ~ s(phaseBeepNum) + group * intervention +
-             s(companyPleasant) +
+             s(companyPleasant_gam) +
              s(ruminating_gam) + s(sumNA_gam) +
              s(negIntensity_gam) + s(posIntensity_gam) + ti(negIntensity_gam, posIntensity_gam) +
              s(stickiness_gam) + s(distracted_gam) + s(listless_gam) + s(sleepQuality_gam) +
@@ -289,9 +289,19 @@ save(pa2, file = "models_pa/pa2_gam.rda")
 compareML(pa.max1, pa2) #pa1 preferred
 
 
+#removing s(companyPleasant_gam)
+pa2a <- bam(sumPA_gam ~ s(phaseBeepNum) + group * intervention +
+             s(ruminating_gam) + s(sumNA_gam) +
+             s(negIntensity_gam) + s(posIntensity_gam) + ti(negIntensity_gam, posIntensity_gam) +
+             s(stickiness_gam) + s(distracted_gam) + s(listless_gam) + s(sleepQuality_gam) +
+             s(phaseBeepNum, by = subject, bs="fs", m=1),
+           data = sc_data, method = "ML")
+
+compareML(pa2, pa2a) #pa2 preferred
+
 #removing ti(negIntensity_gam, posIntensity_gam)
 pa3 <- bam(sumPA_gam ~ s(phaseBeepNum) + group * intervention +
-              s(companyPleasant) +
+              s(companyPleasant_gam) +
               s(ruminating_gam) + s(sumNA_gam) +
               s(negIntensity_gam) + s(posIntensity_gam) +
               s(stickiness_gam) + s(distracted_gam) + s(listless_gam) + s(sleepQuality_gam) +
@@ -305,7 +315,7 @@ compareML(pa2, pa3) #no significant difference --> pa3 preferred
 
 #removing  s(posIntensity_gam)
 pa4 <- bam(sumPA_gam ~ s(phaseBeepNum) + group * intervention +
-              s(companyPleasant) +
+              s(companyPleasant_gam) +
               s(ruminating_gam) + s(sumNA_gam) +
               s(negIntensity_gam) +
               s(stickiness_gam) + s(distracted_gam) + s(listless_gam) + s(sleepQuality_gam) +
@@ -319,7 +329,7 @@ compareML(pa3, pa4) #significant difference --> pa3 preferred
 
 #removing s(negIntensity_gam)
 pa5 <- bam(sumPA_gam ~ s(phaseBeepNum) + group * intervention +
-              s(companyPleasant) +
+              s(companyPleasant_gam) +
               s(ruminating_gam) + s(sumNA_gam) +
               s(posIntensity_gam) +
               s(stickiness_gam) + s(distracted_gam) + s(listless_gam) + s(sleepQuality_gam) +
@@ -333,7 +343,7 @@ compareML(pa3, pa5) #significant difference --> pa3 preferred
 
 #removing s(sleepQuality_gam)
 pa6 <- bam(sumPA_gam ~ s(phaseBeepNum) + group * intervention +
-              s(companyPleasant) +
+              s(companyPleasant_gam) +
               s(ruminating_gam) + s(sumNA_gam) +
               s(negIntensity_gam) + s(posIntensity_gam) +
               s(stickiness_gam) + s(distracted_gam) + s(listless_gam) +
@@ -348,7 +358,7 @@ compareML(pa3, pa6) #significant difference --> pa3 preferred
 
 #removing s(listless_gam)
 pa7 <- bam(sumPA_gam ~ s(phaseBeepNum) + group * intervention +
-              s(companyPleasant) +
+              s(companyPleasant_gam) +
               s(ruminating_gam) + s(sumNA_gam) +
               s(negIntensity_gam) + s(posIntensity_gam) +
               s(stickiness_gam) + s(distracted_gam) + s(sleepQuality_gam) +
@@ -362,7 +372,7 @@ compareML(pa3, pa7) #significant difference --> pa3 preferred
 
 #removing s(distracted_gam)
 pa8 <- bam(sumPA_gam ~ s(phaseBeepNum) + group * intervention +
-              s(companyPleasant) +
+              s(companyPleasant_gam) +
               s(ruminating_gam) + s(sumNA_gam) +
               s(negIntensity_gam) + s(posIntensity_gam) +
               s(stickiness_gam) + s(listless_gam) + s(sleepQuality_gam) +
@@ -376,7 +386,7 @@ compareML(pa3, pa8) #no significant difference --> pa8 preferred
 
 #removing s(stickiness_gam)
 pa9 <- bam(sumPA_gam ~ s(phaseBeepNum) + group * intervention +
-              s(companyPleasant) +
+              s(companyPleasant_gam) +
               s(ruminating_gam) + s(sumNA_gam) +
               s(negIntensity_gam) + s(posIntensity_gam) +
               s(listless_gam) + s(sleepQuality_gam) +
@@ -390,7 +400,7 @@ compareML(pa8, pa9) #no significant difference --> pa9 preferred
 
 #removing s(ruminating_gam)
 pa10 <- bam(sumPA_gam ~ s(phaseBeepNum) + group * intervention +
-             s(companyPleasant) +
+             s(companyPleasant_gam) +
              s(sumNA_gam) +
              s(negIntensity_gam) + s(posIntensity_gam) +
              s(listless_gam) + s(sleepQuality_gam) +
@@ -404,7 +414,7 @@ compareML(pa9, pa10) #significant difference --> pa9 preferred
 
 #removing s(sumNA_gam)
 pa11 <- bam(sumPA_gam ~ s(phaseBeepNum) + group * intervention +
-              s(companyPleasant) +
+              s(companyPleasant_gam) +
               s(ruminating_gam) +
               s(negIntensity_gam) + s(posIntensity_gam) +
               s(listless_gam) + s(sleepQuality_gam) +
@@ -415,7 +425,7 @@ save(pa11, file = "models_pa/pa11_gam.rda")
 
 compareML(pa9, pa11) #significant difference --> pa9 preferred
 
-#removing  s(companyPleasant)
+#removing  s(companyPleasant_gam)
 pa12 <- bam(sumPA_gam ~ s(phaseBeepNum) + group * intervention +
              s(ruminating_gam) + s(sumNA_gam) +
              s(negIntensity_gam) + s(posIntensity_gam) +
@@ -430,7 +440,7 @@ compareML(pa9, pa12) #significant difference --> pa9 preferred
 #pa9 is the winner
 
 pa.m1 <- bam(sumPA_gam ~ s(phaseBeepNum) + group * intervention +
-               s(companyPleasant) +
+               s(companyPleasant_gam) +
                s(ruminating_gam) + s(sumNA_gam) +
                s(negIntensity_gam) + s(posIntensity_gam) +
                s(listless_gam) + s(sleepQuality_gam) +

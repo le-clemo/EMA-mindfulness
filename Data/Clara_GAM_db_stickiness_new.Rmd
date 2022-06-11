@@ -1,0 +1,153 @@
+---
+title: "GAM_ESM_v2"
+author: "Clara"
+date: "`r Sys.Date()`"
+output: html_document
+---
+
+## Setup
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+# set root directory
+setwd("C:/Users/cleme/Documents/Education/RUG/Thesis/EMA-mindfulness/Data")
+```
+
+## Clean everything up
+```{r}
+rm(list = ls())
+```
+
+## Import Libraries
+```{r}
+library(mgcv)
+library(itsadug)
+library(plyr)
+library(ggplot2)
+library(plotfunctions)
+library(colorspace)
+library (dplyr)
+```
+
+## Import data
+```{r}
+ESM_data <- read.csv("ESM_gams_g2_diff.csv")
+
+```
+
+# bs="re" -> include random intercepts and slopes
+# bs="fs",m=1 -> add non-linear random effects
+# BY parameter -> obtain separate non-linearities
+
+```{r}
+# need to make some columns of type factor to be able to include them as predictors
+
+ESM_data$id2 <- as.factor(ESM_data$id2)
+ESM_data$intervention <- as.factor(ESM_data$intervention)
+ESM_data$subject <- as.factor(ESM_data$subject)
+ESM_data$block <- as.factor(ESM_data$block)
+
+```
+
+## Create complex model
+```{r}
+m1 <- bam(db_stickiness_diff ~ s(assessmentDayPhase, by=intervention, k=6)
+           + intervention
+           + s(assessmentDayPhase, subject, by=block, bs="fs", m=1, k=6)
+           , data=ESM_data, method="ML") 
+summary(m1)
+
+plot_smooth(m1, view="assessmentDayPhase", rug=F, plot_all="intervention")
+
+# check autocorrelation
+m1acf <- acf_resid(m1)
+
+#check model fit
+gam.check(m1)
+
+#plot the model based predicted differences between interventions (summed effects)
+plot_parametric(m1, pred=list(intervention=c("mindfulness", "fantasizing")))
+
+
+# plot differences
+plot_diff(m1, view="assessmentDayPhase", comp=list("intervention"=c("mindfulness", "fantasizing")), main="mindfulness vs fantasizing")
+
+```
+
+
+## Visualize raw data and check if it is in line with the model predictions
+```{r}
+avg2 <- ddply(ESM_data, c("group", "intervention", "assessmentDayPhase", "db_stickiness_diff"), summarise,
+               N    = length(db_stickiness_diff),
+               sd   = sd(db_stickiness_diff),
+               se   = sd / sqrt(N))
+plot2 <- ggplot(avg2, aes(y=db_stickiness_diff, x=assessmentDayPhase, color=intervention)) + geom_point(position = position_jitter(w=0.1,h=0))+ facet_grid(.~group) + ylab("Stickiness Difference peri-pre")+ xlab("Day") + labs(color = "Intervention") + geom_hline(yintercept=0) + scale_x_discrete(limits=c("1","2","3", "4", "5", "6", "7")) + geom_smooth() 
+
+plot2
+
+#ggsave(filename="Analysis/my_scripts/GAMs_new/visualisation/db_stickiness_rawDiff.png", plot=plot2, width=10, height=7)
+```
+
+## Create less complex model and compare
+```{r}
+# take out interaction
+m2 <- bam(db_stickiness_diff ~ s(assessmentDayPhase, k=6)
+           + intervention
+           + s(assessmentDayPhase, subject, by=block, bs="fs", m=1, k=6)
+           , data=ESM_data, method="ML") 
+summary(m2)
+
+# check autocorrelation
+m2acf <- acf_resid(m2)
+
+plot_smooth(m2, view="assessmentDayPhase", rug=F, plot_all="intervention")
+
+compareML(m1, m2) #m2 better (AIC diff 0.45)
+
+
+# take out main effect
+m2b <- bam(db_stickiness_diff ~ s(assessmentDayPhase, k=6)
+           # + intervention
+           + s(assessmentDayPhase, subject, by=block, bs="fs", m=1, k=6)
+           , data=ESM_data, method="ML") 
+summary(m2b)
+
+plot_smooth(m2b, view="assessmentDayPhase", rug=F, plot_all="intervention")
+
+compareML(m2, m2b) #m2b slightly better (AIC diff 0.15)
+```
+
+## create intercept model and compare
+```{r}
+# intercept model
+m.int <- bam(db_stickiness_diff ~ 1 + s(assessmentDayPhase, subject, by=block, bs="fs", m=1, k=6), data=ESM_data, method="ML")
+summary(m.int)
+
+compareML(m.int, m1) # intercept model vs complex model (AIC diff 4.89)
+compareML(m.int, m2) # intercept model vs main effects model (AIC diff 5.34)
+compareML(m1, m2) # m2 slightly better (AIC diff 0.45)
+compareML(m2, m2b) #m2b slightly better (AIC diff 0.15)
+
+# akaike 2011: AIC diff 2
+```
+
+## Investigate best model
+```{r}
+summary(m2b)
+# Approximate significance of smooth terms:
+#                                        edf Ref.df     F p-value    
+# s(assessmentDayPhase)                 1.00      1 5.799  0.0162 *  
+
+plot_smooth(m2b, view="assessmentDayPhase", rug=F, plot_all="intervention")
+
+#check model fit
+gam.check(m2b)
+
+#plot the model based predicted differences between interventions (summed effects)
+#plot_parametric(m2b, pred=list(intervention=c("mindfulness", "fantasizing")))
+
+#plot differences
+#plot_diff(m2b, view="assessmentDayPhase", comp=list("intervention"=c("mindfulness", "fantasizing")), main="mindfulness vs fantasizing")
+
+```
+

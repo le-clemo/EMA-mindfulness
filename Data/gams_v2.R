@@ -18,7 +18,6 @@ library(MASS)
 data <- read.csv('merged_data.csv') 
 
 
-
 #same for sleepQuality
 for(id in unique(data$subject)){
   respondent_rows <- which(data$subject == id)
@@ -47,7 +46,7 @@ for(id in unique(data$subject)){
   }
 }
 
-#aaaaaaand for sleepLatency
+#and for sleepLatency
 for(id in unique(data$subject)){
   respondent_rows <- which(data$subject == id)
   current_day <- 0
@@ -84,37 +83,53 @@ data$grIntPhase <- as.factor(interaction(data$group, data$intervention, data$pha
 data$subject <- as.factor(data$subject)
 data$subjB <- interaction(data$subject, data$block, drop = TRUE)
 
-#creating rumination measures minus baseline
-data$ruminating_minBase <- NA
-for(id in unique(data$subject)){
-  for(b in 1:2){
-    pre_rows <- which((data$subject == id) & (data$phase=="pre") & (data$block==b))
-    s_rows <- which((data$subject == id) & (data$block==b))
-    baselineMean <- mean(data$ruminating[pre_rows], na.rm=TRUE)
-    
-    if(is.na(baselineMean)){
-      baselineMean <- 0
-    }
-    
-    data$ruminating_minBase[s_rows] <- round(data$ruminating[s_rows] - baselineMean, 2)
-  }
-}
+
+#add day of the week
+data$weekday <- weekdays(strptime(data$mindcog_db_open_from, "%Y-%m-%d %H:%M:%S"))
+data$weekday <- as.factor(data$weekday)
 
 
+#creating variables minus baseline means per subject
 met.vars <- c('ruminating', 'stickiness', 'sumNA',  'down', 'irritated', 'restless', 'anxious',
               'sumPA', 'wakeful', 'satisfied', 'energetic',
               'stressed', 'listless',  'distracted',
               'thoughtsPleasant', 'restOfDayPos',
               'posMax', 'posIntensity', 'negMax', 'negIntensity',
-              "sleepQuality", "sleepLatency", "sleepDuration", "restednessWakeup",
-              "ruminating_minBase")
+              "sleepQuality", "sleepLatency", "sleepDuration", "restednessWakeup")
 
+#in addition we create a new list which includes both the changed and unchanged met.vars for scaling later on
+scale.vars <- c(rep(NA, length(met.vars)*2))
+i = 0
+for(v in met.vars){
+  new_var <- paste(v, "_diff", sep = "")
+  data[[new_var]] <- NA
+  i = i+1
+  scale.vars[[i]] <- v
+  i = i+1
+  scale.vars[[i]] <- new_var
+  
+  for(id in unique(data$subject)){
+    for(b in 1:2){
+      pre_rows <- which((data$subject == id) & (data$phase=="pre") & (data$block==b))
+      s_rows <- which((data$subject == id) & (data$block==b))
+      baselineMean <- mean(data[[v]][pre_rows], na.rm=TRUE)
+      
+      if(is.na(baselineMean)){
+        baselineMean <- 0
+      }
+      
+      data[[new_var]][s_rows] <- round(data[[v]][s_rows] - baselineMean, 2)
+    }
+  }  
+}
+
+#creating a scaled version of data
 sc_data <- copy(data)
-sc_data[met.vars] <- scale(sc_data[met.vars])
+sc_data[scale.vars] <- scale(sc_data[scale.vars])
 
 
 #number of participants so far
-length(unique(sc_data$subjB)) #62 subjB (same subject, different block --> viewed as separate)
+length(unique(sc_data$subjB)) #66 subjB (same subject, different block --> viewed as separate)
 responses_block <- ddply(sc_data, .(subjB), plyr::summarise,
                          numCompleted = length(mindcog_db_open_from),
                          noResponse = length(unique(mindcog_db_non_response)),
@@ -122,37 +137,56 @@ responses_block <- ddply(sc_data, .(subjB), plyr::summarise,
                          responseRate = round(response/numCompleted,2),
                          numDays = max(assessmentDay))
 
-
 meanResponseRate_block <- mean(responses_block$responseRate) #the mean response rate is ~67.6%
 length(unique(responses_block[which(responses_block$responseRate >= meanResponseRate_block),]$subjB)) #36
 length(unique(responses_block[which(responses_block$responseRate >= 0.6),]$subjB)) #45
 length(unique(responses_block[which(responses_block$responseRate >= 0.5),]$subjB)) #53
 
+responses_subject <- ddply(sc_data, .(subject), plyr::summarise,
+                         numCompleted = length(mindcog_db_open_from),
+                         noResponse = length(unique(mindcog_db_non_response)),
+                         response = numCompleted - noResponse,
+                         responseRate = round(response/numCompleted,2),
+                         numDays = max(assessmentDay))
+
+meanResponseRate_subject <- mean(responses_subject$responseRate) #the mean response rate is ~66.9%
+length(unique(responses_subject[which(responses_subject$responseRate >= meanResponseRate_block),]$subject)) #20
+length(unique(responses_subject[which(responses_subject$responseRate >= 0.6),]$subject)) #26
+length(unique(responses_subject[which(responses_subject$responseRate >= 0.5),]$subject)) #33
+
+
+
+
 #removing participants with a response rate lower than 60%
 pp <- unique(responses_block[which(responses_block$responseRate >= 0.6),]$subjB)
 sc_data <- sc_data[which(sc_data$subjB %in% pp),]
+#sc_data <- sc_data[which(is.na(sc_data$mindcog_db_non_response)),]
 
 
 
 ############################# Predicting rumination ######################################
 #checking out its distribution
 hist(data$ruminating, breaks = 20)
-
 qqnorm(data$ruminating)
 qqline(data$ruminating)
+
+#also the change scores
+hist(data$ruminating_diff, breaks = 20)
+qqnorm(data$ruminating_diff)
+qqline(data$ruminating_diff) #change scores are more normally distributed
 
 ############################################## ruminating minus baseline average models ######################################
 
 
 if(FALSE){
-  r0 <- gam(ruminating_minBase ~ s(blockBeepNum) + group * intervention * phase +
+  r0 <- gam(ruminating_diff ~ s(blockBeepNum) + group * intervention * phase +
               s(blockBeepNum, by = subject, bs="fs", m=1),
             data=sc_data)
   
   summary_r0 <- summary(r0)
   
   #refitting with ML for FE comparison
-  r_ml0 <- gam(ruminating_minBase ~ s(blockBeepNum) + group * intervention * phase +
+  r_ml0 <- gam(ruminating_diff ~ s(blockBeepNum) + group * intervention * phase +
                  s(blockBeepNum, by = subject, bs="fs", m=1),
                data=sc_data, method = "ML")
   
@@ -163,14 +197,14 @@ if(FALSE){
 
 
 if(FALSE){
-  r1 <- gam(ruminating_minBase ~ s(blockBeepNum) + group * intervention * phase + s(blockBeepNum, by=group) +
+  r1 <- gam(ruminating_diff ~ s(blockBeepNum) + group * intervention * phase + s(blockBeepNum, by=group) +
               s(blockBeepNum, by = subject, bs="fs", m=1),
             data=sc_data)
   
   summary_r1 <- summary(r1)
   
   #refitting with ML for FE comparison
-  r_ml1 <- gam(ruminating_minBase ~ s(blockBeepNum) + group * intervention * phase + s(blockBeepNum, by=group) +
+  r_ml1 <- gam(ruminating_diff ~ s(blockBeepNum) + group * intervention * phase + s(blockBeepNum, by=group) +
                s(blockBeepNum, by = subject, bs="fs", m=1),
              data=sc_data, method = "ML")
   
@@ -198,14 +232,14 @@ abline(h=0) #there is also obvious structure in the residuals
 #Extending the model (with normal distribution)
 #Negative Affect
 if(FALSE){
-  r2 <- gam(ruminating_minBase ~ s(blockBeepNum) + group * intervention * phase + s(blockBeepNum, by=group) +
+  r2 <- gam(ruminating_diff ~ s(blockBeepNum) + group * intervention * phase + s(blockBeepNum, by=group) +
               s(sumNA) +
               s(blockBeepNum, by = subject, bs="fs", m=1),
             data=sc_data)
   
   summary_r2 <- summary(r2)
   
-  r_ml2 <- gam(ruminating_minBase ~ s(blockBeepNum) + group * intervention * phase + s(blockBeepNum, by=group) +
+  r_ml2 <- gam(ruminating_diff ~ s(blockBeepNum) + group * intervention * phase + s(blockBeepNum, by=group) +
                s(sumNA) +
                s(blockBeepNum, by = subject, bs="fs", m=1),
              data=sc_data, method = "ML")
@@ -232,14 +266,14 @@ abline(h=0) #there is also obvious structure in the residuals
 
 #Positive Affect
 if(FALSE){
-  r3 <- gam(ruminating_minBase ~ s(blockBeepNum) + group * intervention * phase + s(blockBeepNum, by=group) +
+  r3 <- gam(ruminating_diff ~ s(blockBeepNum) + group * intervention * phase + s(blockBeepNum, by=group) +
                s(sumNA) + s(sumPA) +
                s(blockBeepNum, by = subject, bs="fs", m=1),
              data=sc_data)
   
   summary_r3 <- summary(r3)
   
-  rl3 <- gam(ruminating_minBase ~ s(blockBeepNum) + group * intervention * phase + s(blockBeepNum, by=group) +
+  rl3 <- gam(ruminating_diff ~ s(blockBeepNum) + group * intervention * phase + s(blockBeepNum, by=group) +
                s(sumNA) + s(sumPA) +
                s(blockBeepNum, by = subject, bs="fs", m=1),
              data=sc_data, method = "ML")
@@ -265,14 +299,14 @@ abline(h=0) #there is also obvious structure in the residuals
 
 #Sleep Quality
 if(FALSE){
-  r4 <- gam(ruminating_minBase ~ s(blockBeepNum) + group * intervention * phase + s(blockBeepNum, by=group) +
+  r4 <- gam(ruminating_diff ~ s(blockBeepNum) + group * intervention * phase + s(blockBeepNum, by=group) +
               s(sumNA) + s(sumPA) + s(sleepQuality) +
               s(blockBeepNum, by = subject, bs="fs", m=1),
             data=sc_data)
   
   summary_r4 <- summary(r4)
   
-  r_ml4 <- gam(ruminating_minBase ~ s(blockBeepNum) + group * intervention * phase + s(blockBeepNum, by=group) +
+  r_ml4 <- gam(ruminating_diff ~ s(blockBeepNum) + group * intervention * phase + s(blockBeepNum, by=group) +
                s(sumNA) + s(sumPA) + s(sleepQuality) +
                s(blockBeepNum, by = subject, bs="fs", m=1),
              data=sc_data, method = "ML")
@@ -291,14 +325,14 @@ compareML(rl3, r_ml4) #significant --> r4 preferred
 
 #adding negIntensity
 if(FALSE){
-  r5 <- gam(ruminating_minBase ~ s(blockBeepNum) + group * intervention * phase + s(blockBeepNum, by=group) +
+  r5 <- gam(ruminating_diff ~ s(blockBeepNum) + group * intervention * phase + s(blockBeepNum, by=group) +
               s(sumNA) + s(sumPA) + s(sleepQuality) + s(negIntensity) +
               s(blockBeepNum, by = subject, bs="fs", m=1),
             data=sc_data)
   
   summary_r5 <- summary(r5)
   
-  r_ml5 <- gam(ruminating_minBase ~ s(blockBeepNum) + group * intervention * phase + s(blockBeepNum, by=group) +
+  r_ml5 <- gam(ruminating_diff ~ s(blockBeepNum) + group * intervention * phase + s(blockBeepNum, by=group) +
                  s(sumNA) + s(sumPA) + s(sleepQuality) + s(negIntensity) +
                  s(blockBeepNum, by = subject, bs="fs", m=1),
                data=sc_data, method = "ML")
@@ -317,14 +351,14 @@ compareML(r_ml4, r_ml5) #significant --> r5 preferred
 #adding posIntensity
 if(FALSE){
   
-  r6 <- gam(ruminating_minBase ~ s(blockBeepNum) + group * intervention * phase + s(blockBeepNum, by=group) +
+  r6 <- gam(ruminating_diff ~ s(blockBeepNum) + group * intervention * phase + s(blockBeepNum, by=group) +
               s(sumNA) + s(sumPA) + s(sleepQuality) + s(negIntensity) + s(posIntensity) +
               s(blockBeepNum, by = subject, bs="fs", m=1),
             data=sc_data)
   
   summary_r6 <- summary(r6)
   
-  r_ml6 <- gam(ruminating_minBase ~ s(blockBeepNum) + group * intervention * phase + s(blockBeepNum, by=group) +
+  r_ml6 <- gam(ruminating_diff ~ s(blockBeepNum) + group * intervention * phase + s(blockBeepNum, by=group) +
                  s(sumNA) + s(sumPA) + s(sleepQuality) + s(negIntensity) + s(posIntensity) +
                  s(blockBeepNum, by = subject, bs="fs", m=1),
                data=sc_data, method = "ML")
@@ -346,14 +380,14 @@ compareML(r_ml5, r_ml6) #significant --> r6 preferred
 
 #adding interaction betwwen PA and NA
 if(FALSE){
-  r7 <- gam(ruminating_minBase ~ s(blockBeepNum) + group * intervention * phase + s(blockBeepNum, by=group) +
+  r7 <- gam(ruminating_diff ~ s(blockBeepNum) + group * intervention * phase + s(blockBeepNum, by=group) +
               s(sumNA) + s(sumPA) + ti(sumNA, sumPA) + s(sleepQuality) + s(negIntensity) + s(posIntensity) +
               s(blockBeepNum, by = subject, bs="fs", m=1),
             data=sc_data)
   
   summary_r7 <- summary(r7)
   
-  r_ml7 <- gam(ruminating_minBase ~ s(blockBeepNum) + group * intervention * phase + s(blockBeepNum, by=group) +
+  r_ml7 <- gam(ruminating_diff ~ s(blockBeepNum) + group * intervention * phase + s(blockBeepNum, by=group) +
                  s(sumNA) + s(sumPA) + ti(sumNA, sumPA) + s(sleepQuality) + s(negIntensity) + s(posIntensity) +
                  s(blockBeepNum, by = subject, bs="fs", m=1),
                data=sc_data, method = "ML")
@@ -371,7 +405,7 @@ compareML(r_ml6, r_ml7) #significant --> r7 preferred
 
 #adding interaction betwwen neg- and posIntensity
 if(FALSE){
-  r8 <- gam(ruminating_minBase ~ s(blockBeepNum) + group * intervention * phase + s(blockBeepNum, by=group) +
+  r8 <- gam(ruminating_diff ~ s(blockBeepNum) + group * intervention * phase + s(blockBeepNum, by=group) +
               s(sumNA) + s(sumPA) + ti(sumNA, sumPA) + s(sleepQuality) +
               s(negIntensity) + s(posIntensity) + ti(negIntensity, posIntensity) +
               s(blockBeepNum, by = subject, bs="fs", m=1),
@@ -379,7 +413,7 @@ if(FALSE){
   
   summary_r8 <- summary(r8)
   
-  r_ml8 <- gam(ruminating_minBase ~ s(blockBeepNum) + group * intervention * phase + s(blockBeepNum, by=group) +
+  r_ml8 <- gam(ruminating_diff ~ s(blockBeepNum) + group * intervention * phase + s(blockBeepNum, by=group) +
                  s(sumNA) + s(sumPA) + ti(sumNA, sumPA) + s(sleepQuality) +
                  s(negIntensity) + s(posIntensity) + ti(negIntensity, posIntensity) +
                  s(blockBeepNum, by = subject, bs="fs", m=1),
@@ -402,7 +436,7 @@ abline(h=0)
 
 #adding stickiness
 if(FALSE){
-  r9 <- gam(ruminating_minBase ~ s(blockBeepNum) + group * intervention * phase + s(blockBeepNum, by=group) +
+  r9 <- gam(ruminating_diff ~ s(blockBeepNum) + group * intervention * phase + s(blockBeepNum, by=group) +
               s(sumNA) + s(sumPA) + ti(sumNA, sumPA) + s(sleepQuality) +
               s(negIntensity) + s(posIntensity) + ti(negIntensity, posIntensity) + s(stickiness) +
               s(blockBeepNum, by = subject, bs="fs", m=1),
@@ -410,7 +444,7 @@ if(FALSE){
   
   summary_r9 <- summary(r9)
   
-  r_ml9 <- gam(ruminating_minBase ~ s(blockBeepNum) + group * intervention * phase + s(blockBeepNum, by=group) +
+  r_ml9 <- gam(ruminating_diff ~ s(blockBeepNum) + group * intervention * phase + s(blockBeepNum, by=group) +
                  s(sumNA) + s(sumPA) + ti(sumNA, sumPA) + s(sleepQuality) +
                  s(negIntensity) + s(posIntensity) + ti(negIntensity, posIntensity) + s(stickiness) +
                  s(blockBeepNum, by = subject, bs="fs", m=1),
@@ -431,7 +465,7 @@ plot_diff(r9, view = "blockBeepNum", comp = list(group = c("controls", "remitted
 r9_pred <- predict(r9)
 
 mean(r9_pred)
-mean(sc_data$ruminating_minBase, na.rm = TRUE)
+mean(sc_data$ruminating_diff, na.rm = TRUE)
 
 
 
@@ -444,17 +478,388 @@ mean(sc_data$ruminating_minBase, na.rm = TRUE)
 
 
 
+if(FALSE){
+  rMax <- gam(ruminating_diff ~ s(blockBeepNum) + group * intervention * phase * thoughtsValence * thoughtsTime +
+              s(blockBeepNum, by=group) +
+              s(sumNA) + s(sumPA) + ti(sumNA, sumPA) + s(sleepQuality) +
+              s(negIntensity) + s(posIntensity) + ti(negIntensity, posIntensity) + s(stickiness) + s(distracted) +
+              s(listless) +
+              s(blockBeepNum, by = subject, bs="fs", m=1),
+            data=sc_data)
+  
+  summary_rMax <- summary(rMax)
+  
+  rMax_ML <- gam(ruminating_diff ~ s(blockBeepNum) + group * intervention * phase * thoughtsValence * thoughtsTime +
+                s(blockBeepNum, by=group) +
+                s(sumNA) + s(sumPA) + ti(sumNA, sumPA) + s(sleepQuality) +
+                s(negIntensity) + s(posIntensity) + ti(negIntensity, posIntensity) + s(stickiness) + s(distracted) +
+                s(listless) +
+                s(blockBeepNum, by = subject, bs="fs", m=1),
+              data=sc_data, method = "ML")
+  
+  save(rMax, summary_rMax, rMax_ML, file="models/rMax.rda", compress="xz")
+} else {
+  load("models/rMax.rda")
+}
+ #rMax leads to a matrix that "is either rank-deficient or indefinite" --> likely too complex for the amount of (very noisy) data we have
+
+
+# rMax_weekday <- gam(ruminating_diff ~ s(blockBeepNum) + group * intervention * phase * thoughtsValence * thoughtsTime *
+#                       weekday +
+#                  s(blockBeepNum, by=group) +
+#                  s(sumNA) + s(sumPA) + ti(sumNA, sumPA) + s(sleepQuality) +
+#                  s(negIntensity) + s(posIntensity) + ti(negIntensity, posIntensity) + s(stickiness) + s(distracted) +
+#                  s(listless) +
+#                  s(blockBeepNum, by = subject, bs="fs", m=1),
+#                data=sc_data, method = "ML")
+
+#minus interaction thoughtsTime:phase
+if(FALSE){
+  bw1 <- gam(ruminating_diff ~ s(blockBeepNum) + group * intervention * phase * thoughtsValence + thoughtsTime +
+               thoughtsTime:group + thoughtsTime:intervention +
+                s(blockBeepNum, by=group) +
+                s(sumNA) + s(sumPA) + ti(sumNA, sumPA) + s(sleepQuality) +
+                s(negIntensity) + s(posIntensity) + ti(negIntensity, posIntensity) + s(stickiness) + s(distracted) +
+                s(listless) +
+                s(blockBeepNum, by = subject, bs="fs", m=1),
+              data=sc_data, method = "ML")
+  
+  
+  save(bw1, file="models/bw1.rda", compress="xz")
+} else {
+  load("models/bw1.rda")
+}
+
+compareML(bw1, rMax_ML) #significant --> rMax preferred
+
+#minus interaction thoughtsTime:intervention
+if(FALSE){
+  bw2 <- gam(ruminating_diff ~ s(blockBeepNum) + group * intervention * phase * thoughtsValence + thoughtsTime +
+               thoughtsTime:group + thoughtsTime:phase +
+               s(blockBeepNum, by=group) +
+               s(sumNA) + s(sumPA) + ti(sumNA, sumPA) + s(sleepQuality) +
+               s(negIntensity) + s(posIntensity) + ti(negIntensity, posIntensity) + s(stickiness) + s(distracted) +
+               s(listless) +
+               s(blockBeepNum, by = subject, bs="fs", m=1),
+             data=sc_data, method = "ML")
+  
+  
+  save(bw1, file="models/bw2.rda", compress="xz")
+} else {
+  load("models/bw2.rda")
+}
+
+compareML(bw2, rMax_ML)
+
+
+#minus interaction thoughtsTime:intervention
+if(FALSE){
+  bw2 <- gam(ruminating_diff ~ s(blockBeepNum) + group * intervention * phase * thoughtsValence + thoughtsTime +
+               thoughtsTime:group + thoughtsTime:phase +
+               s(blockBeepNum, by=group) +
+               s(sumNA) + s(sumPA) + ti(sumNA, sumPA) + s(sleepQuality) +
+               s(negIntensity) + s(posIntensity) + ti(negIntensity, posIntensity) + s(stickiness) + s(distracted) +
+               s(listless) +
+               s(blockBeepNum, by = subject, bs="fs", m=1),
+             data=sc_data, method = "ML")
+  
+  
+  save(bw2, file="models/bw2.rda", compress="xz")
+} else {
+  load("models/bw2.rda")
+}
+
+compareML(bw2, rMax_ML)
 
 
 
+#rMax but minus the "thoughtsTime" predictor
+if(FALSE){
+  g1 <- gam(ruminating_diff ~ s(blockBeepNum) + group * intervention * phase * thoughtsValence +
+                s(blockBeepNum, by=group) +
+                s(sumNA) + s(sumPA) + ti(sumNA, sumPA) + s(sleepQuality) +
+                s(negIntensity) + s(posIntensity) + ti(negIntensity, posIntensity) + s(stickiness) + s(distracted) +
+                s(listless) +
+                s(blockBeepNum, by = subject, bs="fs", m=1),
+              data=sc_data)
+  
+  summary_g1 <- summary(g1)
+  
+  gML1 <- gam(ruminating_diff ~ s(blockBeepNum) + group * intervention * phase * thoughtsValence +
+                        s(blockBeepNum, by=group) +
+                        s(sumNA) + s(sumPA) + ti(sumNA, sumPA) + s(sleepQuality) +
+                        s(negIntensity) + s(posIntensity) + ti(negIntensity, posIntensity) + s(stickiness) + s(distracted) +
+                        s(listless) +
+                        s(blockBeepNum, by = subject, bs="fs", m=1),
+                      data=sc_data, method = "ML")
+  
+  save(g1, summary_g1, gML1, file="models/g1.rda", compress="xz")
+} else {
+  load("models/g1.rda")
+}
+
+compareML(rMax_ML, gML1)
 
 
+plot_smooth(g1, view="blockBeepNum", plot_all = "group")
+
+plot(fitted(g1), resid(g1))
+points(fitted(r9), resid(r9), col = "red")
+abline(h=0)
+
+# minus listless
+if(FALSE){
+  g2 <- gam(ruminating_diff ~ s(blockBeepNum) + group * intervention * phase +
+              s(blockBeepNum, by=group) +
+              s(sumNA) + s(sumPA) + ti(sumNA, sumPA) + s(sleepQuality) +
+              s(negIntensity) + s(posIntensity) + ti(negIntensity, posIntensity) + s(stickiness) + s(distracted) +
+              s(blockBeepNum, by = subject, bs="fs", m=1),
+            data=sc_data)
+  
+  summary_g2 <- summary(g2)
+  
+  gML2 <- gam(ruminating_diff ~ s(blockBeepNum) + group * intervention * phase +
+                s(blockBeepNum, by=group) +
+                s(sumNA) + s(sumPA) + ti(sumNA, sumPA) + s(sleepQuality) +
+                s(negIntensity) + s(posIntensity) + ti(negIntensity, posIntensity) + s(stickiness) + s(distracted) +
+                s(blockBeepNum, by = subject, bs="fs", m=1),
+              data=sc_data, method = "ML")
+  
+  save(g2, summary_g2, gML2, file="models/g2.rda", compress="xz")
+} else {
+  load("models/g2.rda")
+}
+
+plot(fitted(g1), resid(g1))
+points(fitted(g2), resid(g2), col= "red")
+abline(h=0)
+
+plot_smooth(g1, view="blockBeepNum", plot_all="group")
+
+compareML(gML1, gML2) #significant --> g1 is preferred
 
 
+# minus distracted
+if(FALSE){
+  g3 <- gam(ruminating_diff ~ s(blockBeepNum) + group * intervention * phase +
+              s(blockBeepNum, by=group) +
+              s(sumNA) + s(sumPA) + ti(sumNA, sumPA) + s(sleepQuality) +
+              s(listless) +
+              s(negIntensity) + s(posIntensity) + ti(negIntensity, posIntensity) + s(stickiness) +
+              s(blockBeepNum, by = subject, bs="fs", m=1),
+            data=sc_data)
+  
+  summary_g3 <- summary(g3)
+  
+  gML3 <- gam(ruminating_diff ~ s(blockBeepNum) + group * intervention * phase +
+                s(blockBeepNum, by=group) +
+                s(sumNA) + s(sumPA) + ti(sumNA, sumPA) + s(sleepQuality) +
+                s(negIntensity) + s(posIntensity) + ti(negIntensity, posIntensity) + s(stickiness) + s(distracted) +
+                s(blockBeepNum, by = subject, bs="fs", m=1),
+              data=sc_data, method = "ML")
+  
+  save(g3, summary_g3, gML3, file="models/g3.rda", compress="xz")
+} else {
+  load("models/g3.rda")
+}
+
+compareML(gML1, gML3) #significant --> g1 preferred
 
 
+# minus interaction(posIntensity, negIntensity)
+if(FALSE){
+  g4 <- gam(ruminating_diff ~ s(blockBeepNum) + group * intervention * phase +
+              s(blockBeepNum, by=group) +
+              s(sumNA) + s(sumPA) + ti(sumNA, sumPA) + s(sleepQuality) +
+              s(listless) +
+              s(negIntensity) + s(posIntensity) + s(stickiness) + s(distracted) +
+              s(blockBeepNum, by = subject, bs="fs", m=1),
+            data=sc_data)
+  
+  summary_g4 <- summary(g4)
+  
+  gML4 <- gam(ruminating_diff ~ s(blockBeepNum) + group * intervention * phase +
+                s(blockBeepNum, by=group) +
+                s(sumNA) + s(sumPA) + ti(sumNA, sumPA) + s(sleepQuality) +
+                s(listless) +
+                s(negIntensity) + s(posIntensity)+ s(stickiness) + s(distracted) +
+                s(blockBeepNum, by = subject, bs="fs", m=1),
+              data=sc_data, method = "ML")
+  
+  save(g4, summary_g4, gML4, file="models/g4.rda", compress="xz")
+} else {
+  load("models/g4.rda")
+}
+
+compareML(gML1, gML4) #significant --> g1 preferred
+
+plot_smooth(g4, view="blockBeepNum", plot_all = "group")
 
 
+# minus interaction(sumNA, sumPA)
+if(FALSE){
+  g5 <- gam(ruminating_diff ~ s(blockBeepNum) + group * intervention * phase +
+              s(blockBeepNum, by=group) +
+              s(sumNA) + s(sumPA) + s(sleepQuality) +
+              s(listless) +
+              s(negIntensity) + s(posIntensity)+ ti(negIntensity, posIntensity) + s(stickiness) + s(distracted) +
+              s(blockBeepNum, by = subject, bs="fs", m=1),
+            data=sc_data)
+  
+  summary_g5 <- summary(g5)
+  
+  gML5 <- gam(ruminating_diff ~ s(blockBeepNum) + group * intervention * phase +
+                s(blockBeepNum, by=group) +
+                s(sumNA) + s(sumPA) + s(sleepQuality) +
+                s(listless) +
+                s(negIntensity) + s(posIntensity)+ ti(negIntensity, posIntensity) + s(stickiness) + s(distracted) +
+                s(blockBeepNum, by = subject, bs="fs", m=1),
+              data=sc_data, method = "ML")
+  
+  save(g5, summary_g5, gML5, file="models/g5.rda", compress="xz")
+} else {
+  load("models/g5.rda")
+}
+
+compareML(gML1, gML5) #not significant --> g5 preferred
+plot_smooth(g5, view="blockBeepNum", plot_all="group")
+
+
+# minus sleepQuality
+if(FALSE){
+  g6 <- gam(ruminating_diff ~ s(blockBeepNum) + group * intervention * phase +
+              s(blockBeepNum, by=group) +
+              s(sumNA) + s(sumPA) +
+              s(listless) +
+              s(negIntensity) + s(posIntensity)+ ti(negIntensity, posIntensity) + s(stickiness) + s(distracted) +
+              s(blockBeepNum, by = subject, bs="fs", m=1),
+            data=sc_data)
+  
+  summary_g6 <- summary(g7)
+  
+  gML6 <- gam(ruminating_diff ~ s(blockBeepNum) + group * intervention * phase +
+                s(blockBeepNum, by=group) +
+                s(sumNA) + s(sumPA) +
+                s(listless) +
+                s(negIntensity) + s(posIntensity)+ ti(negIntensity, posIntensity) + s(stickiness) + s(distracted) +
+                s(blockBeepNum, by = subject, bs="fs", m=1),
+              data=sc_data, method = "ML")
+  
+  save(g6, summary_g6, gML6, file="models/g6.rda", compress="xz")
+} else {
+  load("models/g6.rda")
+}
+
+compareML(gML5, gML6) #significant --> g5 preferred
+plot_smooth(g5, view="blockBeepNum", plot_all="group")
+
+
+# minus stickiness
+if(FALSE){
+  g7 <- gam(ruminating_diff ~ s(blockBeepNum) + group * intervention * phase +
+              s(blockBeepNum, by=group) +
+              s(sumNA) + s(sumPA) + s(sleepQuality) +
+              s(listless) +
+              s(negIntensity) + s(posIntensity)+ ti(negIntensity, posIntensity) + s(distracted) +
+              s(blockBeepNum, by = subject, bs="fs", m=1),
+            data=sc_data)
+  
+  summary_g7 <- summary(g7)
+  
+  gML7 <- gam(ruminating_diff ~ s(blockBeepNum) + group * intervention * phase +
+                s(blockBeepNum, by=group) +
+                s(sumNA) + s(sumPA) + s(sleepQuality) +
+                s(listless) +
+                s(negIntensity) + s(posIntensity)+ ti(negIntensity, posIntensity) + s(distracted) +
+                s(blockBeepNum, by = subject, bs="fs", m=1),
+              data=sc_data, method = "ML")
+  
+  save(g7, summary_g7, gML7, file="models/g7.rda", compress="xz")
+} else {
+  load("models/g7.rda")
+}
+
+compareML(gML5, gML7) #not significant --> g5 preferred
+
+
+# minus interaction (blockBeepNum by group)
+if(FALSE){
+  g8 <- gam(ruminating_diff ~ s(blockBeepNum) + group * intervention * phase +
+              s(sumNA) + s(sumPA) + s(sleepQuality) +
+              s(listless) +
+              s(negIntensity) + s(posIntensity)+ ti(negIntensity, posIntensity) + s(stickiness) + s(distracted) +
+              s(blockBeepNum, by = subject, bs="fs", m=1)
+            data=sc_data)
+  
+  summary_g8 <- summary(g8)
+  
+  gML8 <- gam(ruminating_diff ~ s(blockBeepNum) + group * intervention * phase +
+                s(sumNA) + s(sumPA) + s(sleepQuality) +
+                s(listless) +
+                s(negIntensity) + s(posIntensity)+ ti(negIntensity, posIntensity) + s(stickiness) + s(distracted) +
+                s(blockBeepNum, by = subject, bs="fs", m=1),
+              data=sc_data, method = "ML")
+  
+  save(g8, summary_g8, gML8, file="models/g8.rda", compress="xz")
+} else {
+  load("models/g8.rda")
+}
+
+compareML(gML5, gML8) #significant --> g8 preferred
+
+plot_smooth(g8, view="blockBeepNum", plot_all= "group")
+
+
+# minus sumPA
+if(FALSE){
+  g9 <- gam(ruminating_diff ~ s(blockBeepNum) + group * intervention * phase +
+              s(sumNA) + s(sleepQuality) +
+              s(listless) +
+              s(negIntensity) + s(posIntensity)+ ti(negIntensity, posIntensity) + s(stickiness) + s(distracted) +
+              s(blockBeepNum, by = subject, bs="fs", m=1) + s(group, bs="re"),
+            data=sc_data)
+  
+  summary_g9 <- summary(g9)
+  
+  gML9 <- gam(ruminating_diff ~ s(blockBeepNum) + group * intervention * phase +
+                s(sumNA) + s(sleepQuality) +
+                s(listless) +
+                s(negIntensity) + s(posIntensity)+ ti(negIntensity, posIntensity) + s(stickiness) + s(distracted) +
+                s(blockBeepNum, by = subject, bs="fs", m=1) + s(group, bs="re"),
+              data=sc_data, method = "ML")
+  
+  save(g9, summary_g9, gML9, file="models/g9.rda", compress="xz")
+} else {
+  load("models/g9.rda")
+}
+
+compareML(gML8, gML9) #significant --> g8 preferred
+
+
+# minus sumNA
+if(FALSE){
+  g10 <- gam(ruminating_diff ~ s(blockBeepNum) + group * intervention * phase +
+              s(sumPA) + s(sleepQuality) +
+              s(listless) +
+              s(negIntensity) + s(posIntensity)+ ti(negIntensity, posIntensity) + s(stickiness) + s(distracted) +
+              s(blockBeepNum, by = subject, bs="fs", m=1) + s(group, bs="re"),
+            data=sc_data)
+  
+  summary_g10 <- summary(g10)
+  
+  gML10 <- gam(ruminating_diff ~ s(blockBeepNum) + group * intervention * phase +
+                s(sumPA) + s(sleepQuality) +
+                s(listless) +
+                s(negIntensity) + s(posIntensity)+ ti(negIntensity, posIntensity) + s(stickiness) + s(distracted) +
+                s(blockBeepNum, by = subject, bs="fs", m=1) + s(group, bs="re"),
+              data=sc_data, method = "ML")
+  
+  save(g10, summary_g10, gML10, file="models/g10.rda", compress="xz")
+} else {
+  load("models/g10.rda")
+}
+
+compareML(gML8, gML10) #significant --> g8 preferred
 
 ############################################ Models with unchanged ruminating ############################################
 #first simple gams

@@ -132,13 +132,24 @@ for(i in 1:nrow(games)){
 
 length(games[(which(!is.na(games$subject))),]$subject) #685 games associated with participant
 
+######################################## adding some subjects manually ###############################################
+games[which(games$userID==170163647),]$subject <- "s220"
+games[which(games$userID==3979696),]$subject <- "s262"
+games[which(games$userID==1789203881),]$subject <- "s340"
+games[which(games$userID==1866292861),]$subject <- "s81"
+games[which(games$userID==39005574),]$subject <- "s307"
+games[which(games$userID==421807041),]$subject <- "s57"
+games[which(games$userID==1716193541),]$subject <- "s344"
+
+
+
 #userIDs that are missing from wander_all (Preofpersonen)
 table(games[which(is.na(games$subject)),]$userID)
 length(unique(games[which(is.na(games$subject)),]$userID))
 
 ################################## Inspecting games ###################################
-length(unique(games$userID)) #72 (participants that took part in both blocks are counted twice!)
-length(games$gameSessionID) #3771
+length(unique(games$userID)) #75 (participants that took part in both blocks are counted twice!)
+length(games$gameSessionID) #988
 
 #class(games$time) #already POSIXct
 
@@ -180,7 +191,7 @@ games_summary <- ddply(games, .(subject, fullID, userID), plyr::summarise,
 games_subj <- ddply(games, .(group,intervention), plyr::summarise,
                     nSubj = length(unique(subject)))
 
-length(unique(games$subject))
+length(unique(games$subject)) #40
 
 # View(esm[which((esm$mindcog_db_open_from=="2021-11-09") & (esm$subject=="s7")),])
 # View(games[which( (games$subject=="s7")),])                       
@@ -213,7 +224,7 @@ length(unique(games$subject))
 
 
 
-length(unique(questions$userID)) #62
+length(unique(questions$userID)) #65
 
 questions$fullID <- NA
 questions$subject <- NA
@@ -271,7 +282,7 @@ remitted_summary <- ddply(questions[which(questions$group=="remitted"),], .(ques
                             proportionAnswer5 = round(length(questionID[which(answer==5)])/length(questionID),2))
 
 ################################# Inspecting numbers ##################################
-length(unique(numbers$userID)) #71
+length(unique(numbers$userID)) #74
 
 numbers$fullID <- NA
 numbers$subject <- NA
@@ -338,8 +349,8 @@ numbers_per_participant <- ddply(numbers, .(userID, subject, group, phase, block
                                  meanRT = round(mean(responseTime),2),
                                  sdRT = round(sd(responseTime),2))
 
-max(numbers_summary2$nTrials) #7262
-mean(numbers_summary2$nTrials) #3037
+max(numbers_summary2$nTrials) #5229
+mean(numbers_summary2$nTrials) #2797
 #View(numbers[which(numbers$userID=="148649783"),])                      
 
 numbers$cycle <- NA #a column to determine which number guesses are associated with which thought probes
@@ -477,6 +488,14 @@ for(subj in subject_IDs){
 
 numbers[which(numbers$responseTime==0),]$responseTime <- NA #turning 0 RTs into NAs
 
+
+trials <- ddply(numbers, .(subject, userID, gameSessionID), plyr::summarise,
+      nTrials = length(id))
+length(trials$subject)
+length(trials[which(trials$nTrials < 45),]$subject)
+
+
+
 numbers$meanRT <- NA
 numbers$meanRT_Go <- NA
 numbers$meanRT_NoGo <- NA
@@ -560,20 +579,30 @@ for(subj in subject_IDs){
       #meanRT for No-Go trials
       meanRT_NoGo <- mean(numbers[which((numbers$userID==id) & (numbers$gameSessionID==gid) & (numbers$subject==subj) &
                                                (numbers$isGo==FALSE)),]$responseTime, na.rm = TRUE)
+      
+      #number of correct trials
+      nCor <- length(numbers[which((numbers$userID==id) & (numbers$gameSessionID==gid) & (numbers$subject==subj) &
+                                     (numbers$correct==TRUE)),]$id)
+      
+      nCor_Go <- length(numbers[which((numbers$userID==id) & (numbers$gameSessionID==gid) & (numbers$subject==subj) &
+                             (numbers$isGo==TRUE) & (numbers$correct==TRUE)),]$id)
+      
+      nCor_NoGo <- length(numbers[which((numbers$userID==id) & (numbers$gameSessionID==gid) & (numbers$subject==subj) &
+                             (numbers$isGo==FALSE) & (numbers$correct==TRUE)),]$id)
+      
       #get the proportion of correct trials overall
-      propCor <- round(length(numbers[which((numbers$userID==id) & (numbers$gameSessionID==gid) & (numbers$subject==subj) &
-                                            (numbers$correct==TRUE)),]$id) / 
-                              length(numbers[which((numbers$userID==id) & (numbers$gameSessionID==gid) & (numbers$subject==subj)),]$id), 2)
+      propCor <- round(nCor / length(numbers[which((numbers$userID==id) &
+                                                     (numbers$gameSessionID==gid) &
+                                                     (numbers$subject==subj)),]$id), 2)
       #get the proportion of correct trials on Go trials
-      propCor_Go <- length(numbers[which((numbers$userID==id) & (numbers$gameSessionID==gid) & (numbers$subject==subj) &
-                                               (numbers$isGo==TRUE) & (numbers$correct==TRUE)),]$id) / 
-                           length(numbers[which((numbers$userID==id) & (numbers$gameSessionID==gid) & (numbers$subject==subj) &
-                                                 (numbers$isGo==TRUE)),]$id)
+      propCor_Go <- nCor_Go / length(numbers[which((numbers$userID==id) & (numbers$gameSessionID==gid) &
+                                                     (numbers$subject==subj) & (numbers$isGo==TRUE)),]$id)
       #get the proportion of correct trials on No-Go trials
-      propCor_NoGo <- round(length(numbers[which((numbers$userID==id) & (numbers$gameSessionID==gid) & (numbers$subject==subj) &
-                                                 (numbers$isGo==FALSE) & (numbers$correct==TRUE)),]$id) / 
-                                   length(numbers[which((numbers$userID==id) & (numbers$gameSessionID==gid) & (numbers$subject==subj) &
-                                                   (numbers$isGo==FALSE)),]$id), 2)
+      propCor_NoGo <- round(nCor_NoGo / length(numbers[which((numbers$userID==id) & (numbers$gameSessionID==gid) &
+                                                               (numbers$subject==subj) & (numbers$isGo==FALSE)),]$id), 2)
+      
+
+      
       #add all measures to the relevant rows
       numbers[n_rows, ]$meanRT <- round(meanRT, 2)
       numbers[n_rows, ]$meanRT_Go <- round(meanRT_Go, 2)
@@ -629,6 +658,8 @@ for(subj in subject_IDs){
                                                          (numbers$cycle==i) & (numbers$isGo==FALSE) & (numbers$correct==TRUE)),]$id) / 
               length(numbers[which((numbers$userID==id) & (numbers$gameSessionID==gid) & (numbers$subject==subj) &
                                      (numbers$cycle==i) & (numbers$isGo==FALSE)),]$id)
+            
+          
             # if(subj=="s15"){
             #   print(meanRT_cycle)
             #   print(propCor_cycle)
@@ -776,9 +807,12 @@ for(row in 1:nrow(meanTimes)){
 # [1] 992
 
 # > length(esm[which(!is.na(esm$meanRT)),]$meanRT)
-# [1] 661
+# [1] 721
 # > length(esm[which(!is.na(esm$meanRT_day)),]$meanRT_day)
-# [1] 3067
+# [1] 3341
+
+
+
 
 missing_links <- data.frame(table(games[which(is.na(games$subject)),]$userID))
 colnames(missing_links) <-  c("userID", "gamesPlayed")

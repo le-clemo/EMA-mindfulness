@@ -143,7 +143,7 @@ ggplot(missedAssessments, aes(x=blockAssessmentDay, y=propMissed, color=interact
 met.vars <- c('ruminating', 'stickiness', 'sumNA',  'down', 'irritated', 'restless', 'anxious',
                'sumPA', 'wakeful', 'satisfied', 'energetic',
                 'stressed', 'listless',  'distracted',
-                'thoughtsPleasant', 'restOfDayPos',
+                'thoughtsPleasant', 'restOfDayPos', 'companyPleasant', 'alonePleasant',
                 'posMax', 'posIntensity', 'negMax', 'negIntensity',
                "sleepQuality", "sleepLatency", "sleepDuration", "restednessWakeup")
 
@@ -158,9 +158,11 @@ for(g in groups){
       pre <- data[which((data$group==g) & (data$intervention==int) & (data$phase=="pre")),][[v]]
       peri <- data[which((data$group==g) & (data$intervention==int) & (data$phase=="peri")),][[v]]
       
-      test <- t.test(peri, pre)
+      test <- t.test(pre, peri)
       if(test$p.value<0.05){
         print(test)
+       # print(mean(peri, na.rm = TRUE))
+        #print(mean(pre, na.rm = TRUE))
       } else {
         print("No significant difference")
       }

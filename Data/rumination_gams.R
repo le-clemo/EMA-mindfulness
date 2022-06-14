@@ -14,6 +14,8 @@ library(tidyr)           # Simplify R code
 library(car)
 library(MASS)
 
+R.version.string
+
 #read in data
 data <- read.csv('merged_data.csv') 
 

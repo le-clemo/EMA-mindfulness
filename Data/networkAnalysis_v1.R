@@ -394,19 +394,20 @@ for (v in seq_along(nodeVars)){
 
 
 
-nodeVars <- c('ruminating', 'wakeful', 'down', 'satisfied',
-              'irritated', 'energetic', 'restless', 'anxious', 'stressed', 'listless',
-              'thoughtsPleasant', 'distracted', 'restOfDayPos', 'posIntensity',
-              'negIntensity', "sleepQuality")
-
+nodeVars <- c('ruminating', 'stickiness', 'wakeful', 'satisfied', 'energetic',
+              'down', 'irritated', 'restless', 'anxious',
+              'posIntensity',
+              'stressed', 'listless', 'distracted', 'negIntensity',
+              "sleepQuality", "companyPleasant")
+              #"alonePleasant")
 
 
 # xData <- data[which(is.na(data$mindcog_db_non_response)),]
 
-groups_list <- list(NegativeAffect = c(3,5,7,8), PositiveAffect = c(2,4,6),
-                    Cognition = c(1), OtherNegative = c(9,10,12,15),
-                    OtherPositive = c(11,13,14), Sleep=c(16))
-groups_colors <- c("#d60000", "#149F36", "#53B0CF", "#f66a6a", "#72CF53", "#B94B7B")
+groups_list <- list(Rumination = c(1, 2), PositiveAffect = c(3,4,5), NegativeAffect = c(6,7,8,9),
+                    OtherPositive = c(10), OtherNegative = c(11,12,13,14),
+                    Sleep=c(15), Social=c(16))
+groups_colors <- c("#d60000", "#149F36", "#53B0CF", "#f66a6a", "#72CF53", "#0558ff", "#B94B7B")
 
 # Estimate network using multilevel VAR model
 res <- mlVAR(data,
@@ -457,13 +458,18 @@ dev.off()
 for(g in c("controls", "remitted")){
   for(i in c("fantasizing", "mindfulness")){  
     for(p in c("pre", "peri")){
-      data_detrended_copy <- data.table::copy(data_detrended[which((data_detrended$group==g) &
-                                                                     (data_detrended$phase==p) &
-                                                                     (data_detrended$intervention==i)),])
-      data_detrended_copy <- data_detrended_copy[which(is.na(data_detrended_copy$mindcog_db_non_response)),]
+      # data_detrended_copy <- data.table::copy(data_detrended[which((data_detrended$group==g) &
+      #                                                                (data_detrended$phase==p) &
+      #                                                                (data_detrended$intervention==i)),])
+      # data_detrended_copy <- data_detrended_copy[which(is.na(data_detrended_copy$mindcog_db_non_response)),]
       #data_copy <- data_copy[complete.cases(data_copy), ]
       
-      res <- mlVAR(data_detrended_copy,
+      dat <- data.table::copy(data[which((data$group==g) &
+                                         (data$phase==p) &
+                                         (data$intervention==i)),])
+      dat <- dat[which(is.na(dat$mindcog_db_non_response)),]
+      
+      res <- mlVAR(dat,
                    vars=nodeVars,
                    idvar="subject",
                    dayvar="assessmentDay",
@@ -481,11 +487,11 @@ for(g in c("controls", "remitted")){
       
       pdf(paste0(figs, "figure.pdf"), width=6, height=2.5)
       layout(matrix(c(1,1,2,2,2), nc=5, byrow = TRUE)) # 40% vs 60% widths
-      n1 <- qgraph(cont, layout = L,
+      qgraph(cont, layout = L,
                    title=paste("Contemporaneous network:",g,i,p, sep=" "), theme='colorblind', negDashed=FALSE,
                    groups=groups_list, legend=FALSE, nodeNames = nodeVars, labels=c(1:16),
                    vsize=6, repulsion=1.1, esize=3)
-      n2 <- qgraph(temp, layout = L,
+      qgraph(temp, layout = L,
                    title=paste("Temporal network:",g,i,p, sep=" "), theme='colorblind', negDashed=FALSE, diag=FALSE,
                    groups=groups_list, legend.cex=0.5, legend=TRUE, nodeNames = nodeVars, labels=c(1:16),
                    vsize=6, asize=6, curve=0.75, curveAll=T, esize=3)

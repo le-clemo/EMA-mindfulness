@@ -2,7 +2,7 @@
 #################################### Set up ####################################
 rm(list = ls()) #clean all up
 
-setwd("C:/Users/cleme/Documents/Education/RUG/Thesis/EMA-mindfulness/Data/ESM/mindcog_v202204")
+setwd("C:/Users/cleme/Documents/Education/RUG/Thesis/EMA-mindfulness/Data/ESM/mindcog_v202205")
 
 #setwd("~/Documents/RUG/Thesis/EMA-mindfulness/Data/ESM/mindcog_v202204")
 
@@ -21,7 +21,7 @@ library(igraph)
 library(qgraph)
 
 #read in data
-data <- read.csv('mindcog_db_2022-05-19.csv', sep = ";") 
+data <- read.csv('mindcog_db_2022-06-30.csv', sep = ";") 
 
 
 ################################# load Medoq info and clean up #################################################
@@ -34,6 +34,9 @@ names(mylist) <- c("matchingFantasizing", "matchingMindfulness")
 
 # Bring the dataframes to the global environment
 list2env(mylist ,.GlobalEnv)
+
+matchingFantasizing <- matchingFantasizing[which(!is.na(matchingFantasizing$`Meting ID`)),]
+matchingMindfulness <- matchingMindfulness[which(!is.na(matchingMindfulness$`Meting ID`)),]
 
 matchingMindfulness$intervention <- "mindfulness" #add intervention type per sheet
 matchingFantasizing$intervention <- "fantasizing"
@@ -886,3 +889,4 @@ for(id in subject_IDs){
 # View(test)
 
 write.csv(data, "preprocessed_data.csv", row.names = FALSE)
+

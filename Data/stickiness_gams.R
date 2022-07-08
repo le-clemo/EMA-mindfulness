@@ -445,8 +445,9 @@ summary_sticky.m1 <- summary(sticky.m1)
 
 save(sticky.m1, summary_sticky.m1, file="models_stickiness/sticky.m1.rda")
 
-plot_smooth(sticky.m1, view="phaseBeepNum", rug=F, plot_all="intervention")
-plot_smooth(sticky.m1, view="phaseBeepNum", rug=F, plot_all="group")
+plot_smooth(sticky.m1, view="phaseBeepNum", rug=F, cond=list(group="remitted"), plot_all=c("intervention", "group"), main="Change in stickiness peri-intervention")
+plot_smooth(sticky.m1, view="phaseBeepNum", rug=F, cond=list(group="controls"), plot_all=c("intervention", "group"), main="Change in stickiness peri-intervention")
+
 
 # check autocorrelation
 model1.acf <- acf_resid(sticky.m1)

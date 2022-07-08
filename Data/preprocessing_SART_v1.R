@@ -33,8 +33,8 @@ names(mylist) <- c("wander_all", "wander_pre1", "wander_peri1", "wander_pre2", "
 list2env(mylist ,.GlobalEnv)
 
 #load preprocessed ESM data for matching
-esm <- read_csv('ESM/mindcog_v202204/preprocessed_data.csv')
-matchingData <- read_csv('ESM/mindcog_v202204/matchingData.csv')
+esm <- read_csv('ESM/mindcog_v202205/preprocessed_data.csv')
+matchingData <- read_csv('ESM/mindcog_v202205/matchingData.csv')
 
 # esm$group <- factor(esm$group, levels = c("controls", "remitted"))
 # esm$intervention <- factor(esm$intervention, levels = c("mindfulness", "fantasizing"))

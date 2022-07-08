@@ -455,10 +455,10 @@ gam1 <- bam(ruminating_gam ~ s(phaseBeepNum) + group * intervention +
 
 summary_gam1 <- summary(gam1)
 
-save(gam1, summary_gam1, file="gam1.rda")
+save(gam1, summary_gam1, file="models_rumination/gam1.rda")
 
-plot_smooth(gam1, view="phaseBeepNum", rug=F, plot_all="intervention", main="Change in rumination peri-intervention")
-plot_smooth(gam1, view="phaseBeepNum", rug=F, plot_all="group")
+plot_smooth(gam1, view="phaseBeepNum", rug=F, cond=list(group="remitted"), plot_all=c("intervention", "group"), main="Change in rumination peri-intervention")
+plot_smooth(gam1, view="phaseBeepNum", rug=F, cond=list(group="controls"), plot_all=c("intervention", "group"), main="Change in rumination peri-intervention")
 
 # check autocorrelation
 model1.acf <- acf_resid(gam1)

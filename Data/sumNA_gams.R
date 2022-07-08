@@ -487,8 +487,9 @@ summary_na.m1 <- summary(na.m1)
 
 save(na.m1, summary_na.m1, file="models_na/na.m1.rda")
 
-plot_smooth(na.m1, view="phaseBeepNum", rug=F, plot_all="intervention")
-plot_smooth(na.m1, view="phaseBeepNum", rug=F, plot_all="group")
+plot_smooth(na.m1, view="phaseBeepNum", rug=F, cond=list(group="remitted"), plot_all=c("intervention", "group"), main="Change in negative affect peri-intervention")
+plot_smooth(na.m1, view="phaseBeepNum", rug=F, cond=list(group="controls"), plot_all=c("intervention", "group"), main="Change in negative affect peri-intervention")
+
 
 # check autocorrelation
 model1.acf <- acf_resid(na.m1) #no significant autocorrelation

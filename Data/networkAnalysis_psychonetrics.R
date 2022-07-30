@@ -221,7 +221,7 @@ nodeVars <- c('ruminating', 'stickiness', 'wakeful','energetic', 'energeticWakef
 #               'listless', 'distracted', 'sleepQuality')
 
 
-nodeVars <- c('ruminating',# 'stickiness',
+nodeVars <- c('ruminating', 'stickiness',
               'energetic', 'wakeful', 'satisfied',
               'down', 'irritated', 'anxious', 'restless',
               'posIntensity', 'negIntensity',
@@ -246,8 +246,8 @@ data_t[,nodeVars] <- huge.npn(data_t[,nodeVars])
 # groups_list <- list(Rumination = c(1, 2), PositiveAffect = c(3,4,5), NegativeAffect = c(6,7,8,9), MoodReactivity = c(10,11),
 #                     OtherNegative = c(12,13))#, Sleep = c(11)) 
 
-groups_list <- list(Rumination = c(1), PositiveAffect = c(2,3,4), NegativeAffect = c(5,6,7,8), MoodReactivity = c(9,10),
-                    OtherNegative = c(11,12))#, Sleep = c(11)) 
+groups_list <- list(Rumination = c(1,2), PositiveAffect = c(3,4,5), NegativeAffect = c(6,7,8,9), MoodReactivity = c(10,11),
+                    OtherNegative = c(12,13))#, Sleep = c(11)) 
 
 groups_colors <- c("#d60000", "#149F36", "#53B0CF", "#f66a6a", "#72CF53")#, "#0558ff")
 
@@ -256,6 +256,173 @@ Lambda = matrix(1, length(nodeVars),1)
 #subData <- sc_data[which((sc_data$group==g) & (sc_data$phase=="pre")),]
 conBase <- data_t[which((data_t$group=="controls") & (data_t$phase=="pre")),] #non-paranormalized data  & (data_t$block==1)
 remBase <- data_t[which((data_t$group=="remitted") & (data_t$phase=="pre")),] #non-paranormalized data
+
+
+#Try with bootnet
+#Baseline Networks
+conBoot <- estimateNetwork(conBase, vars = nodeVars,
+                           default = "graphicalVAR",
+                           idvar = "subjB",
+                           dayvar = "blockAssessmentDay",
+                           beepvar = "dayBeepNum")
+
+
+remBoot <- estimateNetwork(remBase, vars = nodeVars,
+                           default = "graphicalVAR",
+                           idvar = "subjB",
+                           dayvar = "blockAssessmentDay",
+                           beepvar = "dayBeepNum")
+
+layout(matrix(c(1,1,2,2,2), nc=5, byrow = TRUE)) # 40% vs 60% widths
+TL <- averageLayout(remBoot$graph$temporal, conBoot$graph$temporal)
+
+plot(conBoot, graph = "temporal",
+     title = "Controls - Baseline",
+     nodeNames = nodeVars,
+     groups = groups_list,
+     legend = FALSE,
+     labels = c(1:12),
+     layout = TL)
+
+plot(remBoot, graph = "temporal",
+     title = "Remitted - Baseline",
+     nodeNames = nodeVars,
+     groups = groups_list,
+     legend.cex = 0.5,
+     labels = c(1:12),
+     layout = TL)
+
+CL <- averageLayout(remBoot$graph$contemporaneous, conBoot$graph$contemporaneous)
+
+plot(conBoot, graph = "contemporaneous",
+     nodeNames = nodeVars,
+     groups = groups_list,
+     legend = FALSE,
+     labels = c(1:12),
+     layout = CL)
+
+plot(remBoot, graph = "contemporaneous",
+     nodeNames = nodeVars,
+     groups = groups_list,
+     legend.cex = 0.5,
+     labels = c(1:12),
+     layout = CL)
+
+corStability(remBoot)
+
+#Peri-networks
+for(g in c("controls", "remitted")){
+    f_dat <- data_t[which((data_t$group==g) & (data_t$intervention=="fantasizing") & (data_t$phase=="peri") & (data_t$block==1)),]
+    m_dat <- data_t[which((data_t$group==g) & (data_t$intervention=="mindfulness") & (data_t$phase=="peri")),]
+    
+    f_boot <- estimateNetwork(f_dat, vars = nodeVars,
+                               default = "graphicalVAR",
+                               idvar = "subjB",
+                               dayvar = "blockAssessmentDay",
+                               beepvar = "dayBeepNum")
+    
+    m_boot <- estimateNetwork(m_dat, vars = nodeVars,
+                              default = "graphicalVAR",
+                              idvar = "subjB",
+                              dayvar = "blockAssessmentDay",
+                              beepvar = "dayBeepNum")
+    
+    layout(matrix(c(1,1,2,2,2), nc=5, byrow = TRUE)) # 40% vs 60% widths
+    TL <- averageLayout(f_boot$graph$temporal, m_boot$graph$temporal)
+    
+    plot(f_boot, graph = "temporal",
+         title = paste(g, "Peri-Fantasizing", sep = " | "),
+         nodeNames = nodeVars,
+         groups = groups_list,
+         legend = FALSE,
+         labels = c(1:13),
+         layout = TL)
+    
+    plot(m_boot, graph = "temporal",
+         title = paste(g, "Peri-Mindfulness", sep = " | "),
+         nodeNames = nodeVars,
+         groups = groups_list,
+         legend.cex = 0.5,
+         labels = c(1:13),
+         layout = TL)
+    
+    CL <- averageLayout(f_boot$graph$contemporaneous, m_boot$graph$contemporaneous)
+    
+    plot(f_boot, graph = "contemporaneous",
+         title = paste(g, "Peri-Fantasizing", sep = " | "),
+         nodeNames = nodeVars,
+         groups = groups_list,
+         legend = FALSE,
+         labels = c(1:13),
+         layout = CL)
+    
+    plot(m_boot, graph = "contemporaneous",
+         title = paste(g, "Peri-Mindfulness", sep = " | "),
+         nodeNames = nodeVars,
+         groups = groups_list,
+         legend.cex = 0.5,
+         labels = c(1:13),
+         layout = CL)
+}
+
+
+
+
+#+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+###################################### Stability Analysis of the network with fewest data ###################################################### 
+#+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+#This is to see if we can afford splitting the data by block or not
+#If this network is not stable, we need to combine blocks to hopefully get stable results
+
+#We only take the data for the remitted-mindfulness group in block 2 - peri intervention
+rMP2 <- data_t[which((data_t$group=="remitted") & (data_t$intervention=="mindfulness") & (data_t$phase=="peri") & (data_t$block==2)),]
+
+#estimating the network
+rMP2_net <- estimateNetwork(rMP2, vars = nodeVars,
+                          default = "graphicalVAR",
+                          idvar = "subjB",
+                          dayvar = "blockAssessmentDay",
+                          beepvar = "dayBeepNum")
+
+#nonparametric bootstrap (takes up to 7 hours!)
+if(FALSE){
+  rMP2_boot1 <- bootnet(rMP2_net, boots = 1000, nCores = 8, statistics = c("strength", "expectedInfluence", "edge")) 
+  save(rMP2_boot1, file = "remMF_Peri_Block2.rda")
+} else {
+  load("remMF_Peri_Block2.rda")
+}
+
+#creating different plots (most of which don't work because of the poor results?)
+plot(rMP2_boot1, labels = FALSE, order = "sample", graph = "contemporaneous")
+plot(rMP2_boot1, graph = "contemporaneous", labels = FALSE)
+plot(rMP2_boot1, graph = "contemporaneous", "strength", order = "sample")
+plot(rMP2_boot1, "expectedInfluence", order = "sample", graph = "contemporaneous")
+plot(rMP2_boot1, graph = "contemporaneous", "edge", order = "sample", plot = "difference", onlyNonZero = TRUE)
+
+#case-dropping bootstrap (also takes up to 7 hours)
+if(FALSE){
+  rMP2_boot2 <- bootnet(rMP2_net, boots = 1000, nCores = 10, type = "case", statistics = c("strength", "expectedInfluence", "edge")) 
+  save(rMP2_boot2, file = "remMF_Peri_Block2_case.rda")
+} else {
+  load("remMF_Peri_Block2_case.rda")
+}
+#looking at the stability coefficients (plots are actually not necessary anymore --> the stability coefficient is sufficient)
+corStability(rMP2_boot2)
+#we see stability coefficients of 0 for all statistics --> our networks are definitely not interpretable
+
+
+centralityPlot(f_boot$graph$contemporaneous, include = c("Strength", "ExpectedInfluence", "Closeness"))
+
+centralityTable(f_boot$graph$contemporaneous)
+
+getWmat(f_boot) #get partial correlation matrices 
+
+f1 <- bootnet(f_boot, boots = 1000, nCores = 8, statistics = c("strength", "expectedInfluence", "edge")) #non-parametric bootstrap
+f2 <- bootnet(f_boot, boots = 1000, nCores = 6, type = "case", statistics = c("strength", "expectedInfluence", "edge")) #case-dropping bootstrap
+
+corStability(f1)
+corStability(f2)
+
 
 conMod <- var1(conBase, #Note: var1() and gvar() are identical for our purpose
         vars = nodeVars,
@@ -277,11 +444,7 @@ conMod_ts <- tsdlvm1(conBase,
                   storedata = TRUE)
 
 
-conBoot <- estimateNetwork(conBase, vars = nodeVars,
-                            default = "graphicalVAR",
-                            idvar = "subjB",
-                            dayvar = "blockAssessmentDay",
-                            beepvar = "dayBeepNum")
+
 
 remMod <- var1(remBase, #Note: var1() and gvar() are identical for our purpose
                vars = nodeVars,
@@ -294,48 +457,6 @@ remMod <- var1(remBase, #Note: var1() and gvar() are identical for our purpose
 #contemporaneous = "ggm")
 
 
-remBoot <- estimateNetwork(remBase, vars = nodeVars,
-                            default = "graphicalVAR",
-                            idvar = "subjB",
-                            dayvar = "blockAssessmentDay",
-                            beepvar = "dayBeepNum")
-
-layout(matrix(c(1,1,2,2,2), nc=5, byrow = TRUE)) # 40% vs 60% widths
-TL <- averageLayout(remBoot$graph$temporal, conBoot$graph$temporal)
-
-plot(conBoot, graph = "temporal",
-     title = "Controls - Baseline",
-     nodeNames = nodeVars,
-     groups = groups_list,
-     legend = FALSE,
-     labels = c(1:12),
-     layout = TL)
-
-plot(remBoot, graph = "temporal",
-     title = "Remitted - Baseline",
-     nodeNames = nodeVars,
-     groups = groups_list,
-     legend.cex = 0.5,
-     labels = c(1:12),
-     layout = TL)
-
-
-CL <- averageLayout(remBoot$graph$contemporaneous, conBoot$graph$contemporaneous)
-
-plot(conBoot, graph = "contemporaneous",
-     nodeNames = nodeVars,
-     groups = groups_list,
-     legend = FALSE,
-     labels = c(1:12),
-     layout = CL)
-
-plot(remBoot, graph = "contemporaneous",
-     nodeNames = nodeVars,
-     groups = groups_list,
-     legend.cex = 0.5,
-     labels = c(1:12),
-     layout = CL)
-        
 
 conMod <- conMod %>% runmodel %>% prune(alpha = 0.01) %>% modelsearch
 conMod_ts <- conMod_ts %>% runmodel %>% prune(alpha = 0.01) %>% modelsearch
@@ -389,7 +510,7 @@ conNetTS_c <- getmatrix(conMod_ts, matrix = "exo_cholesky")
 remNet_temp <- getmatrix(remMod, matrix = "beta")
 remNet_cont <- getmatrix(remMod, matrix = "omega_zeta")
 
-
+centrality_auto(remNet_temp)
 # corStability(conMod)
 
 L <- averageLayout(conNet_temp, conNet_cont)

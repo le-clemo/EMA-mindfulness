@@ -128,6 +128,125 @@ data <- data[which(data$subject %in% pp),]
 # data_copy <- data_copy[which(is.na(data_copy$mindcog_db_non_response)),]
 # data_copy <- data_copy[,node_cols]
 
+#+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+############################################################ Detrend data #################################################################### 
+#+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+#Following Borsboom et al, 2021
+# some of the variables have trends (i.e. linear or other changes over time)
+# we remove these trends before estimation network structures
+# we work with most variables here that we collected
+# afterwards, we select those we want to estimate networks on
+
+# Alpha to detrend:
+alpha <- 0.05
+
+# Variables to investigate:
+vars <- c('ruminating', 'stickiness', 'sumNA', 'sumPA', 'wakeful', 'down', 'satisfied',
+          'irritated', 'energetic', 'restless', 'anxious', 'stressed', 'listless', 
+          'thoughtsPleasant', 'distracted', 'restOfDayPos', 'posMax', 'posIntensity',
+          'negMax', 'negIntensity', "sleepQuality")
+
+
+
+# Data frame with empty values for fitted effects (all):
+fitted_all <- expand.grid(
+  beep = seq(min(data$dayBeepNum),max(data$dayBeepNum)),
+  day = seq(min(data$blockAssessmentDay),max(data$blockAssessmentDay))
+)
+
+# Data frame with empty values for day trends:
+fitted_day <- data.frame(
+  day = seq(min(data$blockAssessmentDay),max(data$blockAssessmentDay))
+)
+
+# Data frame with empty values for beeps:
+fitted_beep <- data.frame(
+  beep = seq(min(data$dayBeepNum),max(data$dayBeepNum))
+)
+
+# Data frame to store p-values:
+p_values <- data.frame(
+  var = c("day", "beep")
+)
+
+# Also empty data frame list for test statistics:
+testStatistics <- list()
+coefficients <- list()
+stdcoefficients <- list()
+
+
+# Make the beep variable factor in dataset:
+data$beepFactor <- factor(data$dayBeepNum, levels = 1:10)#, labels = c("09:00 - 12:00","12:00 - 15:00","15:00 - 18:00","18:00 - 21:00"))
+fitted_all$beepFactor <- factor(fitted_all$beep, levels = 1:10)#, labels = c("09:00 - 12:00","12:00 - 15:00","15:00 - 18:00","18:00 - 21:00"))
+fitted_beep$beepFactor <- factor(fitted_beep$beep, levels = 1:10)#, labels = c("09:00 - 12:00","12:00 - 15:00","15:00 - 18:00","18:00 - 21:00"))
+
+# Make day variable for dates:
+data$date <- as.Date("2020-03-15") + data$blockAssessmentDay
+fitted_all$date <- as.Date("2020-03-15") + fitted_all$day
+fitted_day$date <- as.Date("2020-03-15") + fitted_day$day
+
+#find midpoints
+midpoints <- data.frame(beep = 1:10, midpoint = NA)
+for(i in 1:max(data$dayBeepNum)){
+  t <- as.POSIXct(strftime(data[which(data$dayBeepNum==i),]$mindcog_db_open_from, format="%H:%M:%S"), format="%H:%M:%S")
+  midpoints$midpoint[i] <- strftime(mean(t), format="%H:%M:%S")
+}
+
+# Add the (very approximate) midpoints as time variable:
+data$midTime <- as.character(factor(data$dayBeepNum, levels = 1:10, labels = c("8:30","10:00","11:30","13:00","14:30", "16:00",
+                                                                               "17:00","18:30","20:00","21:30")))
+data$midTime <- as.POSIXct(paste(data$date,data$midTime), format = "%Y-%m-%d %H:%M", tz = "Europe/Amsterdam")
+
+fitted_all$midTime <- as.character(factor(fitted_all$beep, levels = 1:10, labels = c("8:30","10:00","11:30","13:00","14:30", "16:00",
+                                                                                     "17:00","18:30","20:00","21:30")))
+fitted_all$midTime <- as.POSIXct(paste(fitted_all$date,fitted_all$midTime), format = "%Y-%m-%d %H:%M", tz = "Europe/Amsterdam")
+
+# Data frame to store detrended data:
+data_detrended <- copy(data)
+
+# Fix curves:
+for (v in seq_along(vars)){
+  formula <- as.formula(paste0(vars[v], " ~ 1 + blockAssessmentDay + factor(dayBeepNum)"))
+  lmRes <- lm(formula, data = data)
+  
+  # Fixed effects:
+  fixed <- coef(lmRes)
+  
+  # make zero if not significant at alpha:
+  p_values[[vars[v]]] <- anova(lmRes)[["Pr(>F)"]][1:2]
+  if (p_values[[vars[v]]][1] > alpha){
+    fixed[2] <- 0
+  }
+  if (p_values[[vars[v]]][2] > alpha){
+    fixed[3:5] <- 0
+  }
+  
+  # Add to DFs:
+  fitted_all[,vars[v]] <- fixed[1] + fixed[2] * fitted_all[["day"]]  +  fixed[3] * (fitted_all[["beep"]] == 1)  + 
+    fixed[4] * (fitted_all[["beep"]] == 2) + fixed[5] *  (fitted_all[["beep"]] == 3)
+  
+  fitted_day[,vars[v]] <- fixed[1] + fixed[2] * fitted_day[["day"]]
+  
+  fitted_beep[,vars[v]] <- fixed[1] + fixed[2] * median(fitted_day[["day"]]) +  fixed[3] * (fitted_beep[["beep"]] == 1)  + 
+    fixed[4] * (fitted_beep[["beep"]] == 2) + fixed[5] *  (fitted_beep[["beep"]] == 3)
+  
+  # Detrend data:
+  data_detrended[,vars[v]] <- data[,vars[v]] - (fixed[1] + fixed[2] * data[["blockAssessmentDay"]]  +  fixed[3] * (data[["dayBeepNum"]] == 1)  + 
+                                                  fixed[4] * (data[["dayBeepNum"]] == 2) + fixed[5] *  (data[["dayBeepNum"]] == 3))
+  
+  ids <- rownames(anova(lmRes))
+  testStatistics[[v]] <- cbind(data.frame(var = vars[v], effect = ids), anova(lmRes))
+  
+  coefficients[[v]] <- data.frame(
+    var = vars[v],
+    type = names(coef(lmRes)),
+    coef = coef(lmRes),
+    std = coef(lm.beta(lmRes))
+  )
+}
+
+
 
 ########################## Following Borsboom et al (2021) ################################
 metricCols <- c('ruminating', 'stickiness', 'sumNA', 'sumPA', 'wakeful', 'down', 'satisfied',
@@ -265,7 +384,20 @@ diffVars <- c('ruminating_diff', 'energeticWakeful_diff', 'satisfied_diff',
               'posIntensity_diff', 'negIntensity_diff',
               'listless_diff', 'distracted_diff')
 
-data_copy <- data.table::copy(data)
+
+nodeVars <- c('ruminating', 'stickiness',
+              'energetic', 'wakeful', 'satisfied',
+              'down', 'irritated', 'anxious', 'restless',
+              'posIntensity', 'negIntensity',
+              'listless', 'distracted')
+
+nodeVars <- c('ruminating', 'stickiness',
+              'sumPA',
+              'sumNA',
+              'posIntensity', 'negIntensity',
+              'listless', 'distracted')
+
+data_copy <- data.table::copy(data_detrended)
 data_copy <- data_copy[which(is.na(data_copy$mindcog_db_non_response)),]
 data_copy <- data_copy[complete.cases(data_copy[nodeVars]),]
 
@@ -279,10 +411,10 @@ sc_data[scale.vars] <- scale(data_copy[scale.vars])
 data_t <- copy(data_copy)
 data_t[,nodeVars] <- huge.npn(data_t[,nodeVars])
 
-groups_list <- list(Rumination = c(1), PositiveAffect = c(2,3), NegativeAffect = c(4,5))
-                    #OtherNegative = c(6))#, MoodReactivity = c(8))#, Sleep = c(11)) , 
+groups_list <- list(Rumination = c(1,2), PositiveAffect = c(3), NegativeAffect = c(4),
+                   MoodReactivity = c(5,6), OtherNegative = c(7,8))#,)#, Sleep = c(11)) , 
                    # Sleep=c(15))
-groups_colors <- c("#d60000", "#149F36", "#53B0CF")#, "#f66a6a")#, "#72CF53")#, "#0558ff")
+groups_colors <- c("#d60000", "#149F36", "#53B0CF", "#f66a6a", "#72CF53")#, "#0558ff")
 
 #creating baseline networks per group
 for(g in c("controls", "remitted")){
@@ -290,9 +422,9 @@ for(g in c("controls", "remitted")){
   
   #subData <- data_copy[which((data_copy$group==g) & (data_copy$phase=="pre")),]
   
-  subData <- sc_data[which((sc_data$group==g) & (sc_data$phase=="pre")),]
+  #subData <- sc_data[which((sc_data$group==g) & (sc_data$phase=="pre")),]
   
-  #subData <- data_t[which((data_t$group==g) & (data_t$phase=="pre")),]
+  subData <- data_t[which((data_t$group==g) & (data_t$phase=="pre")),]
   
   mlNet <- mlVAR(subData,
                vars=nodeVars,
@@ -303,7 +435,7 @@ for(g in c("controls", "remitted")){
                lags = 1,
                temporal = "orthogonal",
                contemporaneous = "orthogonal",
-               nCores = 6)
+               nCores = 10)
   
 
   # gNet <- estimateNetwork(subData,
@@ -323,7 +455,7 @@ for(g in c("controls", "remitted")){
   
  #  # Get mlVAR networks:
   cont <- getNet(mlNet, "contemporaneous", layout = "spring", nonsig = "hide", rule = "and")
-  bet  <- getNet(mlNet, "between", nonsig = "hide", rule = "and")
+ # bet  <- getNet(mlNet, "between", nonsig = "hide", rule = "and")
   temp <- getNet(mlNet, "temporal", nonsig = "hide")
 
   L <- averageLayout(cont, temp)
@@ -332,12 +464,12 @@ for(g in c("controls", "remitted")){
   layout(matrix(c(1,1,2,2,2), nc=5, byrow = TRUE)) # 40% vs 60% widths
   n1 <- qgraph(cont, layout = L,
                title=paste("mlVAR: Contemporaneous network - Baseline", g, sep = " - "), theme='colorblind', negDashed=FALSE,
-               groups=groups_list, legend=FALSE, nodeNames = nodeVars, labels=c(1:5),
-               vsize=6, repulsion=1.1, esize=3)
+               groups=groups_list, legend=FALSE, nodeNames = nodeVars, labels=c(1:length(nodeVars)),
+               vsize=10, repulsion=1.1, esize=3)
   n2 <- qgraph(temp, layout = L,
                title=paste("mlVAR: Temporal network - Baseline", g, sep = " - "), theme='colorblind', negDashed=FALSE, diag=FALSE,
-               groups=groups_list, legend.cex=0.5, legend=TRUE, nodeNames = nodeVars, labels=c(1:5),
-               vsize=6, asize=6, curve=0.75, curveAll=T, esize=3)
+               groups=groups_list, legend.cex=0.7, legend=TRUE, nodeNames = nodeVars, labels=c(1:length(nodeVars)),
+               vsize=10, asize=8, curve=0.75, curveAll=T, esize=3)
 
   
   # plot(gNet, graph = "contemporaneous",
@@ -366,16 +498,15 @@ dev.off()
 
 for(g in c("controls", "remitted")){
   for(i in c("fantasizing", "mindfulness")){  
-    for(p in c("pre", "peri")){
       # Estimate network using multilevel VAR model
       
       #subData <- data_copy[which((data_copy$group==g) & (data_copy$phase=="pre")),]
       
-      subData <- sc_data[which((sc_data$group==g) & (sc_data$phase==p) & (sc_data$intervention==i)),]
+      #subData <- sc_data[which((sc_data$group==g) & (sc_data$phase==p) & (sc_data$intervention==i)),]
       
-      #subData <- data_t[which((data_t$group==g) & (data_t$phase=="pre")),]
+      subData <- data_t[which((data_t$group==g) & (sc_data$intervention==i) & (data_t$phase=="pre")),]
       
-      mlNet <- mlVAR(subData,
+      preNet <- mlVAR(subData,
                      vars=nodeVars,
                      estimator="lmer",
                      idvar="subjB",
@@ -384,158 +515,62 @@ for(g in c("controls", "remitted")){
                      lags = 1,
                      temporal = "orthogonal",
                      contemporaneous = "orthogonal",
-                     nCores = 6)
+                     nCores = 10)
       
       #  # Get mlVAR networks:
-      cont <- getNet(mlNet, "contemporaneous", layout = "spring", nonsig = "hide", rule = "and")
-      bet  <- getNet(mlNet, "between", nonsig = "hide", rule = "and")
-      temp <- getNet(mlNet, "temporal", nonsig = "hide")
+      preCont <- getNet(preNet, "contemporaneous", layout = "spring", nonsig = "hide", rule = "and")
+      #bet  <- getNet(mlNet, "between", nonsig = "hide", rule = "and")
+      preTemp <- getNet(preNet, "temporal", nonsig = "hide")
       
-      L <- averageLayout(cont, temp)
+      
+      subData <- data_t[which((data_t$group==g) & (sc_data$intervention==i) & (data_t$phase=="peri")),]
+      
+      periNet <- mlVAR(subData,
+                      vars=nodeVars,
+                      estimator="lmer",
+                      idvar="subjB",
+                      dayvar="assessmentDay",
+                      beepvar="dayBeepNum",
+                      lags = 1,
+                      temporal = "orthogonal",
+                      contemporaneous = "orthogonal",
+                      nCores = 10)
+      
+      #  # Get mlVAR networks:
+      periCont <- getNet(periNet, "contemporaneous", layout = "spring", nonsig = "hide", rule = "and")
+      #bet  <- getNet(mlNet, "between", nonsig = "hide", rule = "and")
+      periTemp <- getNet(periNet, "temporal", nonsig = "hide")
+      
       
       # pdf(paste0(figs, "figure.pdf"), width=6, height=2.5)
       layout(matrix(c(1,1,2,2,2), nc=5, byrow = TRUE)) # 40% vs 60% widths
-      n1 <- qgraph(cont, layout = L,
-                   title=paste("mlVAR: Contemporaneous network", g, i, p, sep = " - "), theme='colorblind', negDashed=FALSE,
-                   groups=groups_list, legend=FALSE, nodeNames = nodeVars, labels=c(1:7),
-                   vsize=6, repulsion=1.1, esize=3)
-      n2 <- qgraph(temp, layout = L,
-                   title=paste("mlVAR: Temporal network", g, i, p, sep = " - "), theme='colorblind', negDashed=FALSE, diag=FALSE,
-                   groups=groups_list, legend.cex=0.5, legend=TRUE, nodeNames = nodeVars, labels=c(1:7),
-                   vsize=6, asize=6, curve=0.75, curveAll=T, esize=3)
-    }
+      
+      #plot contemporaneous networks
+      L <- averageLayout(preCont, periCont,preTemp, periTemp)
+      n1 <- qgraph(preCont, layout = L,
+                   title=paste("mlVAR: Contemporaneous network", g, i, "Baseline", sep = " - "), theme='colorblind', negDashed=FALSE,
+                   groups=groups_list, legend=FALSE, nodeNames = nodeVars, labels=c(1:length(nodeVars)),
+                   vsize=10, repulsion=1.1, esize=3)
+      
+      n2 <- qgraph(periCont, layout = L,
+                   title=paste("mlVAR: Contemporaneous network", g, i, "Peri-intervention", sep = " - "), theme='colorblind', negDashed=FALSE,
+                   groups=groups_list, legend=TRUE, nodeNames = nodeVars, labels=c(1:length(nodeVars)),
+                   vsize=10, repulsion=1.1, esize=3)
+      
+      
+      #plot temporal networks
+     # L <- averageLayout(preTemp, periTemp)
+
+      n3 <- qgraph(preTemp, layout = L,
+                   title=paste("mlVAR: Temporal network", g, i, "Baseline", sep = " - "), theme='colorblind', negDashed=FALSE, diag=FALSE,
+                   groups=groups_list, legend.cex=0.5, legend=FALSE, nodeNames = nodeVars, labels=c(1:length(nodeVars)),
+                   vsize=10, asize=6, curve=0.75, curveAll=T, esize=3)
+      
+      n4 <- qgraph(periTemp, layout = L,
+                   title=paste("mlVAR: Temporal network", g, i, "Peri-intervention", sep = " - "), theme='colorblind', negDashed=FALSE, diag=FALSE,
+                   groups=groups_list, legend.cex=0.5, legend=TRUE, nodeNames = nodeVars, labels=c(1:length(nodeVars)),
+                   vsize=10, asize=6, curve=0.75, curveAll=T, esize=3)
   }
 }
 
-
-
-
-# # -------------------------------------------------------------------------
-# # --------------- 3. Detrend data -----------------------------------------
-# # -------------------------------------------------------------------------
-# 
-# # some of the variables have trends (i.e. linear or other changes over time)
-# # we remove these trends before estimation network structures
-# # we work with all 16 variables here that we collected
-# # afterwards, we select those we want to estimate networks on
-# 
-# # Alpha to detrend:
-# alpha <- 0.05
-# 
-# nodeVars <- c('ruminating', 'wakeful', 'down', 'satisfied',
-#               'irritated', 'energetic', 'restless', 'anxious', 'stressed', 
-#               'distracted', 'posIntensity',
-#               'negIntensity')
-# 
-# # #add dayBeepNum
-# # subject_IDs <- unique(data$subject)
-# # data$dayBeepNum <- NA
-# # for(id in subject_IDs){ #every participant
-# #   print(id)
-# #   numDays <- max(data[which(data$subject==id),]$assessmentDay) #some participants dropped out after the first block
-# #   print(numDays)
-# #   for(i in 1:numDays){
-# #     day_rows <- which((data$subject == id) & (data$assessmentDay==i)) #row indices of rows associated with respondent    
-# #       data[day_rows,]$dayBeepNum <- 1:length(day_rows)
-# #   }
-# # }
-# 
-# # #figure out levels (time window per dayBeepNum)
-# # data$time <- strftime(data$mindcog_db_open_from, format="%H:%M:%S")
-# timesPerBeep <- ddply(data, .(dayBeepNum), summarize,
-#                       minTime = min(time),
-#                       maxTime = max(time))
-# 
-# 
-# data <- data[which(data$dayBeepNum<=10),]
-# 
-# 
-# # Data frame with empty values for fitted effects (all):
-# fitted_all <- expand.grid(
-#   beep = seq(min(data$beepNum),max(data$beepNum)),
-#   day = seq(min(data$assessmentDay),max(data$assessmentDay))
-# )
-# 
-# # Data frame with empty values for day trends:
-# fitted_day <- data.frame(
-#   day = seq(min(data$assessmentDay),max(data$assessmentDay))
-# )
-# 
-# # Data frame with empty values for beeps:
-# fitted_beep <- data.frame(
-#   beep = seq(min(data$beepNum),max(data$beepNum))
-# )
-# 
-# # Data frame to store p-values:
-# p_values <- data.frame(
-#   var = c("assessmentDay", "beepNum")
-# )
-# 
-# # Also empty data frame list for test statistics:
-# testStatistics <- list()
-# coefficients <- list()
-# stdcoefficients <- list()
-# 
-# # Make the beep variable factor in dataset:
-# data$beepFactor <- factor(data$beepNum, levels = 0:9)
-# fitted_all$beepFactor <- factor(fitted_all$beep, levels = 0:9)
-# fitted_beep$beepFactor <- factor(fitted_beep$beep, levels = 0:9)
-# 
-# # # Make day variable for dates:
-# # Data5b$date <- as.Date("2020-03-15") + Data5b$day
-# # fitted_all$date <- as.Date("2020-03-15") + fitted_all$day
-# # fitted_day$date <- as.Date("2020-03-15") + fitted_day$day
-# # 
-# # # Add the midpoints as time variable:
-# # Data5b$midTime <- as.character(factor(Data5b$beep, levels = 0:3, labels = c("10:30","13:30","16:30","19:30")))
-# # Data5b$midTime <- as.POSIXct(paste(Data5b$date,Data5b$midTime), format = "%Y-%m-%d %H:%M", tz = "Europe/Amsterdam")
-# # 
-# # fitted_all$midTime <- as.character(factor(fitted_all$beep, levels = 0:3, labels = c("10:30","13:30","16:30","19:30")))
-# # fitted_all$midTime <- as.POSIXct(paste(fitted_all$date,fitted_all$midTime), format = "%Y-%m-%d %H:%M", tz = "Europe/Amsterdam")
-# 
-# # Data frame to store detrended data:
-# data_detrended <- data
-# 
-# # Fix curves:
-# for (v in seq_along(nodeVars)){
-#   formula <- as.formula(paste0(nodeVars[v], " ~ 1 + assessmentDay + factor(dayBeepNum)"))
-#   lmRes <- lm(formula, data = data)
-#   
-#   # Fixed effects:
-#   fixed <- coef(lmRes)
-#   
-#   # make zero if not significant at alpha:
-#   p_values[[nodeVars[v]]] <- anova(lmRes)[["Pr(>F)"]][1:2]
-#   if (p_values[[nodeVars[v]]][1] > alpha){
-#     fixed[2] <- 0
-#   }
-#   if (p_values[[nodeVars[v]]][2] > alpha){
-#     fixed[3:5] <- 0
-#   }
-#   
-#   # Add to DFs:
-#   fitted_all[,nodeVars[v]] <- fixed[1] + fixed[2] * fitted_all[["assessmentDay"]]  +  fixed[3] * (fitted_all[["dayBeepNumNum"]] == 1)  + 
-#     fixed[4] * (fitted_all[["dayBeepNum"]] == 2) + fixed[5] *  (fitted_all[["dayBeepNum"]] == 3)
-#   
-#   fitted_day[,nodeVars[v]] <- fixed[1] + fixed[2] * fitted_day[["assessmentDay"]]
-#   
-#   fitted_beep[,nodeVars[v]] <- fixed[1] + fixed[2] * median(fitted_day[["assessmentDay"]]) +  fixed[3] * (fitted_beep[["dayBeepNum"]] == 1)  + 
-#     fixed[4] * (fitted_beep[["dayBeepNum"]] == 2) + fixed[5] *  (fitted_beep[["dayBeepNum"]] == 3)
-#   
-#   # Detrend data:
-#   data_detrended[,nodeVars[v]] <- data[,nodeVars[v]] - (fixed[1] + fixed[2] * data[["assessmentDay"]]  +  fixed[3] * (data[["dayBeepNum"]] == 1)  + 
-#                                                           fixed[4] * (data[["dayBeepNum"]] == 2) + fixed[5] *  (data[["dayBeepNum"]] == 3))
-#   
-#   ids <- rownames(anova(lmRes))
-#   testStatistics[[v]] <- cbind(data.frame(var = nodeVars[v], effect = ids), anova(lmRes))
-#   
-#   coefficients[[v]] <- data.frame(
-#     var = nodeVars[v],
-#     type = names(coef(lmRes)),
-#     coef = coef(lmRes),
-#     std = coef(lm.beta(lmRes))
-#   )
-# }
-# 
-# 
 

@@ -622,12 +622,12 @@ for(subj in subject_IDs){
         for(i in num_cycles){ #for every cycle
           if(!is.na(i)){
             if(subj=="s15") {
-              print("game number:")
-              print(gid)
-              print("Cycle:")
-              print(i)
-              print("Rows:")
-              print(c_rows)
+              # print("game number:")
+              # print(gid)
+              # print("Cycle:")
+              # print(i)
+              # print("Rows:")
+              # print(c_rows)
             }
             #get the rows associated with this particular cycle
             c_rows <- which((numbers$userID==id) & (numbers$gameSessionID==gid) & (numbers$subject==subj) &
@@ -818,8 +818,8 @@ missing_links <- data.frame(table(games[which(is.na(games$subject)),]$userID))
 colnames(missing_links) <-  c("userID", "gamesPlayed")
 missing_links <- missing_links[with(missing_links, order(-gamesPlayed)), ]
 
-write.csv(missing_links, file = "missing_links.csv")
-write.csv(esm, file = "merged_data.csv")
+write.csv(missing_links, file = "missing_links.csv", row.names = FALSE)
+write.csv(esm, file = "merged_data.csv", row.names = FALSE)
 
 
 ######################################## Data exploration #################################################

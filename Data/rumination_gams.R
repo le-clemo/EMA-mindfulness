@@ -13,6 +13,10 @@ library(mgcv)
 library(tidyr)           # Simplify R code
 library(car)
 library(MASS)
+library(performance)
+library(lme4)
+library(lmerTest) #to more quickly be able to see significance
+library(plotfunctions)
 
 R.version.string
 
@@ -80,7 +84,7 @@ for(id in unique(data$subject)){
   }
 }
 
-data$group <- factor(data$group, levels = c("controls", "remitted"))
+data$group <- factor(data$group, levels = c("remitted", "controls"))
 data$intervention <- factor(data$intervention, levels = c("mindfulness", "fantasizing"))
 data$phase <- factor(data$phase, levels = c("pre", "peri"))
 data$grInt <- as.factor(paste(data$group, data$intervention, sep = "."))
@@ -182,7 +186,7 @@ length(unique(responses_subject[which(responses_subject$responseRate >= 0.5),]$s
 
 
 #removing participants with a response rate lower than 60%
-pp <- unique(responses_block[which(responses_block$responseRate >= 0.6),]$subjB)
+pp <- unique(responses_block[which(responses_block$responseRate >= 0.5),]$subjB)
 sc_data <- sc_data[which(sc_data$subjB %in% pp),]
 #sc_data <- sc_data[which(sc_data$blockBeepNum <= 140),]
 #sc_data <- sc_data[which(is.na(sc_data$mindcog_db_non_response)),]
@@ -445,7 +449,7 @@ compareML(g2, g9) #significant difference --> g2 preferred
 
 #g2 is the winner
 
-gam1 <- bam(ruminating_gam ~ s(phaseBeepNum) + group * intervention +
+gam1 <- gam(ruminating_gam ~ s(phaseBeepNum) + group * intervention +
               s(companyPleasant_gam) +
               s(sumNA_gam) + s(sumPA_gam) + ti(sumNA_gam, sumPA_gam) +
               s(negIntensity_gam) + s(posIntensity_gam) + ti(negIntensity_gam, posIntensity_gam) +
@@ -456,6 +460,8 @@ gam1 <- bam(ruminating_gam ~ s(phaseBeepNum) + group * intervention +
 summary_gam1 <- summary(gam1)
 
 save(gam1, summary_gam1, file="models_rumination/gam1.rda")
+
+
 
 plot_smooth(gam1, view="phaseBeepNum", rug=F, cond=list(group="remitted"), plot_all=c("intervention", "group"), main="Change in rumination peri-intervention")
 plot_smooth(gam1, view="phaseBeepNum", rug=F, cond=list(group="controls"), plot_all=c("intervention", "group"), main="Change in rumination peri-intervention")
@@ -484,6 +490,50 @@ rum.int <- bam(ruminating_gam ~ 1 + s(phaseBeepNum, by=subject, bs="fs", m=1), d
 summary(rum.int)
 
 compareML(rum.int, g2) #g2 clearly outperforms the intercept model
+
+
+
+
+
+gam1b <- bam(ruminating_gam ~ group * intervention + s(phaseBeepNum, by = interaction(group, intervention)) +
+               s(sumNA_gam, by = interaction(group, intervention)) + s(sumPA_gam, by = interaction(group, intervention)) +
+               s(negMax_gam, by = interaction(group, intervention)) + s(posMax, by = interaction(group, intervention)) +
+               s(stickiness_gam) + s(distracted_gam) + s(listless_gam) + s(sleepQuality_gam) + s(companyPleasant_gam) +
+               s(phaseBeepNum, by = subjB, bs="fs", m=1),
+             data = sc_data)
+
+summary_gam1b <- summary(gam1b)
+
+save(gam1b, summary_gam1b, file="models_rumination/gam1b.rda")
+
+plot_smooth(gam1b, plot_all = "group", view = "phaseBeepNum")
+plot_diff(gam1b, view="phaseBeepNum", comp = list( group=c("remitted", "remitted"), intervention=c("mindfulness", "fantasizing")))
+plot_smooth(gam1b, view="phaseBeepNum", rug=F, cond=list(group="remitted"), plot_all=c("intervention", "group"))
+plot_smooth(gam1b, view="phaseBeepNum", rug=F, cond=list(group="controls"), plot_all=c("intervention", "group"))
+
+plot_parametric(gam1b, pred=list(intervention=c("mindfulness", "fantasizing"), group=c("controls", "remitted")))
+
+plot_smooth(gam1b, plot_all = "group", view = "sumNA_gam")
+plot_diff(gam1b, view="sumNA_gam", comp = list(group=c("remitted", "remitted"), intervention=c("mindfulness", "fantasizing")))
+
+plot_smooth(gam1b, plot_all = "group", view = "sumPA_gam")
+plot_diff(gam1b, view="sumPA_gam", comp = list(group = c("controls", "remitted")))
+
+plot_smooth(gam1b, plot_all = "group", view = "negMax_gam")
+plot_diff(gam1b, view="negMax_gam", comp = list(group = c("controls", "remitted")))
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 ########################### Recreating model with thoughtsTime split ################################################
@@ -517,13 +567,29 @@ summary(gam2)
 
 
 
+###########################################################################################################
+######################################## with negMax / posMax instead #####################################
+###########################################################################################################
 
+gam.max <- bam(ruminating_gam ~ s(phaseBeepNum) + s(phaseBeepNum, by = interaction(group, intervention)) + group * intervention +
+                 s(companyPleasant_gam) +
+                 s(phaseBeepNum, by=group) + s(phaseBeepNum, by=intervention) +
+                 s(sumNA_gam) + s(sumPA_gam) + ti(sumNA_gam, sumPA_gam) +
+                 s(negMax_gam) + s(posMax_gam) + ti(negMax_gam, posMax_gam) +
+                 s(stickiness_gam) + s(distracted_gam) + s(listless_gam) + s(sleepQuality_gam) +
+                 s(phaseBeepNum, by = subject, bs="fs", m=1),
+               data = sc_data, method = "ML")
 
+g0 <- bam(ruminating_gam ~ s(phaseBeepNum) + group * intervention +
+            s(companyPleasant_gam) +
+            s(phaseBeepNum, by=group) + s(phaseBeepNum, by = intervention) +
+            s(sumNA_gam) + s(sumPA_gam) + ti(sumNA_gam, sumPA_gam) +
+            s(negMax_gam) + s(posMax_gam) + ti(negMax_gam, posMax_gam) +
+            s(stickiness_gam) + s(distracted_gam) + s(listless_gam) + s(sleepQuality_gam) +
+            s(phaseBeepNum, by = subject, bs="fs", m=1),
+          data = sc_data, method = "ML")
 
-
-
-
-
+compareML(gam.max, g0)
 
 
 ###########################################################################################################

@@ -591,13 +591,15 @@ for(g in c("controls", "remitted")){
 
 #################################### naive time series plots ####################################
 #developments over time
-time_avgs <- ddply(data, .(group, intervention, beepNum), plyr::summarize,
+time_avgs <- ddply(data, .(group, intervention, blockBeepNum), plyr::summarize,
                   #n_Subj = length(unique(respondent_id)),
+                  NA_avg = mean(sumNA, na.rm = TRUE),
+                  PA_avg = mean(sumPA, na.rm = TRUE),
                   sleep_avg = mean(sleepQuality, na.rm = TRUE),
                   sleep_sd = sd(sleepQuality, na.rm = TRUE),
                   wakeful_avg = mean(wakeful, na.rm = TRUE),
-                  sad_avg = mean(sad, na.rm = TRUE),
-                  sad_sd = sd(sad, na.rm = TRUE),
+                  down_avg = mean(down, na.rm = TRUE),
+                  down_sd = sd(down, na.rm = TRUE),
                   satisfied_avg = mean(satisfied, na.rm = TRUE),
                   satisfied_sd = sd(satisfied, na.rm = TRUE),
                   irritated_avg = mean(irritated, na.rm = TRUE),
@@ -606,7 +608,7 @@ time_avgs <- ddply(data, .(group, intervention, beepNum), plyr::summarize,
                   stressed_avg = mean(stressed, na.rm = TRUE),
                   anxious_avg = mean(anxious, na.rm = TRUE),
                   listless_avg = mean(listless, na.rm = TRUE),
-                  worrying_avg = mean(worried, na.rm = TRUE),
+                  ruminating_avg = mean(ruminating, na.rm = TRUE),
                   stickiness_avg = mean(stickiness, na.rm = TRUE),
                   easeThoughts_avg = mean(thoughtsPleasant, na.rm = TRUE),
                   distracted_avg = mean(distracted, na.rm = TRUE),
@@ -621,20 +623,20 @@ time_avgs <- ddply(data, .(group, intervention, beepNum), plyr::summarize,
 time_avgs$grInt <- paste(time_avgs$group, time_avgs$intervention, sep = "-")
 time_avgs <- drop_na(time_avgs, intervention)
 
-dependent_vars = c("sleep_avg", "wakeful_avg", "sad_avg", "satisfied_avg", "irritated_avg",
+dependent_vars = c("NA_avg", "PA_avg", "sleep_avg", "wakeful_avg", "down_avg", "satisfied_avg", "irritated_avg",
                    "energetic_avg", "restless_avg", "stressed_avg", "anxious_avg", "listless_avg",
-                   "worrying_avg", "stickiness_avg", "easeThoughts_avg", "distracted_avg", "restOfDayPos_avg",
+                   "ruminating_avg", "stickiness_avg", "easeThoughts_avg", "distracted_avg", "restOfDayPos_avg",
                    "companyPos_avg", "solitudePos_avg", "enjoyabilityMax_avg", "intensityPos_avg",
                    "unpleasantMax_avg", "intensityNeg_avg")
 
 for(var in dependent_vars){
-  meltData <- melt(drop_na(time_avgs, grInt), id = c( "beepNum", "grInt"), measure.vars = var)
+  meltData <- melt(drop_na(time_avgs, grInt), id = c( "blockBeepNum", "group", "intervention"), measure.vars = var)
   
-  p1 <- ggplot(meltData, aes(beepNum, value, color = factor(grInt), group = variable)) +
+  p1 <- ggplot(meltData, aes(blockBeepNum, value, color = factor(group), group = variable)) +
           geom_point() +
-          facet_grid("grInt") +
+          facet_grid(intervention ~ group) +
           geom_smooth(method='lm', formula = "y ~ x") +
-          labs(y = var, x = "Assessment Number") +
+          labs(y = var, x = "Block Beep Number") +
           theme(strip.text.x = element_text(margin = margin(2, 0, 2, 0)),
                 #strip.background = element_rect(fill = "lightblue"),
                 legend.position="None")

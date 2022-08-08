@@ -427,6 +427,93 @@ rt11 <- gam(meanRT ~ s(phaseBeepNum) + group + phase +
 compareML(rt11, rt10) #not significant
 
 
+#+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+######################################################### individual predictors ################################################################ 
+#+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+RT_rum <- gam(meanRT ~ group * intervention * phase + s(ruminating) +
+              s(phaseBeepNum, by = subject, bs="fs", m=1),
+            data = sc_sart)
+
+summary(RT_rum)
+
+
+RT_dis <- gam(meanRT ~ group * intervention * phase + s(distracted) +
+                s(phaseBeepNum, by = subject, bs="fs", m=1),
+              data = sc_sart)
+
+summary(RT_dis)
+
+
+RT_sti <- gam(meanRT ~ group * intervention * phase + s(stickiness) +
+                s(phaseBeepNum, by = subject, bs="fs", m=1),
+              data = sc_sart)
+
+summary(RT_sti)
+
+
+
+#+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+########################################################### linear regression ################################################################## 
+#+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+##### meanRT #####
+#ruminating
+plot(meanRT ~ ruminating, data = sc_sart)
+lin.mod1 <- lm(meanRT ~ ruminating, data = sc_sart) 
+summary(lin.mod1)
+
+plot(propCor ~ ruminating, data = sc_sart)
+lin.mod1 <- lm(meanRT ~ ruminating, data = sc_sart) 
+summary(lin.mod1)
+
+#distracted
+plot(meanRT ~ distracted, data = sc_sart)
+lin.mod2 <- lm(meanRT ~ distracted, data = sc_sart) 
+summary(lin.mod2)
+
+#stickiness
+plot(meanRT ~ stickiness, data = sc_sart)
+lin.mod3 <- lm(meanRT ~ stickiness, data = sc_sart) 
+summary(lin.mod3)
+
+
+#+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+########################################################### Overall levels ################################################################## 
+#+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+missing_data <- ddply(data, .(patient_id, id, group, intervention), plyr::summarise,
+                      numBeeped = length(mindcog_db_open_from),
+                      responseRate = round((numBeeped - length(unique(mindcog_db_non_response)))/numBeeped,2))
+
+
+#using the values only of the closest ESM beeps
+overall <- ddply(sart, .(subject, group, intervention, phase), plyr::summarise,
+                totalMeanRT = mean(meanRT, na.rm=TRUE),
+                totalMeanRum = mean(ruminating, na.rm=TRUE),
+                totalMeanDis = mean(distracted, na.rm=TRUE),
+                totalMeanSti = mean(stickiness, na.rm=TRUE))
+
+
+#using all ESM beep values
+overall2 <- ddply(data, .(subject, group, intervention, phase), plyr::summarise,
+                 totalMeanRT = mean(meanRT, na.rm=TRUE),
+                 totalMeanRum = mean(ruminating, na.rm=TRUE),
+                 totalMeanDis = mean(distracted, na.rm=TRUE),
+                 totalMeanSti = mean(stickiness, na.rm=TRUE))
+
+cor(overall$totalMeanRT, overall$totalMeanRum)
+cor(overall$totalMeanRT, overall$totalMeanDis)
+cor(overall$totalMeanRT, overall$totalMeanSti)
+
+cor(overall2$totalMeanRT, overall2$totalMeanRum, use="complete.obs")
+cor(overall2$totalMeanRT, overall2$totalMeanDis, use="complete.obs")
+cor(overall2$totalMeanRT, overall2$totalMeanSti, use="complete.obs")
+
+
+
+
+
+
 
 
 

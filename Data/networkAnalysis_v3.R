@@ -285,14 +285,21 @@ nodeVars <- c('ruminating', 'stickiness',
               'listless', 'distracted')
               #'sleepQuality') #sleepQuality turned out to cause issues since it is only measured once a day
   
-nodeVars <- c('ruminating',#, 'stickiness',
-              'energetic', 'wakeful', 'satisfied',
-              'down', 'irritated', 'anxious', 'restless')
-# 'posIntensity',
+# nodeVars <- c('ruminating',#, 'stickiness',
+#               'energetic', 'wakeful', 'satisfied',
+#               'down', 'irritated', 'anxious', 'restless',
+#               'listless', 'distracted')
+# 
+# nodeVars <- c('ruminating', 'stickiness',
+#               'sumPA',
+#               'sumNA',
+#               'posIntensity', 'negIntensity',
+#               'listless', 'distracted')
+# # 'posIntensity',
 # 'listless', 'distracted')
 
 #creating a copy of data without missing cases
-data_copy <- data.table::copy(data)
+data_copy <- data.table::copy(data_detrended)
 data_copy <- data_copy[which(is.na(data_copy$mindcog_db_non_response)),]
 data_copy <- data_copy[complete.cases(data_copy[nodeVars]),]
 
@@ -307,8 +314,10 @@ data_t <- copy(data_copy)
 data_t[,nodeVars] <- huge.npn(data_t[,nodeVars])
 
 #grouping the variables --> for later use in network plotting
-groups_list <- list(Rumination = c(1,2), PositiveAffect = c(3,4,5), NegativeAffect = c(6,7,8,9), MoodReactivity = c(10,11),
-                    OtherNegative = c(12,13))#, Sleep = c(11)) 
+groups_list <- list(Rumination = c(1,2), PositiveAffect = c(3,4,5), NegativeAffect = c(6,7,8,9),
+                    MoodReactivity = c(10,11), 
+                    OtherNegative = c(12,13))#,)#, Sleep = c(11)) , 
+# Sleep=c(15))
 groups_colors <- c("#d60000", "#149F36", "#53B0CF", "#f66a6a", "#72CF53")#, "#0558ff")
 
 # #lambda is needed for certain psychonetrics estimators (which we probably won't use)
@@ -320,8 +329,88 @@ groups_colors <- c("#d60000", "#149F36", "#53B0CF", "#f66a6a", "#72CF53")#, "#05
 #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
 ############################################################# baseline networks ################################################################
-conBase <- data_t[which((data_t$group=="controls") & (data_t$phase=="pre") & (data_t$intervention=="mindfulness")),] #using the non-paranormalized data
-remBase <- data_t[which((data_t$group=="remitted") & (data_t$phase=="pre") & (data_t$intervention=="mindfulness")),] 
+for(g in c("controls", "remitted")){
+  for(i in c("fantasizing", "mindfulness")){
+    for(p in c("pre", "peri")){
+      
+      print(paste(g, i, p, sep = " - "))
+      
+      dat <- data_t[which((data_t$group==g) & (data_t$intervention==i) & (data_t$phase==p)),] # 
+      
+      net <- estimateNetwork(dat, vars = nodeVars,
+                                     default = "graphicalVAR",
+                                     idvar = "subjB",
+                                     dayvar = "blockAssessmentDay",
+                                     beepvar = "dayBeepNum")
+      
+      npBoot <- bootnet(net, boots = 1000, nCores = 10, statistics = c("strength", "expectedInfluence", "edge")) 
+      
+      caseBoot <- bootnet(net, boots = 1000, nCores = 10, type = "case",
+                                                   statistics = c("strength", "expectedInfluence", "edge")) 
+      
+      save(net, npBoot, caseBoot, file = paste("Full_", g, i, p, ".rda", sep = ""))
+      
+      
+    }
+  }
+}
+
+
+
+source("NCT_temporal.R")
+source("NCT_test.R")
+source("NCT_estimators_test.R")
+
+
+NCT_temporal(dat, dat1, it = 100, estimator = "graphicalVAR",
+             estimatorArgs = list(vars = nodeVars,
+                                  idvar = "subjB",
+                                  dayvar = "blockAssessmentDay",
+                                  beepvar = "dayBeepNum"))
+
+NCT_test(dat, dat1, estimator = "ggm", estimatorArgs = list(vars = nodeVars))
+
+
+filenames = c("Full_controlsfantasizingpre.rda", "Full_controlsfantasizingperi.rda", "Full_controlsmindfulnesspre.rda", "Full_controlsmindfulnessperi.rda",
+              "Full_remittedfantasizingpre.rda", "Full_remittedfantasizingperi.rda", "Full_remittedmindfulnesspre.rda", "Full_remittedmindfulnessperi.rda")
+
+
+for(f in filenames){
+  load(f)
+  
+  layout(matrix(c(1,1,2,2,2), nc=5, byrow = TRUE)) # 40% vs 60% widths
+  TL <- averageLayout(net$graph$temporal, net$graph$contemporaneous)
+  
+  #plotting the temporal networks next to one another
+  #we find that the temporal relations seem quite spurious
+  plot(net, graph = "temporal",
+       title = paste(f, "temporal", sep = " - "),
+       nodeNames = nodeVars,
+       groups = groups_list,
+       legend = FALSE,
+       labels = c(1:length(nodeVars)),
+       layout = TL)
+  
+  plot(net, graph = "contemporaneous",
+       title = paste(f, "contemporaneous", sep = " - "),
+       nodeNames = nodeVars,
+       groups = groups_list,
+       legend.cex = 0.7,
+       labels = c(1:length(nodeVars)),
+       layout = TL)
+  
+  corStability(caseBoot)
+  # plot(npBoot, labels = FALSE, order = "sample", graph = "contemporaneous")
+  # plot(npBoot, graph = "contemporaneous", labels = FALSE)
+  # plot(npBoot, graph = "contemporaneous", "strength", order = "sample")
+  # plot(npBoot, "expectedInfluence", order = "sample", graph = "contemporaneous")
+  # plot(npBoot, graph = "contemporaneous", "edge", order = "sample", plot = "difference", onlyNonZero = TRUE)
+}
+
+
+
+conBase <- data_t[which((data_t$group=="controls") & (data_t$phase=="pre")),] #using the non-paranormalized data
+remBase <- data_t[which((data_t$group=="remitted") & (data_t$phase=="pre")),] # & (data_t$intervention=="mindfulness")
 
 #we opt to use graphicalVAR
 conNet_base <- estimateNetwork(conBase, vars = nodeVars,
@@ -383,10 +472,10 @@ plot(remNet_base, graph = "contemporaneous",
 
 #nonparametric bootstrap (takes up to 7 hours!)
 if(FALSE){
-  conNet_boot_detrend_full <- bootnet(conNet_base, boots = 500, nCores = 10, statistics = c("strength", "expectedInfluence", "edge")) 
-  save(conNet_boot_detrend_full, file = "conNet_boot_detrend_full.rda")
+  conNet_boot_noMoodReactivity <- bootnet(conNet_base, boots = 500, nCores = 10, statistics = c("strength", "expectedInfluence", "edge")) 
+  save(conNet_boot_noMoodReactivity, file = "conNet_boot_noMoodReactivity.rda")
 } else {
-  load("conNet_boot_detrend_full.rda")
+  load("conNet_boot_noMoodReactivity.rda")
 }
 
 #creating different plots (most of which don't work because of the poor results?)
@@ -398,21 +487,22 @@ plot(conNet_base_boot1, graph = "contemporaneous", "edge", order = "sample", plo
 
 #case-dropping bootstrap (also takes up to 7 hours)
 if(FALSE){
-  conNet_boot_detrend_full2 <- bootnet(conNet_base, boots = 500, nCores = 10, type = "case", statistics = c("strength", "expectedInfluence", "edge")) 
-  save(conNet_boot_detrend_full2, file = "conNet_boot_detrend_full2.rda")
+  conNet_boot_noMoodReactivity_case <- bootnet(conNet_base, boots = 500, nCores = 10, type = "case", statistics = c("strength", "expectedInfluence", "edge")) 
+  save(conNet_boot_noMoodReactivity_case, file = "conNet_boot_noMoodReactivity_case.rda")
 } else {
-  load("conNet_boot_detrend_full2.rda")
+  load("conNet_boot_noMoodReactivity_case.rda")
 }
 #looking at the stability coefficients (plots are actually not necessary anymore --> the stability coefficient is sufficient)
-corStability(conNet_boot_detrend_full2)
+corStability(conNet_boot_noMoodReactivity_case)
+
 #we see stability coefficients of 0 for edge weight --> network possibly too complex
 
 #nonparametric bootstrap (takes up to 7 hours!)
 if(FALSE){
-  remNet_base_boot1 <- bootnet(remNet_base, boots = 1000, nCores = 10, statistics = c("strength", "expectedInfluence", "edge")) 
-  save(remNet_base_boot1, file = "remNet_base_boot1.rda")
+  remNet_boot_noMoodReactivity <- bootnet(remNet_base, boots = 500, nCores = 10, statistics = c("strength", "expectedInfluence", "edge")) 
+  save(remNet_boot_noMoodReactivity, file = "remNet_boot_noMoodReactivity.rda")
 } else {
-  load("remNet_base_boot1.rda")
+  load("remNet_boot_noMoodReactivity.rda")
 }
 
 #creating different plots (most of which don't work because of the poor results?)
@@ -424,13 +514,13 @@ plot(remNet_base_boot1, graph = "contemporaneous", "edge", order = "sample", plo
 
 #case-dropping bootstrap (also takes up to 7 hours)
 if(FALSE){
-  remNet_base_boot2 <- bootnet(remNet_base, boots = 1000, nCores = 10, type = "case", statistics = c("strength", "expectedInfluence", "edge")) 
-  save(remNet_base_boot2, file = "remNet_base_boot2.rda")
+  remNet_boot_noMoodReactivity_case <- bootnet(remNet_base, boots = 500, nCores = 10, type = "case", statistics = c("strength", "expectedInfluence", "edge")) 
+  save(remNet_boot_noMoodReactivity_case, file = "remNet_boot_noMoodReactivity_case.rda")
 } else {
-  load("remNet_base_boot2.rda")
+  load("remNet_boot_noMoodReactivity.rda")
 }
 #looking at the stability coefficients (plots are actually not necessary anymore --> the stability coefficient is sufficient)
-corStability(remNet_base_boot2)
+corStability(remNet_boot_noMoodReactivity_case)
 #we see stability coefficients of 0 for edge weight --> network possibly too complex
 
 
@@ -447,7 +537,7 @@ corStability(remNet_base_boot2)
 
 #Peri-networks
 for(g in c("controls", "remitted")){
-    f_dat <- data_t[which((data_t$group==g) & (data_t$intervention=="fantasizing") & (data_t$phase=="peri") & (data_t$block==1)),]
+    f_dat <- data_t[which((data_t$group==g) & (data_t$intervention=="fantasizing") & (data_t$phase=="peri")),]
     m_dat <- data_t[which((data_t$group==g) & (data_t$intervention=="mindfulness") & (data_t$phase=="peri")),]
     
     f_boot <- estimateNetwork(f_dat, vars = nodeVars,

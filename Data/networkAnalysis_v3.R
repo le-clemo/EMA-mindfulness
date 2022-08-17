@@ -67,7 +67,7 @@ length(unique(responses_block[which(responses_block$responseRate >= 0.6),]$subje
 length(unique(responses_block[which(responses_block$responseRate >= 0.5),]$subject)) #33
 
 #removing participants with a response rate lower than 60%
-pp <- unique(responses_block[which(responses_block$responseRate >= 0.6),]$subject)
+pp <- unique(responses_block[which(responses_block$responseRate >= 0.5),]$subject)
 data <- data[which(data$subject %in% pp),]
 data <- data[which(data$dayBeepNum < 11),] #three subjects had extra beeps on a day. Since this messes with the detrending code I just removed
 #the extra beeps (<15 entries)
@@ -281,8 +281,8 @@ plot(varclus(as.matrix(dat_clust[,-c(3, 4, 12, 14, 16, 17, 19)])))
 nodeVars <- c('ruminating', 'stickiness',
               'energetic', 'wakeful', 'satisfied',
               'down', 'irritated', 'anxious', 'restless',
-              'posIntensity', 'negIntensity',
-              'listless', 'distracted')
+              'listless', 'distracted',
+              'posMax', 'negMax')
               #'sleepQuality') #sleepQuality turned out to cause issues since it is only measured once a day
   
 # nodeVars <- c('ruminating',#, 'stickiness',
@@ -315,8 +315,8 @@ data_t[,nodeVars] <- huge.npn(data_t[,nodeVars])
 
 #grouping the variables --> for later use in network plotting
 groups_list <- list(Rumination = c(1,2), PositiveAffect = c(3,4,5), NegativeAffect = c(6,7,8,9),
-                    MoodReactivity = c(10,11), 
-                    OtherNegative = c(12,13))#,)#, Sleep = c(11)) , 
+                    NegativeEmotions = c(10,11), 
+                    Events = c(12,13))#,)#, Sleep = c(11)) , 
 # Sleep=c(15))
 groups_colors <- c("#d60000", "#149F36", "#53B0CF", "#f66a6a", "#72CF53")#, "#0558ff")
 
@@ -356,10 +356,9 @@ for(g in c("controls", "remitted")){
 }
 
 
-
-source("NCT_temporal.R")
-source("NCT_test.R")
-source("NCT_estimators_test.R")
+# source("NCT_temporal.R")
+# source("NCT_test.R")
+# source("NCT_estimators_test.R")
 
 
 NCT_temporal(dat, dat1, it = 100, estimator = "graphicalVAR",
@@ -377,6 +376,10 @@ filenames = c("Full_controlsfantasizingpre.rda", "Full_controlsfantasizingperi.r
 
 for(f in filenames){
   load(f)
+  
+  print('+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++')
+  print(f)
+  print('++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++')
   
   layout(matrix(c(1,1,2,2,2), nc=5, byrow = TRUE)) # 40% vs 60% widths
   TL <- averageLayout(net$graph$temporal, net$graph$contemporaneous)
@@ -399,12 +402,18 @@ for(f in filenames){
        labels = c(1:length(nodeVars)),
        layout = TL)
   
-  corStability(caseBoot)
-  # plot(npBoot, labels = FALSE, order = "sample", graph = "contemporaneous")
-  # plot(npBoot, graph = "contemporaneous", labels = FALSE)
+  print(corStability(caseBoot))
+  plot(npBoot, labels = FALSE, order = "sample", graph = "contemporaneous")
+  plot(npBoot, graph = "contemporaneous", labels = FALSE)
   # plot(npBoot, graph = "contemporaneous", "strength", order = "sample")
   # plot(npBoot, "expectedInfluence", order = "sample", graph = "contemporaneous")
   # plot(npBoot, graph = "contemporaneous", "edge", order = "sample", plot = "difference", onlyNonZero = TRUE)
+  
+  plot(npBoot, labels = FALSE, order = "sample", graph = "temporal")
+  plot(npBoot, graph = "temporal", labels = FALSE)
+  # plot(npBoot, graph = "temporal", "strength", order = "sample")
+  # plot(npBoot, "expectedInfluence", order = "sample", graph = "temporal")
+  # plot(npBoot, graph = "temporal", "edge", order = "sample", plot = "difference", onlyNonZero = TRUE)
 }
 
 

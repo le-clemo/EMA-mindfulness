@@ -24,6 +24,7 @@ library(Hmisc)
 library(networktools)
 library(NetworkComparisonTest)
 library(psychNet)
+library(parallel)
 
 #read in data
 data <- read.csv('preprocessed_data.csv') 
@@ -55,6 +56,7 @@ responses_block <- ddply(data, .(subject), plyr::summarise,
                          numDays = max(assessmentDay))
 
 data$subjB <- interaction(data$subject, data$block, drop = TRUE)
+data$subjP <- interaction(data$subject, data$phase, drop = TRUE)
 
 meanResponseRate_block <- mean(responses_block$responseRate) #the mean response rate is ~67.6%
 length(unique(responses_block[which(responses_block$responseRate >= meanResponseRate_block),]$subject)) #20
@@ -342,6 +344,9 @@ groups_list <- list(Rumination = c(1,2), PositiveAffect = c(3,4,5), NegativeAffe
 # Sleep=c(15))
 groups_colors <- c("#d60000", "#149F36", "#53B0CF", "#f66a6a", "#72CF53")#, "#0558ff")
 
+cont.nets <- list(rep(NA,2))
+temp.nets <- list(rep(NA,2))
+i = 1
 #creating baseline networks per group
 for(g in c("controls", "remitted")){
   # Estimate network using multilevel VAR model
@@ -365,59 +370,74 @@ for(g in c("controls", "remitted")){
                contemporaneous = "orthogonal",
                nCores = 10)
   
-
-  # gNet <- estimateNetwork(subData,
-  #                 default = "graphicalVAR",
-  #                 vars = diffVars,
-  #                 idvar = "subject",
-  #                 dayvar = "assessmentDay",
-  #                 beepvar = "dayBeepNum",
-  #                 lags = 1)
-
-  # this is how we can save the object after the estimation; careful, over 100mb
-  # save(res, file=paste0(datapath, "network_orthogonal.RData"))
-  
-  # you can later load it via
-  # load(paste0(datapath, "network_orthogonal.RData"))
-  
   
  #  # Get mlVAR networks:
-  cont <- getNet(mlNet, "contemporaneous", layout = "spring", nonsig = "hide", rule = "and")
+  cont.nets[[i]] <- getNet(mlNet, "contemporaneous", layout = "spring", nonsig = "hide", rule = "and")
  # bet  <- getNet(mlNet, "between", nonsig = "hide", rule = "and")
-  temp <- getNet(mlNet, "temporal", nonsig = "hide")
-
-  L <- averageLayout(cont, temp)
-
- # pdf(paste0(figs, "figure.pdf"), width=6, height=2.5)
-  layout(matrix(c(1,1,2,2,2), nc=5, byrow = TRUE)) # 40% vs 60% widths
-  n1 <- qgraph(cont, layout = L,
-               title=paste("mlVAR: Contemporaneous network - Baseline", g, sep = " - "), theme='colorblind', negDashed=FALSE,
-               groups=groups_list, legend=FALSE, nodeNames = nodeVars, labels=c(1:length(nodeVars)),
-               vsize=10, repulsion=1.1, esize=3)
-  n2 <- qgraph(temp, layout = L,
-               title=paste("mlVAR: Temporal network - Baseline", g, sep = " - "), theme='colorblind', negDashed=FALSE, diag=FALSE,
-               groups=groups_list, legend.cex=0.6, legend=TRUE, nodeNames = nodeVars, labels=c(1:length(nodeVars)),
-               vsize=10, asize=8, curve=0.75, curveAll=T, esize=3)
-
-  print("Contemporaneous Network:")
-  cent_group1 <- centrality_auto(n1, weighted = FALSE)$node.centrality
-  print(cent_group1)
-  print(smallworldIndex(n1)$index)
-  centralityPlot(n1, weighted = FALSE, labels = nodeVars,
-                 include = c("Strength", "ExpectedInfluence"))
-  print(centralityTable(n1, weighted = FALSE, labels = nodeVars))
-
+  temp.nets[[i]] <- getNet(mlNet, "temporal", nonsig = "hide")
   
-  print("Temporal Network:")
-  cent_group2 <- centrality_auto(n2, weighted = TRUE)$node.centrality
-  print(cent_group2)
-  print(smallworldIndex(n2)$index)
-  centralityPlot(n2, weighted = TRUE, labels = nodeVars,
-                 include = c("InStrength", "OutStrength", "InExpectedInfluence", "OutExpectedInfluence"))
-  print(centralityTable(n2, weighted = TRUE, labels = nodeVars))
-
-
+  i <- i + 1
+  
 }
+
+L <- averageLayout(cont.nets[[1]], cont.nets[[2]], temp.nets[[1]], temp.nets[[2]])
+
+# pdf(paste0(figs, "figure.pdf"), width=6, height=2.5)
+layout(matrix(c(1,1,2,2,2), nc=5, byrow = TRUE)) # 40% vs 60% widths
+
+n1 <- qgraph(cont.nets[[1]], layout = L,
+             title=paste("Controls: Contemporaneous - Baseline"), theme='colorblind', negDashed=FALSE,
+             groups=groups_list, legend=FALSE, nodeNames = nodeVars, labels=c(1:length(nodeVars)),
+             vsize=10, repulsion=1.1, esize=3)
+n2 <- qgraph(cont.nets[[2]], layout = L,
+             title=paste("Remitted: Contemporaneous - Baseline", g, sep = " - "), theme='colorblind', negDashed=FALSE, diag=FALSE,
+             groups=groups_list, legend.cex=0.6, legend=TRUE, nodeNames = nodeVars, labels=c(1:length(nodeVars)),
+             vsize=10, asize=8, curve=0.75, curveAll=T, esize=3)
+
+print("Controls:")
+cent_group1 <- centrality_auto(n1, weighted = FALSE)$node.centrality
+print(cent_group1)
+print(smallworldIndex(n1)$index)
+centralityPlot(n1, weighted = FALSE, labels = nodeVars,
+               include = c("Strength", "ExpectedInfluence"))
+print(centralityTable(n1, weighted = FALSE, labels = nodeVars))
+
+
+print("Remitted:")
+cent_group2 <- centrality_auto(n2, weighted = TRUE)$node.centrality
+print(cent_group2)
+print(smallworldIndex(n2)$index)
+centralityPlot(n2, weighted = TRUE, labels = nodeVars,
+               include = c("InStrength", "OutStrength", "InExpectedInfluence", "OutExpectedInfluence"))
+print(centralityTable(n2, weighted = TRUE, labels = nodeVars))
+
+
+n3 <- qgraph(temp.nets[[1]], layout = L,
+             title=paste("Controls: Temporal - Baseline"), theme='colorblind', negDashed=FALSE,
+             groups=groups_list, legend=FALSE, nodeNames = nodeVars, labels=c(1:length(nodeVars)),
+             vsize=10, repulsion=1.1, esize=3)
+n4 <- qgraph(temp.nets[[2]], layout = L,
+             title=paste("Remitted: Temporal - Baseline", g, sep = " - "), theme='colorblind', negDashed=FALSE, diag=FALSE,
+             groups=groups_list, legend.cex=0.6, legend=TRUE, nodeNames = nodeVars, labels=c(1:length(nodeVars)),
+             vsize=10, asize=8, curve=0.75, curveAll=T, esize=3)
+
+print("Controls:")
+cent_group3 <- centrality_auto(n3, weighted = FALSE)$node.centrality
+print(cent_group3)
+print(smallworldIndex(n3)$index)
+centralityPlot(n3, weighted = FALSE, labels = nodeVars,
+               include = c("Strength", "ExpectedInfluence"))
+print(centralityTable(n3, weighted = FALSE, labels = nodeVars))
+
+
+print("Remitted:")
+cent_group4 <- centrality_auto(n4, weighted = TRUE)$node.centrality
+print(cent_group4)
+print(smallworldIndex(n4)$index)
+centralityPlot(n4, weighted = TRUE, labels = nodeVars,
+               include = c("InStrength", "OutStrength", "InExpectedInfluence", "OutExpectedInfluence"))
+print(centralityTable(n4, weighted = TRUE, labels = nodeVars))
+
 
 dev.off()
 
@@ -549,12 +569,13 @@ for(g in c("controls", "remitted")){
 ################################################### Permutation Tests ######################################################### 
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
+
+
 extract_cent <- function(cent.table, n, m){
   #function to get a specific centrality measure for a specific node from a centrality table
   cent.val <- cent.table[which((cent.table$node==n) & cent.table$measure==m),]$value
   return(cent.val)
 }
-
 
 #number of permutations
 perms <- 100
@@ -567,6 +588,10 @@ measures <- c(measures.cont, measures.temp)
 #actual data
 real.dat <- data_t[which((data_t$group=="controls") & (data_t$phase=="pre")),]
 real.dat <- real.dat[,c("subject", "assessmentDay", "dayBeepNum", nodeVars)]
+
+
+testSummary <- list(data = data.frame(), net1 = list(Temporal = list(), Contemporaneous = list()),
+                    net2 = list(Temporal = list(), Contemporaneous = list()))
 
 real.net <- mlVAR(real.dat,
                vars=nodeVars,
@@ -597,6 +622,11 @@ edgeWeights <- list(Contemporaneous = list(), Temporal = list())
 #create empty dataframes for with row = permutation number and col = centrality measures
 cent.df <- data.frame(matrix(ncol = length(measures), nrow = perms+1))
 colnames(cent.df) <- measures
+
+
+#global strength
+gs.cont <- sum(abs(real.cont[which(upper.tri(real.cont))]))
+gs.temp <- sum(abs(real.temp[which(upper.tri(real.temp))]))
 
 
 #add real centralities
@@ -653,16 +683,14 @@ for(i in 1:perms+1){
   for(n in nodeVars){
     for(m in measures.cont){
       val <- extract_cent(perm.cont.cents, n, m)
-      cent.df[i,m] <- val
+      testStats[[n]][i,m] <- val
       
     }
     for(m in measures.temp){
       val <- extract_cent(perm.temp.cents, n, m)
-      cent.df[i,m] <- val
+      testStats[[n]][i,m] <- val
     }
-    testStats[[n]] <- cent.df
   }
-  
 }
 
 #dataframe to store centrality measure p-vals
@@ -760,32 +788,892 @@ for(n in nodeVars){
 
 
 
-# 
-# cent.df <- data.frame(matrix(ncol = length(measures), nrow = length(nodeVars)))
-# colnames(cent.df) <- measures
-# rownames(cent.df) <- nodeVars
-# 
-# 
-# #add real centralities
-# for(n in nodeVars){
-#   for(m in measures.cont){
-#     val <- extract_cent(real.cont.cents, n, m)
-#     print(val)
-#     cent.df[n,m] <- val
-#     
-#   }
-#   for(m in measures.temp){
-#     val <- extract_cent(real.temp.cents, n, m)
-#     cent.df[n,m] <- val
-#   }
-#   
-# }
-# cent.vals[[1]] <- cent.df
-# 
-# 
+
+
+NPT <- function(data, nodes, addToFile, permuteBy="nodes", iterations=100, idvar="subjB", dayvar="assessmentDay", beepvar="dayBeepNum",
+                nCores=detectCores()-2){
+  #if permuteBy = "nodes" this function checks a networks ~robustness by shuffling the nodes per subject (i.e., the columns of the provided data)
+  #at each iteration
+  #else one has to provide the column name of the variable to be permuted by (e.g., "group", or "phase").
+  #Note that the latter case will lead to a comparison test between two networks (e.g. group1 vs group2)
+  
+  start.time <- Sys.time()
+  
+  #number of permutations
+  perms <- iterations
+  nodeVars <- nodes
+  
+  #centrality measures for contemporaneous and temporal networks, respectively
+  measures.cont <- c("Strength", "ExpectedInfluence")
+  measures.temp <- c("InStrength", "OutStrength", "InExpectedInfluence", "OutExpectedInfluence")
+  measures <- c(measures.cont, measures.temp)
+  
+  if(hasArg(addToFile)){
+    print("Loading existing file...")
+    
+    
+    
+  } else {print("no")}
+  
+  if(permuteBy == "nodes"){
+
+    #actual data
+    real.dat <- data[,c(idvar, dayvar, beepvar, nodeVars)]
+    
+    testSummary <- list(data = real.dat,
+                        net1 = list(Temporal = list(Centrality = list(), EdgeWeights = list(), GlobalStrength = list()),
+                                    Contemporaneous = list(Centrality = list(), EdgeWeights = list(), GlobalStrength = list())),
+                        p_values = list(Temporal = list(Centrality = list(), EdgeWeights = list(), GlobalStrength = list()),
+                                        Contemporaneous = list(Centrality = list(), EdgeWeights = list(), GlobalStrength = list())))
+    
+    n_idVars <- length(c(idvar, dayvar, beepvar))
+    n_nodeVars <- length(nodeVars)
+    
+    real.net <- mlVAR(real.dat,
+                      vars=nodeVars,
+                      estimator="lmer",
+                      idvar=idvar,
+                      dayvar=dayvar,
+                      beepvar=beepvar,
+                      lags = 1,
+                      temporal = "orthogonal",
+                      contemporaneous = "orthogonal",
+                      nCores = nCores)
+    
+    #  # Get mlVAR networks:
+    real.cont <- getNet(real.net, "contemporaneous", layout = "spring", nonsig = "hide", rule = "and")
+    #bet  <- getNet(mlNet, "between", nonsig = "hide", rule = "and")
+    real.temp <- getNet(real.net, "temporal", nonsig = "hide")
+    
+    
+    #get all centrality measures
+    real.cont.cents <- centralityTable(real.cont, weighted = TRUE, labels = nodeVars, standardized = FALSE)
+    real.temp.cents <- centralityTable(real.temp, weighted = TRUE, labels = nodeVars, standardized = FALSE)
+    
+    
+    #create a named nested list with centrality measures per node
+    testStats <- list(Centrality = list(), EdgeWeights = list(), GlobalStrength = list())
+    #and a list for edge weight matrices per permutation
+    edgeWeights <- list(Contemporaneous = list(), Temporal = list())
+    
+    #create empty dataframes for with row = permutation number and col = centrality measures
+    cent.df <- data.frame(matrix(ncol = length(measures), nrow = perms+1))
+    colnames(cent.df) <- measures
+    
+    #also for real nets only with row = nodes and col = centrality measure
+    real.cont.df <- data.frame(matrix(nrow = length(nodeVars), ncol = length(measures.cont)))
+    colnames(real.cont.df) <- measures.cont
+    rownames(real.cont.df) <- nodeVars
+    
+    real.temp.df <- data.frame(matrix(nrow = length(nodeVars), ncol = length(measures.temp)))
+    colnames(real.temp.df) <- measures.temp
+    rownames(real.temp.df) <- nodeVars
+    
+
+    #add real centralities
+    for(n in nodeVars){
+      testStats$Centrality[[n]] <- cent.df
+      
+      for(m in measures.cont){
+        val <- extract_cent(real.cont.cents, n, m)
+        testStats$Centrality[[n]][1,m] <- val
+        real.cont.df[n,m] <- val
+        
+      }
+      for(m in measures.temp){
+        val <- extract_cent(real.temp.cents, n, m)
+        # print(val)
+        testStats$Centrality[[n]][1,m] <- val
+        real.temp.df[n,m] <- val
+      }
+    }
+    
+    
+    #add edge weight matrices
+    edgeWeights$Contemporaneous[[1]] <- real.cont
+    edgeWeights$Temporal[[1]] <- real.temp
+    
+    #global strength
+    gs.cont.vec <- c(rep(NA, perms+1))
+    gs.temp.vec <- c(rep(NA, perms+1))
+    gs.cont <- sum(abs(real.cont[which(upper.tri(real.cont))]))
+    gs.temp <- sum(abs(real.temp[which(upper.tri(real.temp))]))
+    
+    gs.cont.vec[1] <- gs.cont
+    gs.temp.vec[1] <- gs.temp
+    
+    #add real stats to testSummary
+    testSummary$net1$Contemporaneous$Centrality <- real.cont.df
+    testSummary$net1$Temporal$Centrality <- real.temp.df
+    testSummary$net1$Contemporaneous$EdgeWeights <- real.cont
+    testSummary$net1$Temporal$EdgeWeights <- real.temp
+    testSummary$net1$Contemporaneous$GlobalStrength <- gs.cont
+    testSummary$net1$Temporal$GlobalStrength <- gs.temp
+    
+    
+    #permutation test statistics
+    s_ids <- unique(real.dat[[idvar]])
+    
+    
+    for(i in 1:perms+1){
+      print(paste("Permutation", i-1, sep = " "))
+      
+      #create permuted data set (shuffled node labels per subject)
+      perm.dat <- data.frame(matrix(ncol = length(c(idvar, dayvar, beepvar, nodeVars))))
+      colnames(perm.dat) <- c(idvar, dayvar, beepvar, nodeVars)
+      
+      for(s in s_ids){
+        #subset for only one subject 
+        s_df <- real.dat[which(real.dat[[idvar]]==s),]
+        
+        #shuffle node lables for subject
+        perm.vars <- sample(nodeVars)
+        colnames(s_df)[(n_idVars + 1) : (n_nodeVars + n_idVars)] <- perm.vars
+        
+        #add to permutation data set
+        perm.dat <- rbind(perm.dat, s_df)
+        
+      }
+
+      #fit permutated network
+      perm.net <- mlVAR(perm.dat,
+                        vars=nodeVars,
+                        estimator="lmer",
+                        idvar=idvar,
+                        dayvar=dayvar,
+                        beepvar=beepvar,
+                        lags = 1,
+                        temporal = "orthogonal",
+                        contemporaneous = "orthogonal",
+                        nCores = nCores)
+      
+      # print("Net created")
+      
+      #  # Get mlVAR networks:
+      perm.cont <- getNet(perm.net, "contemporaneous", layout = "spring", nonsig = "hide", rule = "and")
+      perm.temp <- getNet(perm.net, "temporal", nonsig = "hide")
+      
+      
+      
+      # par(mfrow = c(1,2))
+      # 
+      # n3 <- qgraph(perm.temp,
+      #              title=paste("Temporal", i, sep = " - "), theme='colorblind', negDashed=FALSE, diag=FALSE,
+      #              groups=groups_list, legend=FALSE, nodeNames = nodeVars, labels=c(1:length(nodeVars)),
+      #              vsize=10, asize=6, curve=0.75, curveAll=T, esize=3)
+      # 
+      # n4 <- qgraph(perm.cont,
+      #              title=paste("Contemporaneous", i, sep = " - "), theme='colorblind', negDashed=FALSE, diag=FALSE,
+      #              groups=groups_list, legend.cex=0.6, legend=TRUE, nodeNames = nodeVars, labels=c(1:length(nodeVars)),
+      #              vsize=10, asize=6, curve=0.75, curveAll=T, esize=3)
+      # 
+      # plot(n3)
+      # plot(n4)
+      # 
+      # print("Nets extracted")
+      
+      edgeWeights$Contemporaneous[[i]] <- perm.cont
+      edgeWeights$Temporal[[i]] <- perm.temp
+      
+      # print("Edge weights added")
+      # print(perm.cont)
+      # print(perm.temp)
+      
+      #global strength
+      perm.gs.cont <- sum(abs(perm.cont[which(upper.tri(perm.cont))]))
+      perm.gs.temp <- sum(abs(perm.temp[which(upper.tri(perm.temp))]))
+      gs.cont.vec[i] <- perm.gs.cont
+      gs.temp.vec[i] <- perm.gs.temp
+      
+      # print("Global Strength added")
+      
+      #get permuted centrality measures
+      perm.cont.cents <- centralityTable(perm.cont, weighted = TRUE, labels = nodeVars, standardized = FALSE)
+      perm.temp.cents <- centralityTable(perm.temp, weighted = TRUE, labels = nodeVars, standardized = FALSE)
+      
+      
+      # print("centrality tables created")
+      # print(perm.cont.cents)
+      # print(perm.temp.cents)
+      
+      #add permuted centralities
+      for(n in nodeVars){
+        for(m in measures.cont){
+          val <- extract_cent(perm.cont.cents, n, m)
+          # print(val)
+          testStats$Centrality[[n]][i,m] <- val
+          # print("Measures Cont created")
+          
+        }
+        for(m in measures.temp){
+          val <- extract_cent(perm.temp.cents, n, m)
+          print(val)
+          testStats$Centrality[[n]][i,m] <- val
+          # print("Measures Temp created")
+        }
+      }
+      
+      # print(edgeWeights)
+      # print(gs.cont.vec)
+      # print(gs.temp.vec)
+      
+      
+    }
+    
+    print("Centralities added")
+    
+    #dataframe to store centrality measure p-vals
+    c.cent.df <- data.frame(matrix(ncol = length(measures.cont), nrow = length(nodeVars)))
+    colnames(c.cent.df) <- measures.cont
+    rownames(c.cent.df) <- nodeVars
+    
+    t.cent.df <- data.frame(matrix(ncol = length(measures.temp), nrow = length(nodeVars)))
+    colnames(t.cent.df) <- measures.temp
+    rownames(t.cent.df) <- nodeVars
+    
+    for(n in nodeVars){
+      # print(paste("++++++++++++++++++", n, "++++++++++++++++++", sep = " "))
+      for(m in measures.cont){
+        # print(paste("###", m, "###", sep = " "))
+        # print(testStats$Centrality[[n]][m])
+        if(testStats$Centrality[[n]][1,m] > 0){
+          pval <- mean((testStats$Centrality[[n]][m]) >= (testStats$Centrality[[n]][1,m]))
+          
+        } else if(testStats$Centrality[[n]][1,m] < 0){
+          pval <- mean((testStats$Centrality[[n]][m]) <= (testStats$Centrality[[n]][1,m]))
+          
+        } else {
+          pval <- 1
+        }
+        
+        c.cent.df[n,m] <- pval
+        # print(pval)
+      }
+      for(m in measures.temp){
+        # print(paste("###", m, "###", sep = " "))
+        # print(testStats$Centrality[[n]][m])
+        if(testStats$Centrality[[n]][1,m] > 0){
+          pval <- mean((testStats$Centrality[[n]][m]) >= (testStats$Centrality[[n]][1,m]))
+          
+        } else if(testStats$Centrality[[n]][1,m] < 0){
+          pval <- mean((testStats$Centrality[[n]][m]) <= (testStats$Centrality[[n]][1,m]))
+          
+        } else {
+          pval <- 1
+        }
+        
+        t.cent.df[n,m] <- pval
+        # print(pval)
+      }
+    }
+    
+    print("Centrality pvalues added")
+    
+    #dataframe for edge weight p-vals for contemporaneous and temporal
+    c.ew.df <- data.frame(matrix(ncol = length(nodeVars), nrow = length(nodeVars)))
+    colnames(c.ew.df) <- nodeVars
+    rownames(c.ew.df) <- nodeVars
+    
+    t.ew.df <- data.frame(matrix(ncol = length(nodeVars), nrow = length(nodeVars)))
+    colnames(t.ew.df) <- nodeVars
+    rownames(t.ew.df) <- nodeVars
+    
+    excluded.edges <- c(rep(NA, length(nodeVars)))
+    
+    print(edgeWeights$Contemporaneous)
+    
+    j <- 1
+    for(n in nodeVars){
+      temp.weights <- c(rep(NA, perms+1))
+      temp.edges <- nodeVars[nodeVars %nin% excluded.edges]
+      
+      
+      #now we add the current node to the excluded edges because in contemporaneous nets we do not have self-loops
+      excluded.edges[j] <- n
+      
+      cont.weights <- c(rep(NA, perms+1))
+      cont.edges <- nodeVars[nodeVars %nin% excluded.edges]
+      
+      j <- j + 1
+      
+      for(e in cont.edges){
+        # print("++++++++++++++++++ Contemporaneous ++++++++++++++++++")
+        # print(paste(n, "--", e, sep = " "))
+        # print("+++++++++++++++++++++++++++++++++++++++++++++++++++++")
+        for(i in 1:(perms+1)){
+          cont.weights[i] <- edgeWeights$Contemporaneous[[i]][n,e]
+        }
+        
+        if(cont.weights[1] > 0){
+          pval <- mean((cont.weights) >= (cont.weights[1]))
+          
+        } else if(cont.weights[1] < 0){
+          pval <- mean((cont.weights) <= (cont.weights[1]))
+          
+        } else {
+          pval <- 1
+        }
+        # print(pval)
+        c.ew.df[n,e] <- pval
+      } 
+      
+      
+      
+      for(e in temp.edges){
+        # print("++++++++++++++++++ Temporal ++++++++++++++++++")
+        # print(paste(n, "-->", e, sep = " "))
+        # print("+++++++++++++++++++++++++++++++++++++++++++++++++++++")
+        for(i in 1:(perms+1)){
+          temp.weights[i] <- edgeWeights$Temporal[[i]][n,e]
+        }
+        if(temp.weights[1] > 0){
+          pval <- mean((temp.weights) >= (temp.weights[1]))
+          
+        } else if(temp.weights[1] < 0){
+          pval <- mean((temp.weights) <= (temp.weights[1]))
+          
+        } else {
+          pval <- 1
+        }
+        # print(pval)
+        t.ew.df[n,e] <- pval
+      }
+      
+    }
+    
+    #print("Ew pvalues added")
+    
+    gs.cont.pval <- mean((gs.cont.vec) >= (gs.cont.vec[1]))
+    gs.temp.pval <- mean((gs.temp.vec) >= (gs.temp.vec[1]))
+    
+   # print("Global Strength pvalues added")
+    
+    
+    testSummary$p_values$Contemporaneous$Centrality <- c.cent.df
+    testSummary$p_values$Temporal$Centrality <- t.cent.df
+    testSummary$p_values$Contemporaneous$EdgeWeights <- c.ew.df
+    testSummary$p_values$Temporal$EdgeWeights <- t.ew.df
+    testSummary$p_values$Contemporaneous$GlobalStrength <- gs.cont.pval
+    testSummary$p_values$Temporal$GlobalStrength <- gs.temp.pval
+    
+   # print("testSummary filled --> done")
+    
+    
+    
+  } else {
+    
+    n_idVars <- length(c(idvar, dayvar, beepvar, permuteBy))
+    n_nodeVars <- length(nodeVars)
+    permuteSet <- unique(data[[permuteBy]])
+    
+    testSummary <- list(data = data[,c(idvar, permuteBy, dayvar, beepvar, nodeVars)])
+    
+    #actual data
+    testStats <- list(Centrality = list(), Temporal = list(EdgeWeights = list(), GlobalStrength = list()),
+                      Contemporaneous = list(EdgeWeights = list(), GlobalStrength = list()), 
+                      Difference = list(),
+                      p_values = list(Temporal = list(Centrality = list(), EdgeWeights = list(), GlobalStrength = list()),
+                                      Contemporaneous = list(Centrality = list(), EdgeWeights = list(), GlobalStrength = list())))
+    
+    #list for edge weight matrices per permutation
+    edgeWeights <- list()
+    
+    #vecs for global strengths
+    globalStrengths <- list()
+    
+   # print("++++++++++++++++++++++++ Initialization done ++++++++++++++++++++++++")
+    
+    for(g in permuteSet){
+      
+      testSummary[[g]] <- list(Temporal = list(Centrality = list(), EdgeWeights = list(), GlobalStrength = list()),
+                            Contemporaneous = list(Centrality = list(), EdgeWeights = list(), GlobalStrength = list()))
+      
+      
+      edgeWeights[[g]] <- list()
+      
+      globalStrengths[[g]] <- list()
+      
+      real.dat <- data[which(data[[permuteBy]]==g),c(idvar, permuteBy, dayvar, beepvar, permuteBy, nodeVars)]
+
+      real.net <- mlVAR(real.dat,
+                        vars=nodeVars,
+                        estimator="lmer",
+                        idvar=idvar,
+                        dayvar=dayvar,
+                        beepvar=beepvar,
+                        lags = 1,
+                        temporal = "orthogonal",
+                        contemporaneous = "orthogonal",
+                        nCores = nCores)
+      
+      #  # Get mlVAR networks:
+      real.cont <- getNet(real.net, "contemporaneous", layout = "spring", nonsig = "hide", rule = "and")
+      real.temp <- getNet(real.net, "temporal", nonsig = "hide")
+      
+      #get all centrality measures
+      real.cont.cents <- centralityTable(real.cont, weighted = TRUE, labels = nodeVars, standardized = FALSE)
+      real.temp.cents <- centralityTable(real.temp, weighted = TRUE, labels = nodeVars, standardized = FALSE)
+      
+    #  print("++++++++++++++++++++++++ Net created ++++++++++++++++++++++++")
+      
+      #create empty dataframes for with row = permutation number and col = centrality measures
+      cent.df <- data.frame(matrix(ncol = length(measures), nrow = perms+1))
+      colnames(cent.df) <- measures
+      
+      #also for real nets only with row = nodes and col = centrality measure
+      real.cont.df <- data.frame(matrix(nrow = length(nodeVars), ncol = length(measures.cont)))
+      colnames(real.cont.df) <- measures.cont
+      rownames(real.cont.df) <- nodeVars
+      
+      real.temp.df <- data.frame(matrix(nrow = length(nodeVars), ncol = length(measures.temp)))
+      colnames(real.temp.df) <- measures.temp
+      rownames(real.temp.df) <- nodeVars
+      
+      #add real centralities
+      for(n in nodeVars){
+        for(m in measures.cont){
+          val <- extract_cent(real.cont.cents, n, m)
+          cent.df[1,m] <- val
+          real.cont.df[n,m] <- val
+          
+        }
+        for(m in measures.temp){
+          val <- extract_cent(real.temp.cents, n, m)
+          cent.df[1,m] <- val
+          real.temp.df[n,m] <- val
+        }
+        testStats$Centrality[[g]][[n]] <- cent.df
+      }
+      
+      
+      #add edge weight matrices
+      edgeWeights[[g]]$Contemporaneous[[1]] <- real.cont
+      edgeWeights[[g]]$Temporal[[1]] <- real.temp
+      
+      #global strength
+      gs.cont <- sum(abs(real.cont[which(upper.tri(real.cont))]))
+      gs.temp <- sum(abs(real.temp[which(upper.tri(real.temp))]))
+      
+      globalStrengths[[g]]$Contemporaneous[[1]] <- gs.cont
+      globalStrengths[[g]]$Temporal[[1]] <- gs.temp
+      
+      testSummary[[g]]$Contemporaneous$Centrality <- real.cont.df
+      testSummary[[g]]$Temporal$Centrality <- real.temp.df
+      testSummary[[g]]$Contemporaneous$EdgeWeights <- real.cont
+      testSummary[[g]]$Temporal$EdgeWeights <- real.temp
+      testSummary[[g]]$Contemporaneous$GlobalStrength <- gs.cont
+      testSummary[[g]]$Temporal$GlobalStrength <- gs.temp
+      
+    }
+    
+  #  print("++++++++++++++++++++++++ Test summaries per net created ++++++++++++++++++++++++")
+
+    #Calculate test statistics (differences between networks)
+    #Centrality
+    for(n in nodeVars){
+      testStats$Difference[[n]] <- data.frame(matrix(ncol = length(measures), nrow = perms+1))
+      colnames(testStats$Difference[[n]]) <- measures
+      testStats$Difference[[n]][1,] <-  testStats[[permuteSet[2]]][[n]][1,] - testStats[[permuteSet[1]]][[n]][1,]
+    }
+    
+    testSummary$Difference <- list(Temporal = list(Centrality = list(), EdgeWeights = list(), GlobalStrength = list()),
+                                   Contemporaneous = list(Centrality = list(), EdgeWeights = list(), GlobalStrength = list()))
+    
+    testSummary$Difference$Contemporaneous$Centrality <- testSummary[[permuteSet[2]]]$Contemporaneous$Centrality -
+                                                                testSummary[[permuteSet[1]]]$Contemporaneous$Centrality
+    
+    testSummary$Difference$Temporal$Centrality <- testSummary[[permuteSet[2]]]$Temporal$Centrality -
+                                                    testSummary[[permuteSet[1]]]$Temporal$Centrality
+    
+    
+    # #add centrality differences to list
+    # testStats$Difference <- list(Temporal = list(), Contemporaneous = list())
+    # for(n in nodeVars){
+    #   testStats$Difference[[n]] <- testStats[[permuteSet[2]]][[n]] - testStats[[permuteSet[1]]][[n]]
+    #   # 
+    #   # testSummary$Difference$Centrality[[n]] <- testStats$Difference[[n]][1,]
+    # }
+    
+    
+    #add edgeWeight differences to list for later calculation of p-values
+    edgeWeights$Difference <- list(Temporal = list(c(rep(NA, perms+1))), Contemporaneous = list(c(rep(NA, perms+1))))
+    edgeWeights$Difference$Contemporaneous[[1]] <- edgeWeights[[permuteSet[2]]]$Contemporaneous[[1]] -
+                                                  edgeWeights[[permuteSet[1]]]$Contemporaneous[[1]]
+    edgeWeights$Difference$Temporal[[1]] <- edgeWeights[[permuteSet[2]]]$Temporal[[1]] -
+                                              edgeWeights[[permuteSet[1]]]$Temporal[[1]]
+    
+    #same with global strengths
+    globalStrengths$Difference <- list(Temporal = list(c(rep(NA, perms+1))), Contemporaneous = list(c(rep(NA, perms+1))))
+    globalStrengths$Difference$Contemporaneous[[1]] <- globalStrengths[[permuteSet[2]]]$Contemporaneous[[1]] -
+                                                        globalStrengths[[permuteSet[1]]]$Contemporaneous[[1]]
+    globalStrengths$Difference$Temporal[[1]] <- globalStrengths[[permuteSet[2]]]$Temporal[[1]] -
+                                                    globalStrengths[[permuteSet[1]]]$Temporal[[1]]
+                                                
+    
+    #also add to testSummary
+    # testSummary$Difference$Centrality <- testStats$Difference
+    testSummary$Difference$Contemporaneous$EdgeWeights <- edgeWeights$Difference$Contemporaneous[[1]]
+    testSummary$Difference$Temporal$EdgeWeights <- edgeWeights$Difference$Temporal[[1]]
+    testSummary$Difference$Contemporaneous$GlobalStrength <- globalStrengths$Difference$Contemporaneous[[1]]
+    testSummary$Difference$Temporal$GlobalStrength <- globalStrengths$Difference$Temporal[[1]]
+    
+    #permutation test statistics
+    s_ids <- unique(data[[idvar]])
+    
+    for(i in 1:perms+1){
+      print(paste("Permutation", i-1, sep = " "))
+      
+      #create permuted data set (shuffled node labels per subject)
+      perm.dat <- data.frame(matrix(ncol = length(c(idvar, dayvar, beepvar, permuteBy, nodeVars))))
+      colnames(perm.dat) <- c(idvar, dayvar, beepvar, permuteBy, nodeVars)
+      
+      for(s in s_ids){
+        #subset for only one subject 
+        s_df <- data[which(data[[idvar]]==s),c(idvar, dayvar, beepvar, permuteBy, nodeVars)]
+        
+        #shuffle node lables for subject
+        perm.group <- sample(permuteSet, 1)
+        s_df[[permuteBy]] <- perm.group
+        
+        #add to permutation data set
+        perm.dat <- rbind(perm.dat, s_df)
+        
+      }
+      
+      
+      for(g in permuteSet){
+        
+        pg.dat <- perm.dat[which(perm.dat[[permuteBy]]==g),c(idvar, permuteBy, dayvar, beepvar, permuteBy, nodeVars)]
+        
+        #fit permutated network
+        perm.net <- mlVAR(pg.dat,
+                          vars=nodeVars,
+                          estimator="lmer",
+                          idvar=idvar,
+                          dayvar=dayvar,
+                          beepvar=beepvar,
+                          lags = 1,
+                          temporal = "orthogonal",
+                          contemporaneous = "orthogonal",
+                          nCores = nCores)
+        
+        #print("Net created")
+        
+        #  # Get mlVAR networks:
+        perm.cont <- getNet(perm.net, "contemporaneous", layout = "spring", nonsig = "hide", rule = "and")
+        perm.temp <- getNet(perm.net, "temporal", nonsig = "hide")
+        
+      #  print("Nets extracted")
+        
+        edgeWeights[[g]]$Contemporaneous[[i]] <- perm.cont
+        edgeWeights[[g]]$Temporal[[i]] <- perm.temp
+        
+      #  print("Edge weights added")
+        
+        #global strength
+        perm.gs.cont <- sum(abs(perm.cont[which(upper.tri(perm.cont))]))
+        perm.gs.temp <- sum(abs(perm.temp[which(upper.tri(perm.temp))]))
+        globalStrengths[[g]]$Contemporaneous[[i]] <- perm.gs.cont
+        globalStrengths[[g]]$Temporal[[i]] <- perm.gs.temp
+        
+      #  print("Global Strength added")
+        
+        #get permuted centrality measures
+        perm.cont.cents <- centralityTable(perm.cont, weighted = TRUE, labels = nodeVars, standardized = FALSE)
+        perm.temp.cents <- centralityTable(perm.temp, weighted = TRUE, labels = nodeVars, standardized = FALSE)
+        
+       # print("centrality tables created")
+        
+        #add permuted centralities
+        for(n in nodeVars){
+          for(m in measures.cont){
+            val <- extract_cent(perm.cont.cents, n, m)
+            cent.df[i,m] <- val
+            
+          }
+          for(m in measures.temp){
+            val <- extract_cent(perm.temp.cents, n, m)
+            cent.df[i,m] <- val
+          }
+          testStats[[g]][[n]] <- cent.df
+        }
+        
+      }
+      
+      for(n in nodeVars){
+        testStats$Difference[[n]][i,] <- testStats[[permuteSet[2]]][[n]][i,] - testStats[[permuteSet[1]]][[n]][i,]  
+      }
+      
+     # print("Centralities added")
+      
+      edgeWeights$Difference$Contemporaneous[[i]] <- edgeWeights[[permuteSet[2]]]$Contemporaneous[[i]] -
+                                                      edgeWeights[[permuteSet[1]]]$Contemporaneous[[i]]
+      
+      edgeWeights$Difference$Temporal[[i]] <- edgeWeights[[permuteSet[2]]]$Temporal[[i]] -
+                                               edgeWeights[[permuteSet[1]]]$Temporal[[i]]
+      
+      
+      globalStrengths$Difference$Contemporaneous[[i]] <- globalStrengths[[permuteSet[2]]]$Contemporaneous[[i]] -
+                                                          globalStrengths[[permuteSet[1]]]$Contemporaneous[[i]]
+      
+      globalStrengths$Difference$Temporal[[i]] <- globalStrengths[[permuteSet[2]]]$Temporal[[i]] -
+                                                    globalStrengths[[permuteSet[1]]]$Temporal[[i]]
+        
+    }
+    
+
+    
+    #dataframe to store centrality measure p-vals
+    c.cent.df <- data.frame(matrix(ncol = length(measures.cont), nrow = length(nodeVars)))
+    colnames(c.cent.df) <- measures.cont
+    rownames(c.cent.df) <- nodeVars
+    
+    t.cent.df <- data.frame(matrix(ncol = length(measures.temp), nrow = length(nodeVars)))
+    colnames(t.cent.df) <- measures.temp
+    rownames(t.cent.df) <- nodeVars
+    
+    for(n in nodeVars){
+      # print(paste("++++++++++++++++++", n, "++++++++++++++++++", sep = " "))
+      for(m in measures.cont){
+        # print(paste("###", m, "###", sep = " "))
+        if(testStats$Difference[[n]][1,m] > 0){
+          pval <- mean((testStats$Difference[[n]][m]) >= (testStats$Difference[[n]][1,m]))
+          
+        } else if(testStats$Difference[[n]][1,m] < 0){
+          pval <- mean((testStats$Difference[[n]][m]) <= (testStats$Difference[[n]][1,m]))
+          
+        } else {
+          pval <- 1
+        }
+        
+        c.cent.df[n,m] <- pval
+        # print(pval)
+      }
+      for(m in measures.temp){
+        # print(paste("###", m, "###", sep = " "))
+        if(testStats$Difference[[n]][1,m] > 0){
+          pval <- mean((testStats$Difference[[n]][m]) >= (testStats$Difference[[n]][1,m]))
+          
+        } else if(testStats$Difference[[n]][1,m] < 0){
+          pval <- mean((testStats$Difference[[n]][m]) <= (testStats$Difference[[n]][1,m]))
+          
+        } else {
+          pval <- 1
+        }
+        
+        t.cent.df[n,m] <- pval
+        # print(pval)
+      }
+    }
+    
+   # print("Centrality pvalues added")
+    
+    #dataframe for edge weight p-vals for contemporaneous and temporal
+    c.ew.df <- data.frame(matrix(ncol = length(nodeVars), nrow = length(nodeVars)))
+    colnames(c.ew.df) <- nodeVars
+    rownames(c.ew.df) <- nodeVars
+    
+    t.ew.df <- data.frame(matrix(ncol = length(nodeVars), nrow = length(nodeVars)))
+    colnames(t.ew.df) <- nodeVars
+    rownames(t.ew.df) <- nodeVars
+    
+    excluded.edges <- c(rep(NA, length(nodeVars)))
+    j <- 1
+    for(n in nodeVars){
+      temp.weights <- c(rep(NA, perms+1))
+      temp.edges <- nodeVars[nodeVars %nin% excluded.edges]
+      
+      
+      #now we add the current node to the excluded edges because in contemporaneous nets we do not have self-loops
+      excluded.edges[j] <- n
+      
+      cont.weights <- c(rep(NA, perms+1))
+      cont.edges <- nodeVars[nodeVars %nin% excluded.edges]
+      
+      j <- j + 1
+      
+      for(e in cont.edges){
+        # print("++++++++++++++++++ Contemporaneous ++++++++++++++++++")
+        # print(paste(n, "--", e, sep = " "))
+        # print("+++++++++++++++++++++++++++++++++++++++++++++++++++++")
+        for(i in 1:(perms+1)){
+          cont.weights[i] <- edgeWeights$Difference$Contemporaneous[[i]][n,e]
+        }
+        
+        if(cont.weights[1] > 0){
+          pval <- mean((cont.weights) >= (cont.weights[1]))
+          
+        } else if(cont.weights[1] < 0){
+          pval <- mean((cont.weights) <= (cont.weights[1]))
+          
+        } else {
+          pval <- 1
+        }
+        # print(pval)
+        c.ew.df[n,e] <- pval
+      } 
+      
+      
+      
+      for(e in temp.edges){
+        # print("++++++++++++++++++ Temporal ++++++++++++++++++")
+        # print(paste(n, "-->", e, sep = " "))
+        # print("+++++++++++++++++++++++++++++++++++++++++++++++++++++")
+        for(i in 1:(perms+1)){
+          temp.weights[i] <- edgeWeights$Difference$Temporal[[i]][n,e]
+        }
+        if(temp.weights[1] > 0){
+          pval <- mean((temp.weights) >= (temp.weights[1]))
+          
+        } else if(temp.weights[1] < 0){
+          pval <- mean((temp.weights) <= (temp.weights[1]))
+          
+        } else {
+          pval <- 1
+        }
+        # print(pval)
+        t.ew.df[n,e] <- pval
+      }
+      
+    }
+    
+  #  print("Ew pvalues added")
+    
+    gs.cont.pval <- mean((globalStrengths$Difference$Contemporaneous) >= (globalStrengths$Difference$Contemporaneous[[1]]))
+    gs.temp.pval <- mean((globalStrengths$Difference$Temporal) >= (globalStrengths$Difference$Temporal[[1]]))
+    
+  #  print("Global Strength pvalues added")
+    
+    testSummary$p_values$Contemporaneous$Centrality <- c.cent.df
+    testSummary$p_values$Temporal$Centrality <- t.cent.df
+    testSummary$p_values$Contemporaneous$EdgeWeights <- c.ew.df
+    testSummary$p_values$Temporal$EdgeWeights <- t.ew.df
+    testSummary$p_values$Contemporaneous$GlobalStrength <- gs.cont.pval
+    testSummary$p_values$Temporal$GlobalStrength <- gs.temp.pval
+    
+  #  print("testSummary filled --> done")
+    
+    
+  }
+  
+  testSummary$testStats <- testStats
+  testSummary$testStats$EdgeWeights <- list(Temporal = edgeWeights$Temporal, Contemporaneous = edgeWeights$Contemporaneous)
+  testSummary$testStats$GlobalStrength <- list(Temporal = gs.temp.vec, Contemporaneous = gs.cont.vec)
+  
+  end.time <- Sys.time()
+  time.taken <- end.time - start.time
+  print(paste("Time elapsed:", round(time.taken, 2), sep = " "))
+  
+  return(testSummary)
+}
+
+
+
+# +++++++++++++++++++++++++++++++++++++ robustness tests ++++++++++++++++++++++++++++++++++++++++++++++++++
+
+# baseline networks
+cont_pre_robust <- NPT(data_t[which((data_t$group == "controls") & (data_t$phase == "pre")),], nodes = nodeVars,
+                       iterations = 100)
+
+save(cont_pre_robust, file = "cont_pre_robust.rda")
+
+rem_pre_robust <- NPT(data_t[which((data_t$group == "remitted") & (data_t$phase == "pre")),], nodes = nodeVars,
+                                         iterations = 100)
+save(rem_pre_robust, file = "rem_pre_robust.rda")
+
+
+#remitted fantasizing pre / peri
+rem_pre_fant_robust <- NPT(data_t[which((data_t$group == "remitted") & (data_t$phase == "pre") & (data_t$intervention == "fantasizing")),],
+                           nodes = nodeVars, iterations = 100)
+
+save(rem_pre_fant_robust, file = "rem_pre_fant_robust.rda")
+
+
+rem_peri_fant_robust <- NPT(data_t[which((data_t$group == "remitted") & (data_t$phase == "peri") & (data_t$intervention == "fantasizing")),],
+                           nodes = nodeVars, iterations = 100)
+
+save(rem_peri_fant_robust, file = "rem_peri_fant_robust.rda")
+
+
+#remitted mindfulness pre / peri
+rem_pre_mind_robust <- NPT(data_t[which((data_t$group == "remitted") & (data_t$phase == "pre") & (data_t$intervention == "mindfulness")),],
+                           nodes = nodeVars, iterations = 100)
+
+save(rem_pre_mind_robust, file = "rem_pre_mind_robust.rda")
+
+rem_peri_mind_robust <- NPT(data_t[which((data_t$group == "remitted") & (data_t$phase == "peri") & (data_t$intervention == "mindfulness")),],
+                            nodes = nodeVars, iterations = 100)
+
+save(rem_peri_mind_robust, file = "rem_peri_mind_robust.rda")
+
+
+
+
+#controls fantasizing pre / peri
+cont_pre_fant_robust <- NPT(data_t[which((data_t$group == "controls") & (data_t$phase == "pre") & (data_t$intervention == "fantasizing")),],
+                           nodes = nodeVars, iterations = 100)
+
+save(cont_pre_fant_robust, file = "cont_pre_fant_robust.rda")
+
+
+cont_peri_fant_robust <- NPT(data_t[which((data_t$group == "controls") & (data_t$phase == "peri") & (data_t$intervention == "fantasizing")),],
+                            nodes = nodeVars, iterations = 100)
+
+save(cont_peri_fant_robust, file = "cont_peri_fant_robust.rda")
+
+
+
+
+#controls mindfulness pre / peri
+cont_pre_mind_robust <- NPT(data_t[which((data_t$group == "controls") & (data_t$phase == "pre") & (data_t$intervention == "mindfulness")),],
+                           nodes = nodeVars, iterations = 100)
+
+save(cont_pre_mind_robust, file = "cont_pre_mind_robust.rda")
+
+cont_peri_mind_robust <- NPT(data_t[which((data_t$group == "controls") & (data_t$phase == "peri") & (data_t$intervention == "mindfulness")),],
+                            nodes = nodeVars, iterations = 100)
+
+save(cont_peri_mind_robust, file = "cont_peri_mind_robust.rda")
+
+
+
+
+# +++++++++++++++++++++++++++++++++++++ Network comparison tests ++++++++++++++++++++++++++++++++++++++++++++++++++
+
+#compare groups at baseline
+dat <- data_t[which((data_t$phase=="pre")),]
+compare_groups_pre <- NPT(dat, nodes = nodeVars, iterations = 100, permuteBy = "group")
+save(compare_groups_pre, file = "compare_groups_pre.rda")
+
+
+#compare remitted fantasizing pre / peri
+dat <- data_t[which((data_t$group=="remitted") & (data_t$intervention=="fantasizing")),]
+compare_rem_fant_pre_peri <- NPT(dat, nodes = nodeVars, iterations = 100, permuteBy = "phase", idvar = "subjP")
+save(compare_rem_fant_pre_peri, file = "compare_rem_fant_pre_peri.rda")
+
+#compare remitted mindfulness pre / peri
+dat <- data_t[which((data_t$group=="remitted") & (data_t$intervention=="mindfulness")),]
+compare_rem_mind_pre_peri <- NPT(dat, nodes = nodeVars, iterations = 100, permuteBy = "phase", idvar = "subjP")
+save(compare_rem_mind_pre_peri, file = "compare_rem_mind_pre_peri.rda")
+
+
+#compare controls fantasizing pre / peri
+dat <- data_t[which((data_t$group=="controls") & (data_t$intervention=="fantasizing")),]
+compare_cont_fant_pre_peri <- NPT(dat, nodes = nodeVars, iterations = 100, permuteBy = "phase", idvar = "subjP")
+save(compare_cont_fant_pre_peri, file = "compare_cont_fant_pre_peri.rda")
+
+#compare controls fantasizing pre / peri
+dat <- data_t[which((data_t$group=="controls") & (data_t$intervention=="mindfulness")),]
+compare_cont_mind_pre_peri <- NPT(dat, nodes = nodeVars, iterations = 100, permuteBy = "phase", idvar = "subjP")
+save(compare_cont_mind_pre_peri, file = "compare_cont_mind_pre_peri.rda")
 
 
 
 
 
 
+
+###################### testing ##############################
+
+test <- NPT(data_t[which((data_t$group == "controls") & (data_t$phase == "pre")),], nodes = nodeVars,
+                       iterations = 2)

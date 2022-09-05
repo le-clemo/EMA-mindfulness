@@ -18,6 +18,7 @@ library(lme4)
 library(effectsize)
 library(lmerTest) #to more quickly be able to see significance
 library(plotfunctions)
+library(gratia)
 
 
 R.version.string
@@ -245,7 +246,7 @@ summary(pa.int.sc) #0.4655; 0.4650
 rum.bet <- lmer(ruminating ~ group + (1|subject), data = baseDat)
 rum.bet2 <- gam(ruminating ~ group + s(subject, bs="re"), data = baseDat)
 summary(rum.bet) #betw-subj var 153.8; within-subj var 152.8
-summary(rum.bet2) #estimate 10.850; t-value 2.282, #p=0.02253
+summary(rum.bet2) #estimate groupcontrols: -10.850; t-value -2.282, #p=0.02253
 
 #To calculate the variability explained by group we compare the between-subject variability of the intercept model
 #with the one of the current model --> (177.0 - 153.8) / 177.0 = 13.11%
@@ -260,7 +261,7 @@ summary(rum.bet.sc) #betw-subj var 0.5234; within-subj var 0.5201
 na.bet <- lmer(sumNA ~ group + (1|subject), data = baseDat)
 na.bet2 <- gam(sumNA ~ group + s(subject, bs="re"), data = baseDat)
 summary(na.bet) #1258.1; 972.8
-summary(na.bet2) #estimate 26.487; t-value 2.111, #p=0.0348
+summary(na.bet2) #estimate -26.487; t-value -2.111, #p=0.0348
 # --> 9.26%
 
 
@@ -268,7 +269,7 @@ summary(na.bet2) #estimate 26.487; t-value 2.111, #p=0.0348
 pa.bet <- lmer(sumPA ~ group + (1|subject), data = baseDat)
 pa.bet2 <- gam(sumPA ~ group + s(subject, bs="re"), data = baseDat)
 summary(pa.bet) #1414; 1391
-summary(pa.bet2) #estimate -9.841; t-value -0.793, #p=0.428
+summary(pa.bet2) #estimate 9.846; t-value 0.719, #p=0.477
 # -->  -0.015 --> 0%
 
 
@@ -297,12 +298,12 @@ jcol <- which(colnames(data)=="negMax")
 p.order <- c(c(icol,jcol)[-icol])
 m <- colMeans(data[p.order], na.rm = TRUE)
 s <- apply(data,2,sd, na.rm=TRUE)[p.order]
-rescale.coefs(b1S,m,s)  # rescaled coefficient of negMax --> 0.1585057
+rescale.coefs(b1S,m,s)  # rescaled coefficient of negMax --> 0.1585054
 
 
 #NA
 na.event <- lmer(sumNA ~ negMax + (negMax | subject), data = sc_baseDat)
-summary(na.event) #betw-subj var 0.4514; within-subj var 0.34179
+summary(na.event) #betw-subj var 0.46340; within-subj var 0.34179
 # (0.4098 - 0.34179) / 0.4098 = 16.60%
 
 b1S <- fixed_effects(na.event)
@@ -1157,6 +1158,8 @@ na.peri <- gam(sumNA_gam ~ group * intervention + s(phaseBeepNum, by = interacti
 summary_na.peri <- summary(na.peri)
 
 save(na.peri, summary_na.peri, file="models_na/na_peri.rda")
+
+load()
 
 param_tab_na <- parameters::model_parameters(na.peri)
 d <- t_to_d(param_tab_na$t[2:4], param_tab_na$df_error[2:4])

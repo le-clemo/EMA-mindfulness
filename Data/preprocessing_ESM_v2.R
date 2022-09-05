@@ -2,7 +2,7 @@
 #################################### Set up ####################################
 rm(list = ls()) #clean all up
 
-setwd("C:/Users/cleme/Documents/Education/RUG/Thesis/EMA-mindfulness/Data/ESM/mindcog_v202205")
+setwd("C:/Users/cleme/Documents/Education/RUG/Thesis/EMA-mindfulness/Data/ESM/mindcog_v202207")
 
 #setwd("~/Documents/RUG/Thesis/EMA-mindfulness/Data/ESM/mindcog_v202204")
 
@@ -21,7 +21,7 @@ library(igraph)
 library(qgraph)
 
 #read in data
-data <- read.csv('mindcog_db_2022-06-30.csv', sep = ";") 
+data <- read.csv('mindcog_db_2022-09-01.csv', sep = ";") 
 
 
 ################################# load Medoq info and clean up #################################################
@@ -619,15 +619,15 @@ data <- data[!(data$subject == "s163" & data$block ==2 ),]
 
 # data <- data[!(data$id == "s81_g1_m3" & data$blockAssessmentDay ==1 ),]
 #adjust assessmentDay column
-data[((data$subject == "s81") &
-        (data$block == 2)),]$assessmentDay = data[((data$subject == "s81") &
-                                                     (data$block == 2)),]$assessmentDay -1
-#adjust blockAssessmentDay column
-data[((data$subject == "s81") &
-        (data$block == 2)),]$blockAssessmentDay = data[((data$subject == "s81") &
-                                                          (data$block == 2)),]$blockAssessmentDay -1
-#adjust phaseAssessmentDay column (not for entire block 2; only for pre-intervention phase)
-data[(data$id == "s81_g1_m3"),]$phaseAssessmentDay = data[(data$id == "s81_g1_m3"),]$phaseAssessmentDay -1
+# data[((data$subject == "s81") &
+#         (data$block == 2)),]$assessmentDay = data[((data$subject == "s81") &
+#                                                      (data$block == 2)),]$assessmentDay -1
+# #adjust blockAssessmentDay column
+# data[((data$subject == "s81") &
+#         (data$block == 2)),]$blockAssessmentDay = data[((data$subject == "s81") &
+#                                                           (data$block == 2)),]$blockAssessmentDay -1
+# #adjust phaseAssessmentDay column (not for entire block 2; only for pre-intervention phase)
+# data[(data$id == "s81_g1_m3"),]$phaseAssessmentDay = data[(data$id == "s81_g1_m3"),]$phaseAssessmentDay -1
 
 #s24_g1_m2 one extra day with only one response --> remove extra day (day 8 of peri phase block 1)
 # View(subset(data[which(data$subject=="s24"),],
@@ -652,22 +652,25 @@ data[((data$subject == "s24") &
 
 ################################################## adding half days (must be done after above issues are fixed) ##########################################
 #adding half days per phase
+print('adding half days per phase')
 data$phaseHalfDay <- NA #adding an empty column for assessment days
 for(id in subject_IDs){
- # print(id)
+ print(id)
   numBlocks <- max(data[which(data$subject==id),]$block)
   for(b in 1:numBlocks){
+    print(b)
     phases <- unique(data[which((data$subject==id) & (data$block==b)),]$phase)
     for(p in phases){
+      print(p)
       half_day <- 0 
       num_days <- length(unique(data[which((data$subject==id) & (data$block==b) & (data$phase==p)),]$phaseAssessmentDay)) #how many assessment days are recorded?
       for(d in 1:num_days){ #for each day
         half_day <- half_day + 1 #increment half_day by 1
         respondent_rows <- which((data$subject == id) & (data$phaseAssessmentDay==d) & (data$block==b) & (data$phase==p))#row indices of rows associated with respondent
         numEntries <- length(respondent_rows) #how many entries are associated with that day?
-       # print(d)
-       # print(numEntries)
-        # print(respondent_rows)
+       print(d)
+       print(numEntries)
+       print(respondent_rows)
         if(numEntries > 5){ #if there are more than 5 (a normal day has 10 assessments)
           data[respondent_rows[1:5],]$phaseHalfDay <- half_day #set the first half of the day 
           half_day <- half_day + 1
@@ -686,7 +689,7 @@ for(id in subject_IDs){
   }#for loop to fill the column with the day numbers
 }
 
-
+print('done adding phaseHalfDays')
 
 
 #adding half days per block
@@ -775,7 +778,7 @@ for(id in subject_IDs){ #every participant
 }
 #figure out levels (time window per dayBeepNum)
 data$time <- strftime(data$mindcog_db_open_from, format="%H:%M:%S")
-timesPerBeep <- ddply(data, .(dayBeepNum), summarize,
+timesPerBeep <- ddply(data, .(dayBeepNum), plyr::summarize,
                       minTime = min(time),
                       maxTime = max(time))
 

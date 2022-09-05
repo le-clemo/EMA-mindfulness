@@ -580,7 +580,7 @@ gam.max <- bam(ruminating_gam ~ s(phaseBeepNum) + s(phaseBeepNum, by = interacti
                  s(phaseBeepNum, by = subject, bs="fs", m=1),
                data = sc_data, method = "ML")
 
-g0 <- bam(ruminating_gam ~ s(phaseBeepNum) + group * intervention +
+g0 <- gam(ruminating_gam ~ s(phaseBeepNum) + group * intervention +
             s(companyPleasant_gam) +
             s(phaseBeepNum, by=group) + s(phaseBeepNum, by = intervention) +
             s(sumNA_gam) + s(sumPA_gam) + ti(sumNA_gam, sumPA_gam) +

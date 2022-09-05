@@ -20,9 +20,9 @@ library(igraph)
 library(qgraph)
 
 #read in data
-games <- read_csv('SART/SART_games_030622.csv') 
-numbers <- read_csv('SART/SART_numbers_030622.csv') 
-questions <- read_csv('SART/SART_questions_030622.csv') 
+games <- read_csv('SART/SART_games_010922.csv') 
+numbers <- read_csv('SART/SART_numbers_010922.csv') 
+questions <- read_csv('SART/SART_questions_010922.csv') 
 
 mylist <- lapply(excel_sheets('SART/Proefpersonen_Link_ID_Meting.xlsx'), read_excel, path = 'SART/Proefpersonen_Link_ID_Meting.xlsx')
 

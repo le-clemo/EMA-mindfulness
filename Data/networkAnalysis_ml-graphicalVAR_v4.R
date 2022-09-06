@@ -904,7 +904,6 @@ NPT <- function(data, nodes, filepath, permuteBy="nodes", iterations=100, idvar=
 }
 
 
-
 # +++++++++++++++++++++++++++++++++++++ robustness tests ++++++++++++++++++++++++++++++++++++++++++++++++++
 
 # baseline networks
@@ -934,9 +933,6 @@ rem_peri_mind_robust <- NPT(data_t[which((data_t$group == "remitted") & (data_t$
                             nodes = nodeVars, iterations = 500, filepath = "network_permutations/rem_peri_mind_robust.rda")
 
 
-
-
-
 #controls fantasizing pre / peri
 cont_pre_fant_robust <- NPT(data_t[which((data_t$group == "controls") & (data_t$phase == "pre") & (data_t$intervention == "fantasizing")),],
                            nodes = nodeVars, iterations = 200, filepath = "network_permutations/cont_pre_fant_robust.rda")
@@ -953,10 +949,6 @@ cont_pre_mind_robust <- NPT(data_t[which((data_t$group == "controls") & (data_t$
 
 cont_peri_mind_robust <- NPT(data_t[which((data_t$group == "controls") & (data_t$phase == "peri") & (data_t$intervention == "mindfulness")),],
                             nodes = nodeVars, iterations = 150, filepath = "network_permutations/cont_peri_mind_robust.rda")
-
-
-
-
 
 
 # +++++++++++++++++++++++++++++++++++++ Network comparison tests ++++++++++++++++++++++++++++++++++++++++++++++++++
@@ -996,7 +988,6 @@ compare_cont_mind_pre_peri <- NPT(dat, nodes = nodeVars, iterations = 100, permu
 ############################################################## True Networks ################################################################### 
 #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
-
 cont.nets <- list(rep(NA,2))
 temp.nets <- list(rep(NA,2))
 i = 1
@@ -1033,13 +1024,10 @@ for(g in c("controls", "remitted")){
   
 }
 
-
 L <- averageLayout(cont.nets[[1]], cont.nets[[2]], temp.nets[[1]], temp.nets[[2]])
-
 
 # pdf(paste0(figs, "figure.pdf"), width=6, height=2.5)
 layout(matrix(c(1,1,2,2,2), nc=5, byrow = TRUE)) # 40% vs 60% widths
-
 
 n1 <- qgraph(cont.nets[[1]], layout = L, theme='colorblind', negDashed=FALSE, diag=T, #title=paste("Controls: Temporal - Baseline")
              groups=groups_list, legend=FALSE, nodeNames = nodeVars, labels=c(1:length(nodeVars)),
@@ -1060,8 +1048,6 @@ print(centralityTable(n1, weighted = T, labels = nodeVars))
 print(sum(abs(cont.nets[[1]][which(upper.tri(cont.nets[[1]]))])))
 
 
-
-
 print("Remitted:")
 cent_group2 <- centrality_auto(n2, weighted = TRUE)$node.centrality
 print(cent_group2)
@@ -1075,15 +1061,12 @@ print(centralityTable(n2, weighted = TRUE, labels = nodeVars))
 print(sum(abs(cont.nets[[2]][which(upper.tri(cont.nets[[2]]))])))
 
 
-
-
 n3 <- qgraph(temp.nets[[1]], layout = L, theme='colorblind', negDashed=FALSE, diag=T, #title=paste("Controls: Temporal - Baseline")
              groups=groups_list, legend=FALSE, nodeNames = nodeVars, labels=c(1:length(nodeVars)),
              vsize=10, asize=8, curve=0.5, esize=3)
 n4 <- qgraph(temp.nets[[2]], layout = L, theme='colorblind', negDashed=FALSE, diag=T, #title=paste("Remitted: Temporal - Baseline")
              groups=groups_list, legend.cex=0.6, legend=TRUE, nodeNames = nodeVars, labels=c(1:length(nodeVars)),
              vsize=10, asize=8, curve=0.5, esize=3)
-
 
 print("Controls:")
 cent_group3 <- centrality_auto(n3, weighted = T)$node.centrality
@@ -1097,12 +1080,10 @@ print(centralityTable(n3, weighted = T, labels = nodeVars, standardized = T))
 #global strength
 print(sum(abs(temp.nets[[1]][which(upper.tri(temp.nets[[1]]))])))
 
-
 #local connectivity (PA)
 sum(sum(temp.nets[[1]]["energetic", c("wakeful", "satisfied")]),
     sum(temp.nets[[1]]["wakeful", c("energetic", "satisfied")]),
     sum(temp.nets[[1]]["satisfied", c("wakeful", "satisfied")]))
-
 
 #local connectivity (NA)
 sum(sum(temp.nets[[1]]["down", c("irritated", "anxious", "restless")]),
@@ -1111,26 +1092,22 @@ sum(sum(temp.nets[[1]]["down", c("irritated", "anxious", "restless")]),
     sum(temp.nets[[1]]["restless", c("irritated", "down", "anxious")]))
 
 
-
-
 print("Remitted:")
 cent_group4 <- centrality_auto(n4, weighted = TRUE)$node.centrality
 print(cent_group4)
 x <- min(c(cent_group4$OutExpectedInfluence, cent_group4$InExpectedInfluence)) - 0.05
 y <- max(c(cent_group4$OutExpectedInfluence, cent_group4$InExpectedInfluence)) + 0.05
-print(smallworldIndex(n4)$index)
+# print(smallworldIndex(n4)$index)
 centralityPlot(n4, weighted = TRUE, labels = nodeVars,
                include = c("InExpectedInfluence", "OutExpectedInfluence")) + xlim(x,y)
 print(centralityTable(n4, weighted = TRUE, labels = nodeVars, standardized = TRUE))
 #global strength
 print(sum(abs(temp.nets[[2]][which(upper.tri(temp.nets[[2]]))])))
 
-
 #local connectivity (PA)
 sum(sum(temp.nets[[2]]["energetic", c("wakeful", "satisfied")]),
     sum(temp.nets[[2]]["wakeful", c("energetic", "satisfied")]),
     sum(temp.nets[[2]]["satisfied", c("wakeful", "satisfied")]))
-
 
 #local connectivity (NA)
 sum(sum(temp.nets[[2]]["down", c("irritated", "anxious", "restless")]),
@@ -1138,16 +1115,13 @@ sum(sum(temp.nets[[2]]["down", c("irritated", "anxious", "restless")]),
     sum(temp.nets[[2]]["anxious", c("irritated", "down", "restless")]),
     sum(temp.nets[[2]]["restless", c("irritated", "down", "anxious")]))
 
-
 dev.off()
-
 
 # 
 # xData <- data[which(data$dayBeepNum <=10),]
 
-
-for(g in c("controls", "remitted")){
-  for(i in c("fantasizing", "mindfulness")){  
+for(g in c("remitted")){
+  for(i in c("fantasizing")){  
     
     print('++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++')
     print(g)
@@ -1205,63 +1179,117 @@ for(g in c("controls", "remitted")){
     
     #plot contemporaneous networks
     L <- averageLayout(preCont, periCont,preTemp, periTemp)
-    n1 <- qgraph(preCont, layout = L,
-                 title=paste("mlVAR: Contemporaneous network", g, i, "Baseline", sep = " - "), theme='colorblind', negDashed=FALSE,
+    n1 <- qgraph(preCont, layout = L, #title=paste("mlVAR: Contemporaneous network", g, i, "Baseline", sep = " - "),
+                 theme='colorblind', negDashed=FALSE, diag=T, #title=paste("Controls: Temporal - Baseline")
                  groups=groups_list, legend=FALSE, nodeNames = nodeVars, labels=c(1:length(nodeVars)),
-                 vsize=10, repulsion=1.1, esize=3)
+                 vsize=10, asize=8, curve=0.5, esize=3)
     
-    n2 <- qgraph(periCont, layout = L,
-                 title=paste("mlVAR: Contemporaneous network", g, i, "Peri-intervention", sep = " - "), theme='colorblind', negDashed=FALSE,
-                 groups=groups_list, legend=TRUE, nodeNames = nodeVars, labels=c(1:length(nodeVars)),
-                 vsize=10, repulsion=1.1, esize=3, legend.cex=0.6)
+    n2 <- qgraph(periCont, layout = L, #title=paste("mlVAR: Contemporaneous network", g, i, "Peri-intervention", sep = " - ")
+                 theme='colorblind', negDashed=FALSE, diag=T,
+                 groups=groups_list, legend.cex=0.6, legend=TRUE, nodeNames = nodeVars, labels=c(1:length(nodeVars)),
+                 vsize=10, asize=8, curve=0.5, esize=3)
     
     
     #plot temporal networks
     # L <- averageLayout(preTemp, periTemp)
     
-    n3 <- qgraph(preTemp, layout = L,
-                 title=paste("mlVAR: Temporal network", g, i, "Baseline", sep = " - "), theme='colorblind', negDashed=FALSE, diag=FALSE,
+    n3 <- qgraph(preTemp, layout = L, #title=paste("mlVAR: Temporal network", g, i, "Baseline", sep = " - "),
+                 theme='colorblind', negDashed=FALSE, diag=T, #title=paste("Controls: Temporal - Baseline")
                  groups=groups_list, legend=FALSE, nodeNames = nodeVars, labels=c(1:length(nodeVars)),
-                 vsize=10, asize=6, curve=0.75, curveAll=T, esize=3)
+                 vsize=10, asize=8, curve=0.5, esize=3)
     
-    n4 <- qgraph(periTemp, layout = L,
-                 title=paste("mlVAR: Temporal network", g, i, "Peri-intervention", sep = " - "), theme='colorblind', negDashed=FALSE, diag=FALSE,
+    n4 <- qgraph(periTemp, layout = L, #title=paste("mlVAR: Temporal network", g, i, "Peri-intervention", sep = " - ")
+                 theme='colorblind', negDashed=FALSE, diag=T,
                  groups=groups_list, legend.cex=0.6, legend=TRUE, nodeNames = nodeVars, labels=c(1:length(nodeVars)),
-                 vsize=10, asize=6, curve=0.75, curveAll=T, esize=3)
+                 vsize=10, asize=8, curve=0.5, esize=3)
     
     
     print("Contemporaneous Networks:")
     print('Pre')
-    cent_measures1 <- centrality_auto(n1, weighted = FALSE)$node.centrality
+    cent_measures1 <- centrality_auto(n1, weighted = TRUE)$node.centrality
     print(cent_measures1)
-    print(smallworldIndex(n1)$index)
-    centralityPlot(n1, weighted = FALSE, labels = nodeVars, scale = "z-scores",
-                   include = c("ExpectedInfluence"))
-    print(centralityTable(n1, weighted = FALSE, labels = nodeVars))
+    x <- min(c(cent_measures1$ExpectedInfluence)) - 0.05
+    y <- max(c(cent_measures1$ExpectedInfluence)) + 0.05
+    # print(smallworldIndex(n1)$index)
+    centralityPlot(n1, weighted = TRUE, labels = nodeVars,
+                   include = c("ExpectedInfluence")) + xlim(x,y)
+    print(centralityTable(n1, weighted = T, labels = nodeVars, standardized = TRUE))
+    #global strength
+    print(sum(abs(preCont[which(upper.tri(preCont))])))
+    #local connectivity (PA)
+    print(sum(sum(preCont["energetic", c("wakeful", "satisfied")]),
+              sum(preCont["wakeful", c("energetic", "satisfied")]),
+              sum(preCont["satisfied", c("wakeful", "satisfied")])))
+    #local connectivity (NA)
+    print(sum(sum(preCont["down", c("irritated", "anxious", "restless")]),
+              sum(preCont["irritated", c("down", "anxious", "restless")]),
+              sum(preCont["anxious", c("irritated", "down", "restless")]),
+              sum(preCont["restless", c("irritated", "down", "anxious")])))
     
     print('Peri')
-    cent_measures2 <- centrality_auto(n2, weighted = FALSE)$node.centrality
+    cent_measures2 <- centrality_auto(n2, weighted = T)$node.centrality
     print(cent_measures2)
-    print(smallworldIndex(n2)$index)
-    centralityPlot(n2, weighted = FALSE, labels = nodeVars, scale = "z-scores",
-                   include = c("ExpectedInfluence"))
-    print(centralityTable(n2, weighted = FALSE, labels = nodeVars))
+    x <- min(c(cent_measures2$ExpectedInfluence)) - 0.05
+    y <- max(c(cent_measures2$ExpectedInfluence)) + 0.05
+    # print(smallworldIndex(n2)$index)
+    centralityPlot(n2, weighted = T, labels = nodeVars,
+                   include = c("ExpectedInfluence")) + xlim(x,y)
+    # print(centralityTable(n2, weighted = T, labels = nodeVars, standardized = TRUE))
+    #global strength
+    print(sum(abs(periCont[which(upper.tri(periCont))])))
+    #local connectivity (PA)
+    print(sum(sum(periCont["energetic", c("wakeful", "satisfied")]),
+              sum(periCont["wakeful", c("energetic", "satisfied")]),
+              sum(periCont["satisfied", c("wakeful", "satisfied")])))
+    #local connectivity (NA)
+    print(sum(sum(periCont["down", c("irritated", "anxious", "restless")]),
+              sum(periCont["irritated", c("down", "anxious", "restless")]),
+              sum(periCont["anxious", c("irritated", "down", "restless")]),
+              sum(periCont["restless", c("irritated", "down", "anxious")])))
     
     print("Temporal Networks:")
     print('Pre')
     cent_measures3 <- centrality_auto(n3, weighted = TRUE)$node.centrality
     print(cent_measures3)
-    print(smallworldIndex(n3)$index)
-    centralityPlot(n3, weighted = TRUE, labels = nodeVars, scale = "z-scores",
-                   include = c("InExpectedInfluence", "OutExpectedInfluence"))
-    print(centralityTable(n3, weighted = TRUE, labels = nodeVars))
+    x <- min(c(cent_measures3$OutExpectedInfluence, cent_measures3$InExpectedInfluence)) - 0.05
+    y <- max(c(cent_measures3$OutExpectedInfluence, cent_measures3$InExpectedInfluence)) + 0.05
+    # print(smallworldIndex(n3)$index)
+    centralityPlot(n3, weighted = TRUE, labels = nodeVars,# scale = "z-scores",
+                   include = c("InExpectedInfluence", "OutExpectedInfluence")) + xlim(x,y)
+    # print(centralityTable(n3, weighted = TRUE, labels = nodeVars))
+    #global strength
+    print(sum(abs(preTemp[which(upper.tri(preTemp))])))
+    #local connectivity (PA)
+    print(sum(sum(preTemp["energetic", c("wakeful", "satisfied")]),
+              sum(preTemp["wakeful", c("energetic", "satisfied")]),
+              sum(preTemp["satisfied", c("wakeful", "satisfied")])))
+    #local connectivity (NA)
+    print(sum(sum(preTemp["down", c("irritated", "anxious", "restless")]),
+              sum(preTemp["irritated", c("down", "anxious", "restless")]),
+              sum(preTemp["anxious", c("irritated", "down", "restless")]),
+              sum(preTemp["restless", c("irritated", "down", "anxious")])))
     
     print('Peri')
-    cent_measures4 <- centrality(n4, weighted = TRUE)
+    cent_measures4 <- centrality_auto(n4, weighted = TRUE)$node.centrality
     print(cent_measures4)
-    print(smallworldIndex(n4)$index)
-    centralityPlot(n4, weighted = TRUE, labels = nodeVars, scale = "z-scores",
-                   include = c("InExpectedInfluence", "OutExpectedInfluence"))
-    print(centralityTable(n4, weighted = TRUE, labels = nodeVars))
+    x <- min(c(cent_measures4$OutExpectedInfluence, cent_measures4$InExpectedInfluence)) - 0.05
+    y <- max(c(cent_measures4$OutExpectedInfluence, cent_measures4$InExpectedInfluence)) + 0.05
+    # print(smallworldIndex(n4)$index)
+    centralityPlot(n4, weighted = TRUE, labels = nodeVars, #scale = "z-scores",
+                   include = c("InExpectedInfluence", "OutExpectedInfluence")) + xlim(x,y)
+    # print(centralityTable(n4, weighted = TRUE, labels = nodeVars, standardized = TRUE))
+    #global strength
+    print(sum(abs(periTemp[which(upper.tri(periTemp))])))
+    #local connectivity (PA)
+    print(sum(sum(periTemp["energetic", c("wakeful", "satisfied")]),
+              sum(periTemp["wakeful", c("energetic", "satisfied")]),
+              sum(periTemp["satisfied", c("wakeful", "satisfied")])))
+    #local connectivity (NA)
+    print(sum(sum(periTemp["down", c("irritated", "anxious", "restless")]),
+              sum(periTemp["irritated", c("down", "anxious", "restless")]),
+              sum(periTemp["anxious", c("irritated", "down", "restless")]),
+              sum(periTemp["restless", c("irritated", "down", "anxious")])))
   }
 }
+
+

@@ -243,6 +243,13 @@ for(v in met.vars){
 sc_data <- copy(data_detrended)
 sc_data[scale.vars] <- scale(sc_data[scale.vars])
 
+
+nodeVars <- c('ruminating', 'stickiness',
+              'energetic', 'wakeful', 'satisfied',
+              'down', 'irritated', 'anxious', 'restless',
+              'listless', 'distracted',
+              'posMax', 'negMax')
+
 #only complete cases
 data_copy <- data.table::copy(sc_data)
 data_copy <- data_copy[which(is.na(data_copy$mindcog_db_non_response)),]
@@ -251,14 +258,10 @@ sc_data <- data_copy[complete.cases(data_copy[nodeVars]),]
 
 #paranormal transformation (because the model assumes normality) --> recommended by Epskamp
 #huge.npn() should only be applied to data without missing values! Otherwise creates weird values!!!
+
+
 data_t <- copy(sc_data)
 data_t[,nodeVars] <- huge.npn(data_t[,nodeVars])
-
-nodeVars <- c('ruminating', 'stickiness',
-              'energetic', 'wakeful', 'satisfied',
-              'down', 'irritated', 'anxious', 'restless',
-              'listless', 'distracted',
-              'posMax', 'negMax')
 
 #grouping the variables --> for later use in network plotting
 groups_list <- list(Rumination = c(1,2), PositiveAffect = c(3,4,5), NegativeAffect = c(6,7,8,9),
@@ -284,7 +287,7 @@ extract_cent <- function(cent.table, n, m){
 }
 
 
-NPT <- function(data, nodes, filepath, permuteBy="nodes", iterations=100, idvar="subjB", dayvar="assessmentDay", beepvar="dayBeepNum",
+NPT <- function(data, nodes, filepath, permuteBy="nodes", iterations=100, idvar="subjB", dayvar="phaseAssessmentDay", beepvar="dayBeepNum",
                 nCores=detectCores()-2){
   #if permuteBy = "nodes" this function checks a networks ~robustness by shuffling the nodes per subject (i.e., the columns of the provided data)
   #at each iteration
@@ -441,6 +444,13 @@ NPT <- function(data, nodes, filepath, permuteBy="nodes", iterations=100, idvar=
       #  # Get mlVAR networks:
       real.cont <- getNet(real.net, "contemporaneous", layout = "spring", nonsig = "hide", rule = "and")
       real.temp <- getNet(real.net, "temporal", nonsig = "hide")
+      
+      
+      n1 <- qgraph(real.temp, layout = L, theme='colorblind', negDashed=FALSE, diag=T, #title=paste("Controls: Temporal - Baseline")
+                   groups=groups_list, legend=FALSE, nodeNames = nodeVars, labels=c(1:length(nodeVars)),
+                   vsize=10, asize=8, curve=0.5, esize=3)
+      
+      print(n1)
       
       #get all centrality measures
       real.cont.cents <- centralityTable(real.cont, weighted = TRUE, labels = nodeVars, standardized = FALSE)
@@ -805,9 +815,7 @@ NPT <- function(data, nodes, filepath, permuteBy="nodes", iterations=100, idvar=
   
   j <- 1
   for(n in nodeVars){
-    temp.weights <- c(rep(NA, prev_iter + perms))
-    temp.edges <- nodeVars[nodeVars %nin% excluded.edges]
-    
+
     #now we add the current node to the excluded edges because in contemporaneous nets we do not have self-loops
     excluded.edges[j] <- n
     
@@ -838,6 +846,10 @@ NPT <- function(data, nodes, filepath, permuteBy="nodes", iterations=100, idvar=
       # print(pval)
       c.ew.df[n,e] <- pval
     } 
+    
+    #in temporal networks we have directed edges
+    temp.weights <- c(rep(NA, prev_iter + perms))
+    temp.edges <- nodeVars
     
     for(e in temp.edges){
       # print("++++++++++++++++++ Temporal ++++++++++++++++++")
@@ -910,6 +922,7 @@ NPT <- function(data, nodes, filepath, permuteBy="nodes", iterations=100, idvar=
 cont_pre_robust <- NPT(data_t[which((data_t$group == "controls") & (data_t$phase == "pre")),], nodes = nodeVars,
                        iterations = 100, filepath = "network_permutations/cont_pre_robust.rda")
 
+# load(file = "network_permutations/cont_pre_robust.rda")
 
 rem_pre_robust <- NPT(data_t[which((data_t$group == "remitted") & (data_t$phase == "pre")),], nodes = nodeVars,
                                          iterations = 100, filepath = "network_permutations/rem_pre_robust.rda")
@@ -917,20 +930,20 @@ rem_pre_robust <- NPT(data_t[which((data_t$group == "remitted") & (data_t$phase 
 
 #remitted fantasizing pre / peri
 rem_pre_fant_robust <- NPT(data_t[which((data_t$group == "remitted") & (data_t$phase == "pre") & (data_t$intervention == "fantasizing")),],
-                           nodes = nodeVars, iterations = 100, filepath = "network_permutations/rem_pre_fant_robust.rda")
+                           nodes = nodeVars, iterations = 200, filepath = "network_permutations/rem_pre_fant_robust.rda")
 
 
 rem_peri_fant_robust <- NPT(data_t[which((data_t$group == "remitted") & (data_t$phase == "peri") & (data_t$intervention == "fantasizing")),],
-                           nodes = nodeVars, iterations = 100, filepath = "network_permutations/rem_peri_fant_robust.rda")
+                           nodes = nodeVars, iterations = 2, filepath = "network_permutations/rem_peri_fant_robust.rda")
 
 
 #remitted mindfulness pre / peri
 rem_pre_mind_robust <- NPT(data_t[which((data_t$group == "remitted") & (data_t$phase == "pre") & (data_t$intervention == "mindfulness")),],
-                           nodes = nodeVars, iterations = 100, filepath = "network_permutations/rem_pre_mind_robust.rda")
+                           nodes = nodeVars, iterations = 200, filepath = "network_permutations/rem_pre_mind_robust.rda")
 
 
 rem_peri_mind_robust <- NPT(data_t[which((data_t$group == "remitted") & (data_t$phase == "peri") & (data_t$intervention == "mindfulness")),],
-                            nodes = nodeVars, iterations = 500, filepath = "network_permutations/rem_peri_mind_robust.rda")
+                            nodes = nodeVars, iterations = 200, filepath = "network_permutations/rem_peri_mind_robust.rda")
 
 
 #controls fantasizing pre / peri
@@ -1006,8 +1019,8 @@ for(g in c("controls", "remitted")){
   mlNet <- mlVAR(subData,
                  vars=nodeVars,
                  estimator="lmer",
-                 idvar="subject",
-                 dayvar="assessmentDay",
+                 idvar="subjB",
+                 dayvar="phaseAssessmentDay",
                  beepvar="dayBeepNum",
                  lags = 1,
                  temporal = "orthogonal",
@@ -1134,13 +1147,13 @@ for(g in c("remitted")){
     
     #subData <- sc_data[which((sc_data$group==g) & (sc_data$phase==p) & (sc_data$intervention==i)),]
     
-    subData <- data_t[which((data_t$group==g) & (sc_data$intervention==i) & (data_t$phase=="pre")),]
+    subData <- data_t[which((data_t$group==g) & (data_t$intervention==i) & (data_t$phase=="pre")),]
     
     preNet <- mlVAR(subData,
                     vars=nodeVars,
                     estimator="lmer",
                     idvar="subjB",
-                    dayvar="assessmentDay",
+                    dayvar="phaseAssessmentDay",
                     beepvar="dayBeepNum",
                     lags = 1,
                     temporal = "orthogonal",
@@ -1152,10 +1165,7 @@ for(g in c("remitted")){
     #bet  <- getNet(mlNet, "between", nonsig = "hide", rule = "and")
     preTemp <- getNet(preNet, "temporal", nonsig = "hide")
     
-    
     subData <- data_t[which((data_t$group==g) & (sc_data$intervention==i) & (data_t$phase=="peri")),]
-    
-    
     
     periNet <- mlVAR(subData,
                      vars=nodeVars,

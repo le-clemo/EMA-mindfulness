@@ -287,8 +287,11 @@ extract_cent <- function(cent.table, n, m){
 }
 
 
-NPT <- function(data, nodes, filepath, permuteBy="nodes", iterations=100, idvar="subjB", dayvar="phaseAssessmentDay", beepvar="dayBeepNum",
+NPT <- function(data, nodes, filepath, permuteBy="nodes", iterations=100,
+                idvar="subjB", dayvar="phaseAssessmentDay", beepvar="dayBeepNum",
+                localClustStrength=list(c("energetic", "wakeful", "satisfied"), c("down", "irritated", "anxious", "restless")),
                 nCores=detectCores()-2){
+  
   #if permuteBy = "nodes" this function checks a networks ~robustness by shuffling the nodes per subject (i.e., the columns of the provided data)
   #at each iteration
   #else one has to provide the column name of the variable to be permuted by (e.g., "group", or "phase").
@@ -301,6 +304,14 @@ NPT <- function(data, nodes, filepath, permuteBy="nodes", iterations=100, idvar=
   edgeWeights <- list()
   globalStrengths <- list()
   
+  if(length(localClustStrength)>0){
+    localStrengths <- list()
+    n_local <- length(localClustStrength)
+    for(l in 1:n_local){
+      localStrengths[[l]] <- list()
+    }
+  }
+
   start.time <- Sys.time()
   
   #number of permutations
@@ -373,7 +384,12 @@ NPT <- function(data, nodes, filepath, permuteBy="nodes", iterations=100, idvar=
       globalStrengths[[g]] <- list(Temporal = prev_results$testStats[[g]]$GlobalStrength$Temporal,
                               Contemporaneous = prev_results$testStats[[g]]$GlobalStrength$Contemporaneous)
       
-
+      if(length(localClustStrength)>0){
+        for(l in 1:length(prev_results$testStats[[g]]$LocalStrength)){
+          localStrengths[[l]][[g]] <- list(Temporal = prev_results$testStats[[g]]$LocalStrength[[l]]$Temporal,
+                                      Contemporaneous = prev_results$testStats[[g]]$LocalStrength[[l]]$Contemporaneous)
+        }
+      }
     }
     
     #and a list for edge weight matrices per permutation
@@ -425,6 +441,13 @@ NPT <- function(data, nodes, filepath, permuteBy="nodes", iterations=100, idvar=
       edgeWeights[[g]] <- list()
       
       globalStrengths[[g]] <- list()
+      
+      if(length(localClustStrength)>0){
+        for(l in 1:length(localClustStrength)){
+          localStrengths[[l]][[g]] <- list()
+        }
+      }
+
       
       if(permuteSet[1] != "network"){
         real.dat <- data[which(data[[permuteBy]]==g),c(idvar, permuteBy, dayvar, beepvar, permuteBy, nodeVars)]
@@ -490,6 +513,7 @@ NPT <- function(data, nodes, filepath, permuteBy="nodes", iterations=100, idvar=
       globalStrengths[[g]]$Contemporaneous[[1]] <- gs.cont
       globalStrengths[[g]]$Temporal[[1]] <- gs.temp
       
+      
       testSummary[[g]]$Contemporaneous$Centrality <- real.cont.df
       testSummary[[g]]$Temporal$Centrality <- real.temp.df
       testSummary[[g]]$Contemporaneous$EdgeWeights <- real.cont
@@ -497,6 +521,24 @@ NPT <- function(data, nodes, filepath, permuteBy="nodes", iterations=100, idvar=
       testSummary[[g]]$Contemporaneous$GlobalStrength <- gs.cont
       testSummary[[g]]$Temporal$GlobalStrength <- gs.temp
       
+      #local strengths
+      if(length(localClustStrength)>0){
+        for(l in 1:n_local){
+          clust <- localClustStrength[[l]]
+          contSum <- 0
+          tempSum <- 0
+          for(cl in clust){
+            contSum <- contSum + sum(real.cont[cl, clust[which(clust %nin% cl)]])
+            tempSum <- tempSum + sum(real.temp[cl, clust[which(clust %nin% cl)]])
+          }
+          localStrengths[[l]][[g]]$Contemporaneous[[1]] <- contSum
+          localStrengths[[l]][[g]]$Temporal[[1]] <- tempSum
+          
+          testSummary[[g]]$Contemporaneous$LocalStrenghts[[l]] <- contSum
+          testSummary[[g]]$Temporal$LocalStrenghts[[l]] <- tempSum
+          
+        }
+      }
     }
       
   }
@@ -585,8 +627,8 @@ NPT <- function(data, nodes, filepath, permuteBy="nodes", iterations=100, idvar=
       sampled.groups <- unique(perm.dat[[permuteBy]])
       sampled.groups <- sampled.groups[!is.na(sampled.groups)]
       print("This is the sampled group:")
-      print(sampled.groups)
-      print(length(sampled.groups))
+      # print(sampled.groups)
+      # print(length(sampled.groups))
       if(length(sampled.groups) < 2){ #to ensure we end up with two groups
         print("Fixing issue")
         y <- permuteSet[which(permuteSet != sampled.groups)]
@@ -606,8 +648,8 @@ NPT <- function(data, nodes, filepath, permuteBy="nodes", iterations=100, idvar=
       if(permuteSet[1] != "network"){
         pg.dat <- perm.dat[which(perm.dat[[permuteBy]]==g),c(idvar, permuteBy, dayvar, beepvar, permuteBy, nodeVars)]
         pg.dat[[idvar]] <- as.factor(pg.dat[[idvar]])
-        print(unique(pg.dat[[idvar]]))
-        print(levels(pg.dat[[idvar]]))
+        # print(unique(pg.dat[[idvar]]))
+        # print(levels(pg.dat[[idvar]]))
       }
       
       #fit permutated network
@@ -673,7 +715,27 @@ NPT <- function(data, nodes, filepath, permuteBy="nodes", iterations=100, idvar=
       testStats[[g]]$GlobalStrength <- list(Temporal = globalStrengths[[g]]$Temporal,
                                                     Contemporaneous = globalStrengths[[g]]$Contemporaneous)
       
+
+      
       # print("EdgeWeigthts added to testStats")
+      
+      #local strengths
+      if(length(localClustStrength)>0){
+        for(l in 1:n_local){
+          clust <- localClustStrength[[l]]
+          contSum <- 0
+          tempSum <- 0
+          for(cl in clust){
+            contSum <- contSum + sum(perm.cont[cl, clust[which(clust %nin% cl)]])
+            tempSum <- tempSum + sum(perm.temp[cl, clust[which(clust %nin% cl)]])
+          }
+          localStrengths[[l]][[g]]$Contemporaneous[[i]] <- contSum
+          localStrengths[[l]][[g]]$Temporal[[i]] <- tempSum
+          
+          testStats[[g]]$LocalStrengths[[l]] <- list(Temporal = localStrengths[[l]][[g]]$Temporal,
+                                                     Contemporaneous = localStrengths[[l]][[g]]$Contemporaneous)
+        }
+      }
       
     }
     # print(testStats$controls$GlobalStrength)
@@ -727,6 +789,18 @@ NPT <- function(data, nodes, filepath, permuteBy="nodes", iterations=100, idvar=
       globalStrengths$difference$Temporal[[i]] <- globalStrengths[[permuteSet[2]]]$Temporal[[i]] -
         globalStrengths[[permuteSet[1]]]$Temporal[[i]]
       
+      #local strengths
+      if(length(localClustStrength)>0){
+        for(l in 1:n_local){
+            localStrengths[[l]]$difference$Contemporaneous[[i]] <- localStrengths[[l]][[permuteSet[2]]]$Contemporaneous[[i]] -
+              localStrengths[[l]][[permuteSet[1]]]$Contemporaneous[[i]]
+            
+            localStrengths[[l]]$difference$Temporal[[i]] <- localStrengths[[l]][[permuteSet[2]]]$Temporal[[i]] -
+              localStrengths[[l]][[permuteSet[1]]]$Temporal[[i]]
+
+        }
+      }
+      
     }
     
     
@@ -740,6 +814,14 @@ NPT <- function(data, nodes, filepath, permuteBy="nodes", iterations=100, idvar=
                                              Contemporaneous = edgeWeights[[p_valBase]]$Contemporaneous)
   testStats[[p_valBase]]$GlobalStrength <- list(Temporal = globalStrengths[[p_valBase]]$Temporal,
                                                 Contemporaneous = globalStrengths[[p_valBase]]$Contemporaneous)
+  
+  #local strengths
+  if(length(localClustStrength)>0){
+    for(l in 1:n_local){
+      testStats[[p_valBase]]$LocalStrengths[[l]] <- list(Temporal = localStrengths[[l]][[p_valBase]]$Temporal,
+                                                         Contemporaneous = localStrengths[[l]][[p_valBase]]$Contemporaneous)
+    }
+  }
   
   #dataframe to store centrality measure p-vals
   c.cent.df <- data.frame(matrix(ncol = length(measures.cont), nrow = length(nodeVars)))
@@ -887,8 +969,28 @@ NPT <- function(data, nodes, filepath, permuteBy="nodes", iterations=100, idvar=
   gs.cont.pval <- mean((abs(gs.cont.vec)) >= ((abs(gs.cont.vec[1]))))
   gs.temp.pval <- mean((abs(gs.temp.vec)) >= ((abs(gs.temp.vec[1]))))
   
-  # print("Global Strength pvalues added")
+  #local strengths
+  if(length(localClustStrength)>0){
+    ls.cont.vec <- list()
+    ls.temp.vec <- list()
+    
+    for(l in 1:n_local){
+      ls.cont.vec[[l]] <- c(rep(NA, prev_iter + perms))
+      ls.temp.vec[[l]] <- c(rep(NA, prev_iter + perms))
+      for(i in 1:(prev_iter + perms)){
+        ls.cont.vec[[l]][[i]] <- localStrengths[[l]][[p_valBase]]$Contemporaneous[[i]]
+        ls.temp.vec[[l]][[i]] <- localStrengths[[l]][[p_valBase]]$Temporal[[i]]
+      }
+      
+      ls.cont.pval <- mean((abs(ls.cont.vec[[l]])) >= ((abs(ls.cont.vec[[l]][[1]]))))
+      ls.temp.pval <- mean((abs(ls.temp.vec[[l]])) >= ((abs(ls.temp.vec[[l]][[1]]))))
+      
+      testSummary$p_values$Contemporaneous$LocalStrengths[[l]] <- ls.cont.pval
+      testSummary$p_values$Temporal$LocalStrengths[[l]] <- ls.temp.pval
+    }
+  }
   
+  # print("Global Strength pvalues added")
   
   testSummary$p_values$Contemporaneous$Centrality <- c.cent.df
   testSummary$p_values$Temporal$Centrality <- t.cent.df
@@ -896,6 +998,7 @@ NPT <- function(data, nodes, filepath, permuteBy="nodes", iterations=100, idvar=
   testSummary$p_values$Temporal$EdgeWeights <- t.ew.df
   testSummary$p_values$Contemporaneous$GlobalStrength <- gs.cont.pval
   testSummary$p_values$Temporal$GlobalStrength <- gs.temp.pval
+ 
   
   # testStats[[p_valBase]]$EdgeWeights <- list(Temporal = edgeWeights[[p_valBase]]$Temporal,
   #                                    Contemporaneous = edgeWeights[[p_valBase]]$Contemporaneous)
@@ -920,12 +1023,12 @@ NPT <- function(data, nodes, filepath, permuteBy="nodes", iterations=100, idvar=
 
 # baseline networks
 cont_pre_robust <- NPT(data_t[which((data_t$group == "controls") & (data_t$phase == "pre")),], nodes = nodeVars,
-                       iterations = 100, filepath = "network_permutations/cont_pre_robust.rda")
+                       iterations = 200, filepath = "network_permutations/cont_pre_robust.rda")
 
 # load(file = "network_permutations/cont_pre_robust.rda")
 
 rem_pre_robust <- NPT(data_t[which((data_t$group == "remitted") & (data_t$phase == "pre")),], nodes = nodeVars,
-                                         iterations = 100, filepath = "network_permutations/rem_pre_robust.rda")
+                                         iterations = 200, filepath = "network_permutations/rem_pre_robust.rda")
 
 
 #remitted fantasizing pre / peri
@@ -934,7 +1037,7 @@ rem_pre_fant_robust <- NPT(data_t[which((data_t$group == "remitted") & (data_t$p
 
 
 rem_peri_fant_robust <- NPT(data_t[which((data_t$group == "remitted") & (data_t$phase == "peri") & (data_t$intervention == "fantasizing")),],
-                           nodes = nodeVars, iterations = 2, filepath = "network_permutations/rem_peri_fant_robust.rda")
+                           nodes = nodeVars, iterations = 200, filepath = "network_permutations/rem_peri_fant_robust.rda")
 
 
 #remitted mindfulness pre / peri
@@ -945,23 +1048,23 @@ rem_pre_mind_robust <- NPT(data_t[which((data_t$group == "remitted") & (data_t$p
 rem_peri_mind_robust <- NPT(data_t[which((data_t$group == "remitted") & (data_t$phase == "peri") & (data_t$intervention == "mindfulness")),],
                             nodes = nodeVars, iterations = 200, filepath = "network_permutations/rem_peri_mind_robust.rda")
 
-
-#controls fantasizing pre / peri
-cont_pre_fant_robust <- NPT(data_t[which((data_t$group == "controls") & (data_t$phase == "pre") & (data_t$intervention == "fantasizing")),],
-                           nodes = nodeVars, iterations = 200, filepath = "network_permutations/cont_pre_fant_robust.rda")
-
-
-cont_peri_fant_robust <- NPT(data_t[which((data_t$group == "controls") & (data_t$phase == "peri") & (data_t$intervention == "fantasizing")),],
-                            nodes = nodeVars, iterations = 200, filepath = "network_permutations/cont_peri_fant_robust.rda")
-
-
-#controls mindfulness pre / peri
-cont_pre_mind_robust <- NPT(data_t[which((data_t$group == "controls") & (data_t$phase == "pre") & (data_t$intervention == "mindfulness")),],
-                           nodes = nodeVars, iterations = 200, filepath = "network_permutations/cont_pre_mind_robust.rda")
-
-
-cont_peri_mind_robust <- NPT(data_t[which((data_t$group == "controls") & (data_t$phase == "peri") & (data_t$intervention == "mindfulness")),],
-                            nodes = nodeVars, iterations = 150, filepath = "network_permutations/cont_peri_mind_robust.rda")
+# 
+# #controls fantasizing pre / peri
+# cont_pre_fant_robust <- NPT(data_t[which((data_t$group == "controls") & (data_t$phase == "pre") & (data_t$intervention == "fantasizing")),],
+#                            nodes = nodeVars, iterations = 1, filepath = "network_permutations/cont_pre_fant_robust.rda")
+# 
+# 
+# cont_peri_fant_robust <- NPT(data_t[which((data_t$group == "controls") & (data_t$phase == "peri") & (data_t$intervention == "fantasizing")),],
+#                             nodes = nodeVars, iterations = 2, filepath = "network_permutations/cont_peri_fant_robust.rda")
+# 
+# 
+# #controls mindfulness pre / peri
+# cont_pre_mind_robust <- NPT(data_t[which((data_t$group == "controls") & (data_t$phase == "pre") & (data_t$intervention == "mindfulness")),],
+#                            nodes = nodeVars, iterations = 1, filepath = "network_permutations/cont_pre_mind_robust.rda")
+# 
+# 
+# cont_peri_mind_robust <- NPT(data_t[which((data_t$group == "controls") & (data_t$phase == "peri") & (data_t$intervention == "mindfulness")),],
+#                             nodes = nodeVars, iterations = 1, filepath = "network_permutations/cont_peri_mind_robust.rda")
 
 
 # +++++++++++++++++++++++++++++++++++++ Network comparison tests ++++++++++++++++++++++++++++++++++++++++++++++++++

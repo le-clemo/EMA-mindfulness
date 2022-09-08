@@ -1128,7 +1128,7 @@ for(g in c("controls", "remitted")){
                  lags = 1,
                  temporal = "orthogonal",
                  contemporaneous = "orthogonal",
-                 nCores = 10)
+                 nCores = detectCores()-2)
   
   
   #  # Get mlVAR networks:
@@ -1199,7 +1199,7 @@ print(sum(abs(temp.nets[[1]][which(upper.tri(temp.nets[[1]]))])))
 #local connectivity (PA)
 sum(sum(temp.nets[[1]]["energetic", c("wakeful", "satisfied")]),
     sum(temp.nets[[1]]["wakeful", c("energetic", "satisfied")]),
-    sum(temp.nets[[1]]["satisfied", c("wakeful", "satisfied")]))
+    sum(temp.nets[[1]]["satisfied", c("wakeful", "energetic")]))
 
 #local connectivity (NA)
 sum(sum(temp.nets[[1]]["down", c("irritated", "anxious", "restless")]),
@@ -1221,15 +1221,28 @@ print(centralityTable(n4, weighted = TRUE, labels = nodeVars, standardized = TRU
 print(sum(abs(temp.nets[[2]][which(upper.tri(temp.nets[[2]]))])))
 
 #local connectivity (PA)
+sum(sum(permutationResults$network$Temporal$EdgeWeights["energetic", c("wakeful", "satisfied")]),
+    sum(permutationResults$network$Temporal$EdgeWeights["wakeful", c("energetic", "satisfied")]),
+    sum(permutationResults$network$Temporal$EdgeWeights["satisfied", c("wakeful", "energetic")]))
+
+sum(sum(cont_pre_robust$network$Temporal$EdgeWeights["energetic", c("wakeful", "satisfied")]),
+    sum(cont_pre_robust$network$Temporal$EdgeWeights["wakeful", c("energetic", "satisfied")]),
+    sum(cont_pre_robust$network$Temporal$EdgeWeights["satisfied", c("wakeful", "energetic")]))
+
 sum(sum(temp.nets[[2]]["energetic", c("wakeful", "satisfied")]),
     sum(temp.nets[[2]]["wakeful", c("energetic", "satisfied")]),
-    sum(temp.nets[[2]]["satisfied", c("wakeful", "satisfied")]))
+    sum(temp.nets[[2]]["satisfied", c("wakeful", "energetic")]))
 
 #local connectivity (NA)
 sum(sum(temp.nets[[2]]["down", c("irritated", "anxious", "restless")]),
     sum(temp.nets[[2]]["irritated", c("down", "anxious", "restless")]),
     sum(temp.nets[[2]]["anxious", c("irritated", "down", "restless")]),
     sum(temp.nets[[2]]["restless", c("irritated", "down", "anxious")]))
+
+sum(sum(permutationResults$network$Temporal$EdgeWeights["down", c("irritated", "anxious", "restless")]),
+    sum(permutationResults$network$Temporal$EdgeWeights["irritated", c("down", "anxious", "restless")]),
+    sum(permutationResults$network$Temporal$EdgeWeights["anxious", c("irritated", "down", "restless")]),
+    sum(permutationResults$network$Temporal$EdgeWeights["restless", c("irritated", "down", "anxious")]))
 
 dev.off()
 
@@ -1261,7 +1274,7 @@ for(g in c("remitted")){
                     lags = 1,
                     temporal = "orthogonal",
                     contemporaneous = "orthogonal",
-                    nCores = 10)
+                    nCores = detectCores()-2)
     
     #  # Get mlVAR networks:
     preCont <- getNet(preNet, "contemporaneous", layout = "spring", nonsig = "hide", rule = "and")
@@ -1332,7 +1345,7 @@ for(g in c("remitted")){
     #local connectivity (PA)
     print(sum(sum(preCont["energetic", c("wakeful", "satisfied")]),
               sum(preCont["wakeful", c("energetic", "satisfied")]),
-              sum(preCont["satisfied", c("wakeful", "satisfied")])))
+              sum(preCont["satisfied", c("wakeful", "energetic")])))
     #local connectivity (NA)
     print(sum(sum(preCont["down", c("irritated", "anxious", "restless")]),
               sum(preCont["irritated", c("down", "anxious", "restless")]),
@@ -1353,7 +1366,7 @@ for(g in c("remitted")){
     #local connectivity (PA)
     print(sum(sum(periCont["energetic", c("wakeful", "satisfied")]),
               sum(periCont["wakeful", c("energetic", "satisfied")]),
-              sum(periCont["satisfied", c("wakeful", "satisfied")])))
+              sum(periCont["satisfied", c("wakeful", "energetic")])))
     #local connectivity (NA)
     print(sum(sum(periCont["down", c("irritated", "anxious", "restless")]),
               sum(periCont["irritated", c("down", "anxious", "restless")]),
@@ -1375,7 +1388,7 @@ for(g in c("remitted")){
     #local connectivity (PA)
     print(sum(sum(preTemp["energetic", c("wakeful", "satisfied")]),
               sum(preTemp["wakeful", c("energetic", "satisfied")]),
-              sum(preTemp["satisfied", c("wakeful", "satisfied")])))
+              sum(preTemp["satisfied", c("wakeful", "energetic")])))
     #local connectivity (NA)
     print(sum(sum(preTemp["down", c("irritated", "anxious", "restless")]),
               sum(preTemp["irritated", c("down", "anxious", "restless")]),
@@ -1396,7 +1409,7 @@ for(g in c("remitted")){
     #local connectivity (PA)
     print(sum(sum(periTemp["energetic", c("wakeful", "satisfied")]),
               sum(periTemp["wakeful", c("energetic", "satisfied")]),
-              sum(periTemp["satisfied", c("wakeful", "satisfied")])))
+              sum(periTemp["satisfied", c("wakeful", "energetic")])))
     #local connectivity (NA)
     print(sum(sum(periTemp["down", c("irritated", "anxious", "restless")]),
               sum(periTemp["irritated", c("down", "anxious", "restless")]),

@@ -618,7 +618,7 @@ NPT <- function(data, nodes, filepath, permuteBy="nodes", iterations=100,
           n <- 1
         }
         rand.subj <- sample(perm.dat[which(perm.dat[[permuteBy]]==permuteSet[2]),][[idvar]], n)
-        perm.dat[which(perm.dat$subjP %in% rand.subj),][[permuteBy]] <- permuteSet[1]
+        perm.dat[which(perm.dat[[idvar]] %in% rand.subj),][[permuteBy]] <- permuteSet[1]
       }  
      
       if(n_g2 < 2){
@@ -629,7 +629,7 @@ NPT <- function(data, nodes, filepath, permuteBy="nodes", iterations=100,
           n <- 1
         }
         rand.subj <- sample(perm.dat[which(perm.dat[[permuteBy]]==permuteSet[1]),][[idvar]], n)
-        perm.dat[which(perm.dat$subjP %in% rand.subj),][[permuteBy]] <- permuteSet[2]
+        perm.dat[which(perm.dat[[idvar]] %in% rand.subj),][[permuteBy]] <- permuteSet[2]
       }
       
       
@@ -647,7 +647,7 @@ NPT <- function(data, nodes, filepath, permuteBy="nodes", iterations=100,
         print(y)
         random.subj <- sample(s_ids, 1)
         print(random.subj)
-        perm.dat[which(perm.dat$subject == random.subj),][[permuteBy]] <- y
+        perm.dat[which(perm.dat[[idvar]] == random.subj),][[permuteBy]] <- y
         print(unique(perm.dat[[permuteBy]]))
       }
     }
@@ -1435,9 +1435,6 @@ for(g in c("remitted")){
   }
 }
 
-load("network_permutations/rem_pre_fant_robust.rda")
-rem_pre_fant_robust <- copy(permutationResults)
-
 colnames(data_t)[colnames(data_t) == 'sumNA'] <- 'NegativeAffect'
 colnames(data_t)[colnames(data_t) == 'sumPA'] <- 'PositiveAffect'
 colnames(data_t)[colnames(data_t) == 'negMax'] <- 'EventUnpleasantness'
@@ -1512,16 +1509,28 @@ compare_rem_mind_pre_peri_reduced <- NPT(dat, nodes = reducedNodes, iterations =
 #                                   filepath = "network_permutations/compare_cont_mind_pre_peri_reduced.rda")
 
 
-n1 <- qgraph(rem_pre_mind_reduced2$network$Contemporaneous$EdgeWeights, #title=paste("mlVAR: Contemporaneous network", g, i, "Baseline", sep = " - "),
+
+load("network_permutations/rem_pre_fant_alternative.rda")
+rem_pre_fant_alt <- copy(permutationResults)
+
+net1 <- rem_pre_fant_alt$network$Temporal$EdgeWeights
+net2 <- rem_pre_fant_alt$network$Contemporaneous$EdgeWeights
+
+layout(matrix(c(1,1,2,2,2), nc=5, byrow = TRUE)) # 40% vs 60% widths
+
+#plot contemporaneous networks
+L <- averageLayout(net1, net2)
+
+n1 <- qgraph(net1, layout = L, #title=paste("mlVAR: Contemporaneous network", g, i, "Baseline", sep = " - "),
              theme='colorblind', negDashed=FALSE, diag=T, #title=paste("Controls: Temporal - Baseline")
-             groups=reduced_list, legend=FALSE, nodeNames = reducedNodes, labels=c(1:length(reducedNodes)),
+             groups=alternative_list, legend=FALSE, nodeNames = alternativeNodes, labels=c(1:length(alternativeNodes)),
              vsize=10, asize=8, curve=0.5, esize=3)
 
 
-n1 <- qgraph(rem_peri_mind_reduced2$network$Contemporaneous$EdgeWeights, #title=paste("mlVAR: Contemporaneous network", g, i, "Baseline", sep = " - "),
+n2 <- qgraph(net2, layout = L, #title=paste("mlVAR: Contemporaneous network", g, i, "Baseline", sep = " - "),
              theme='colorblind', negDashed=FALSE, diag=T, #title=paste("Controls: Temporal - Baseline")
-             groups=reduced_list, legend=T, nodeNames = reducedNodes, labels=c(1:length(reducedNodes)),
+             groups=alternative_list, legend=T, nodeNames = alternativeNodes, labels=c(1:length(alternativeNodes)),
              vsize=10, asize=8, curve=0.5, esize=3)
 
-sum((rem_pre_mind_reduced2$p_values$Contemporaneous$EdgeWeights < 0.025), na.rm = T)
-sum((rem_pre_mind_reduced2$p_values$Contemporaneous$EdgeWeights != 1), na.rm = T)
+sum((rem_pre_fant_alt$p_values$Temporal$EdgeWeights < 0.025), na.rm = T)
+sum((rem_pre_fant_alt$p_values$Temporal$EdgeWeights != 1), na.rm = T)

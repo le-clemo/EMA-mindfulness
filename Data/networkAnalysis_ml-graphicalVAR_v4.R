@@ -274,14 +274,14 @@ groups_colors <- c("#d60000", "#149F36", "#53B0CF", "#f66a6a", "#72CF53")#, "#05
 
 reducedNodes <- c('ruminating', 'stickiness',
               'energetic', 'wakeful', 'satisfied',
-              'down', 'irritated', 'anxious', 'restless',
-              'posMax', 'negMax')
+              'down', 'irritated', 'anxious', 'restless')
+              # 'posMax', 'negMax')
 
 #grouping the variables --> for later use in network plotting
-reduced_list <- list(Rumination = c(1,2), PositiveAffect = c(3,4,5), NegativeAffect = c(6,7,8,9),
-                     Events = c(10,11))
+reduced_list <- list(Rumination = c(1,2), PositiveAffect = c(3,4,5), NegativeAffect = c(6,7,8,9))
+                     # Events = c(10,11))
 # Sleep=c(15))
-reduced_colors <- c("#d60000", "#149F36", "#53B0CF", "#72CF53")
+reduced_colors <- c("#d60000", "#149F36", "#53B0CF")#, "#72CF53")
 
 #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 ########################################################### Permutation Testing ################################################################ 
@@ -481,12 +481,12 @@ NPT <- function(data, nodes, filepath, permuteBy="nodes", iterations=100,
       real.cont <- getNet(real.net, "contemporaneous", layout = "spring", nonsig = "hide", rule = "and")
       real.temp <- getNet(real.net, "temporal", nonsig = "hide")
       
-      
-      n1 <- qgraph(real.temp, layout = L, theme='colorblind', negDashed=FALSE, diag=T, #title=paste("Controls: Temporal - Baseline")
-                   groups=groups_list, legend=FALSE, nodeNames = nodeVars, labels=c(1:length(nodeVars)),
-                   vsize=10, asize=8, curve=0.5, esize=3)
-      
-      print(n1)
+      # 
+      # n1 <- qgraph(real.temp, layout = L, theme='colorblind', negDashed=FALSE, diag=T, #title=paste("Controls: Temporal - Baseline")
+      #              groups=groups_list, legend=FALSE, nodeNames = nodeVars, labels=c(1:length(nodeVars)),
+      #              vsize=10, asize=8, curve=0.5, esize=3)
+      # 
+      # print(n1)
       
       #get all centrality measures
       real.cont.cents <- centralityTable(real.cont, weighted = TRUE, labels = nodeVars, standardized = FALSE)
@@ -639,7 +639,7 @@ NPT <- function(data, nodes, filepath, permuteBy="nodes", iterations=100,
       #in case only one group was assigned to all subjects
       sampled.groups <- unique(perm.dat[[permuteBy]])
       sampled.groups <- sampled.groups[!is.na(sampled.groups)]
-      print("This is the sampled group:")
+      # print("This is the sampled group:")
       # print(sampled.groups)
       # print(length(sampled.groups))
       if(length(sampled.groups) < 2){ #to ensure we end up with two groups
@@ -932,9 +932,10 @@ NPT <- function(data, nodes, filepath, permuteBy="nodes", iterations=100,
      if(cont.weights[1] > 0){
        pval <- mean((cont.weights) >= (cont.weights[1]))
 
-       pval <- mean((cont.weights) <= (cont.weights[1]))
      } else if(cont.weights[1] < 0){
-
+       
+       pval <- mean((cont.weights) <= (cont.weights[1]))
+       
      } else {
        pval <- 1
      }
@@ -1046,20 +1047,20 @@ rem_pre_robust <- NPT(data_t[which((data_t$group == "remitted") & (data_t$phase 
 
 #remitted fantasizing pre / peri
 rem_pre_fant_robust <- NPT(data_t[which((data_t$group == "remitted") & (data_t$phase == "pre") & (data_t$intervention == "fantasizing")),],
-                           nodes = reducedNodes, iterations = 200, filepath = "network_permutations/rem_pre_fant_robust.rda")
+                           nodes = nodeVars, iterations = 200, filepath = "network_permutations/rem_pre_fant_robust.rda")
 
 
 rem_peri_fant_robust <- NPT(data_t[which((data_t$group == "remitted") & (data_t$phase == "peri") & (data_t$intervention == "fantasizing")),],
-                           nodes = reducedNodes, iterations = 200, filepath = "network_permutations/rem_peri_fant_robust.rda")
+                           nodes = nodeVars, iterations = 200, filepath = "network_permutations/rem_peri_fant_robust.rda")
 
 
 #remitted mindfulness pre / peri
 rem_pre_mind_robust <- NPT(data_t[which((data_t$group == "remitted") & (data_t$phase == "pre") & (data_t$intervention == "mindfulness")),],
-                           nodes = reducedNodes, iterations = 200, filepath = "network_permutations/rem_pre_mind_robust.rda")
+                           nodes = nodeVars, iterations = 100, filepath = "network_permutations/rem_pre_mind_robust.rda")
 
 
 rem_peri_mind_robust <- NPT(data_t[which((data_t$group == "remitted") & (data_t$phase == "peri") & (data_t$intervention == "mindfulness")),],
-                            nodes = reducedNodes, iterations = 200, filepath = "network_permutations/rem_peri_mind_robust.rda")
+                            nodes = nodeVars, iterations = 200, filepath = "network_permutations/rem_peri_mind_robust.rda")
 
 # 
 # #controls fantasizing pre / peri
@@ -1090,24 +1091,24 @@ compare_group_pre <- NPT(dat, nodes = nodeVars, iterations = 200, permuteBy = "g
 
 #compare remitted fantasizing pre / peri
 dat <- data_t[which((data_t$group=="remitted") & (data_t$intervention=="fantasizing")),]
-compare_rem_fant_pre_peri <- NPT(dat, nodes = reducedNodes, iterations = 200, permuteBy = "phase", idvar = "subjP",
+compare_rem_fant_pre_peri <- NPT(dat, nodes = nodeVars, iterations = 200, permuteBy = "phase", idvar = "subjP",
                                  filepath = "network_permutations/compare_rem_fant_pre_peri.rda")
 
 #compare remitted mindfulness pre / peri
 dat <- data_t[which((data_t$group=="remitted") & (data_t$intervention=="mindfulness")),]
-compare_rem_mind_pre_peri <- NPT(dat, nodes = reducedNodes, iterations = 200, permuteBy = "phase", idvar = "subjP",
+compare_rem_mind_pre_peri <- NPT(dat, nodes = nodeVars, iterations = 200, permuteBy = "phase", idvar = "subjP",
                                  filepath = "network_permutations/compare_rem_mind_pre_peri.rda")
 
 
 #compare controls fantasizing pre / peri
 dat <- data_t[which((data_t$group=="controls") & (data_t$intervention=="fantasizing")),]
-compare_cont_fant_pre_peri <- NPT(dat, nodes = reducedNodes, iterations = 100, permuteBy = "phase", idvar = "subjP",
+compare_cont_fant_pre_peri <- NPT(dat, nodes = nodeVars, iterations = 100, permuteBy = "phase", idvar = "subjP",
                                   filepath = "network_permutations/compare_cont_fant_pre_peri.rda")
 
 
 #compare controls fantasizing pre / peri
 dat <- data_t[which((data_t$group=="controls") & (data_t$intervention=="mindfulness")),]
-compare_cont_mind_pre_peri <- NPT(dat, nodes = reducedNodes, iterations = 100, permuteBy = "phase", idvar = "subjP",
+compare_cont_mind_pre_peri <- NPT(dat, nodes = nodeVars, iterations = 100, permuteBy = "phase", idvar = "subjP",
                                   filepath = "network_permutations/compare_cont_mind_pre_peri.rda")
 
 
@@ -1247,8 +1248,6 @@ sum(sum(temp.nets[[2]]["down", c("irritated", "anxious", "restless")]),
 
 dev.off()
 
-sum((rem_peri_mind_robust$p_values$Temporal$EdgeWeights < 0.025))
-sum((rem_peri_mind_robust$p_values$Temporal$EdgeWeights != 1))
 
 sum(sum(permutationResults$network$Temporal$EdgeWeights["energetic", c("wakeful", "satisfied")]),
     sum(permutationResults$network$Temporal$EdgeWeights["wakeful", c("energetic", "satisfied")]),
@@ -1434,24 +1433,65 @@ load("network_permutations/rem_pre_fant_robust.rda")
 rem_pre_fant_robust <- copy(permutationResults)
 
 
-
-
-
+#compare groups at baseline
+# dat <- data_t[which((data_t$phase=="pre")),]
+# compare_group_pre3 <- NPT(dat, nodes = reducedNodes, iterations = 100, permuteBy = "group",
+#                          filepath = "network_permutations/compare_group_pre_reduced3.rda")
 
 #remitted fantasizing pre / peri
 rem_pre_fant_reduced <- NPT(data_t[which((data_t$group == "remitted") & (data_t$phase == "pre") & (data_t$intervention == "fantasizing")),],
-                           nodes = reducedNodes, iterations = 200, filepath = "network_permutations/rem_pre_fant_robust.rda")
+                           nodes = reducedNodes, iterations = 200, filepath = "network_permutations/rem_pre_fant_reduced.rda")
 
 
 rem_peri_fant_reduced <- NPT(data_t[which((data_t$group == "remitted") & (data_t$phase == "peri") & (data_t$intervention == "fantasizing")),],
-                            nodes = reducedNodes, iterations = 200, filepath = "network_permutations/rem_peri_fant_robust.rda")
+                            nodes = reducedNodes, iterations = 200, filepath = "network_permutations/rem_peri_fant_reduced.rda")
 
 
 #remitted mindfulness pre / peri
 rem_pre_mind_reduced <- NPT(data_t[which((data_t$group == "remitted") & (data_t$phase == "pre") & (data_t$intervention == "mindfulness")),],
-                           nodes = reducedNodes, iterations = 200, filepath = "network_permutations/rem_pre_mind_robust.rda")
+                           nodes = reducedNodes, iterations = 100, filepath = "network_permutations/rem_pre_mind_reduced.rda")
 
 
 rem_peri_mind_reduced <- NPT(data_t[which((data_t$group == "remitted") & (data_t$phase == "peri") & (data_t$intervention == "mindfulness")),],
-                            nodes = reducedNodes, iterations = 200, filepath = "network_permutations/rem_peri_mind_robust.rda")
+                            nodes = reducedNodes, iterations = 200, filepath = "network_permutations/rem_peri_mind_reduced.rda")
 
+
+
+#comparison tests
+
+#compare remitted fantasizing pre / peri
+dat <- data_t[which((data_t$group=="remitted") & (data_t$intervention=="fantasizing")),]
+compare_rem_fant_pre_peri_reduced <- NPT(dat, nodes = nodeVars, iterations = 100, permuteBy = "phase", idvar = "subjP",
+                                 filepath = "network_permutations/compare_rem_fant_pre_peri_reduced.rda")
+
+#compare remitted mindfulness pre / peri
+dat <- data_t[which((data_t$group=="remitted") & (data_t$intervention=="mindfulness")),]
+compare_rem_mind_pre_peri_reduced <- NPT(dat, nodes = nodeVars, iterations = 100, permuteBy = "phase", idvar = "subjP",
+                                 filepath = "network_permutations/compare_rem_mind_pre_peri_reduced.rda")
+
+# 
+# #compare controls fantasizing pre / peri
+# dat <- data_t[which((data_t$group=="controls") & (data_t$intervention=="fantasizing")),]
+# compare_cont_fant_pre_peri <- NPT(dat, nodes = nodeVars, iterations = 100, permuteBy = "phase", idvar = "subjP",
+#                                   filepath = "network_permutations/compare_cont_fant_pre_peri.rda")
+# 
+# 
+# #compare controls fantasizing pre / peri
+# dat <- data_t[which((data_t$group=="controls") & (data_t$intervention=="mindfulness")),]
+# compare_cont_mind_pre_peri <- NPT(dat, nodes = nodeVars, iterations = 100, permuteBy = "phase", idvar = "subjP",
+#                                   filepath = "network_permutations/compare_cont_mind_pre_peri.rda")
+
+
+n1 <- qgraph(rem_pre_mind_reduced$network$Contemporaneous$EdgeWeights, #title=paste("mlVAR: Contemporaneous network", g, i, "Baseline", sep = " - "),
+             theme='colorblind', negDashed=FALSE, diag=T, #title=paste("Controls: Temporal - Baseline")
+             groups=reduced_list, legend=FALSE, nodeNames = reducedNodes, labels=c(1:length(reducedNodes)),
+             vsize=10, asize=8, curve=0.5, esize=3)
+
+
+n1 <- qgraph(rem_pre_mind_reduced$network$Temporal$EdgeWeights, #title=paste("mlVAR: Contemporaneous network", g, i, "Baseline", sep = " - "),
+             theme='colorblind', negDashed=FALSE, diag=T, #title=paste("Controls: Temporal - Baseline")
+             groups=reduced_list, legend=T, nodeNames = reducedNodes, labels=c(1:length(reducedNodes)),
+             vsize=10, asize=8, curve=0.5, esize=3)
+
+sum((rem_pre_mind_reduced$p_values$Temporal$EdgeWeights < 0.025), na.rm = T)
+sum((rem_pre_mind_reduced$p_values$Temporal$EdgeWeights != 1), na.rm = T)

@@ -1037,11 +1037,11 @@ NPT <- function(data, nodes, filepath, permuteBy="nodes", iterations=100,
 # baseline networks
 cont_pre_robust <- NPT(data_t[which((data_t$group == "controls") & (data_t$phase == "pre")),], nodes = nodeVars,
                        iterations = 200, filepath = "network_permutations/cont_pre_robust.rda",
-                       localClustStrength = c("energetic", "wakeful", "satisfied"), c("down", "irritated", "anxious", "restless"))
+                       localClustStrength = list(c("energetic", "wakeful", "satisfied"), c("down", "irritated", "anxious", "restless")))
 
 rem_pre_robust <- NPT(data_t[which((data_t$group == "remitted") & (data_t$phase == "pre")),], nodes = nodeVars,
                       iterations = 200, filepath = "network_permutations/rem_pre_robust.rda",
-                      localClustStrength = c("energetic", "wakeful", "satisfied"), c("down", "irritated", "anxious", "restless"))
+                      localClustStrength = list(c("energetic", "wakeful", "satisfied"), c("down", "irritated", "anxious", "restless")))
 
 
 # #remitted fantasizing pre / peri
@@ -1088,9 +1088,9 @@ rem_pre_robust <- NPT(data_t[which((data_t$group == "remitted") & (data_t$phase 
 
 #compare groups at baseline
 dat <- data_t[which((data_t$phase=="pre")),]
-compare_group_pre <- NPT(dat, nodes = nodeVars, iterations = 500, permuteBy = "group",
+compare_group_pre <- NPT(dat, nodes = nodeVars, iterations = 200, permuteBy = "group",
                           filepath = "network_permutations/compare_group_pre.rda",
-                         localClustStrength = c("energetic", "wakeful", "satisfied"), c("down", "irritated", "anxious", "restless"))
+                         localClustStrength = list(c("energetic", "wakeful", "satisfied"), c("down", "irritated", "anxious", "restless")))
 
 # 
 # #compare remitted fantasizing pre / peri
@@ -1436,15 +1436,9 @@ for(g in c("remitted")){
 colnames(data_t)[colnames(data_t) == 'sumNA'] <- 'NegativeAffect'
 colnames(data_t)[colnames(data_t) == 'sumPA'] <- 'PositiveAffect'
 colnames(data_t)[colnames(data_t) == 'negMax'] <- 'EventUnpleasantness'
+colnames(data_t)[colnames(data_t) == 'posMax'] <- 'EventPleasantness'
 
-# alternativeNodes <- c('ruminating',
-#                   'PositiveAffect',
-#                   'NegativeAffect',
-#                   'distracted',
-#                   'EventUnpleasantness')
-# 
-# #grouping the variables --> for later use in network plotting
-# alternative_list <- list(Rumination = c(1), Affect = c(2,3), Other = c(4,5))
+
 
 
 
@@ -1474,7 +1468,7 @@ rem_peri_fant_reduced <- NPT(data_t[which((data_t$group == "remitted") & (data_t
 
 #remitted mindfulness pre / peri
 rem_pre_mind_reduced <- NPT(data_t[which((data_t$group == "remitted") & (data_t$phase == "pre") & (data_t$intervention == "mindfulness")),],
-                           nodes = reducedNodes, iterations = 200, filepath = "network_permutations/rem_pre_mind_reduced.rda")
+                           nodes = reducedNodes, iterations = 100, filepath = "network_permutations/rem_pre_mind_reduced.rda")
 
 
 rem_peri_mind_reduced <- NPT(data_t[which((data_t$group == "remitted") & (data_t$phase == "peri") & (data_t$intervention == "mindfulness")),],
@@ -1505,6 +1499,42 @@ compare_rem_mind_pre_peri_reduced <- NPT(dat, nodes = reducedNodes, iterations =
 # dat <- data_t[which((data_t$group=="controls") & (data_t$intervention=="mindfulness")),]
 # compare_cont_mind_pre_peri_reduced <- NPT(dat, nodes = reducedNodes, iterations = 100, permuteBy = "phase", idvar = "subjP",
 #                                   filepath = "network_permutations/compare_cont_mind_pre_peri_reduced.rda")
+
+
+
+
+alternativeNodes <- c('ruminating',
+                  'PositiveAffect',
+                  'NegativeAffect',
+                  'EventUnpleasantness',
+                  'EventPleasantness',
+                  'distracted')
+
+#grouping the variables --> for later use in network plotting
+alt_list <- list(Rumination = c(1), Affect = c(2,3), Events = c(4,5), Other = c(6))
+
+alt_colors <- c("#d60000", "#149F36", "#53B0CF", "#72CF53")
+
+
+#remitted fantasizing pre / peri
+rem_pre_fant_alt2 <- NPT(data_t[which((data_t$group == "remitted") & (data_t$phase == "pre") & (data_t$intervention == "fantasizing")),],
+                            nodes = alternativeNodes, iterations = 100, filepath = "network_permutations/rem_pre_fant_alt2.rda")
+
+
+rem_peri_fant_alt2 <- NPT(data_t[which((data_t$group == "remitted") & (data_t$phase == "peri") & (data_t$intervention == "fantasizing")),],
+                             nodes = alternativeNodes, iterations = 100, filepath = "network_permutations/rem_peri_fant_alt2.rda")
+
+
+#remitted mindfulness pre / peri
+rem_pre_mind_alt2 <- NPT(data_t[which((data_t$group == "remitted") & (data_t$phase == "pre") & (data_t$intervention == "mindfulness")),],
+                            nodes = alternativeNodes, iterations = 100, filepath = "network_permutations/rem_pre_mind_alt2.rda")
+
+
+rem_peri_mind_alt2 <- NPT(data_t[which((data_t$group == "remitted") & (data_t$phase == "peri") & (data_t$intervention == "mindfulness")),],
+                             nodes = alternativeNodes, iterations = 100, filepath = "network_permutations/rem_peri_mind_alt2.rda")
+
+
+
 
 
 

@@ -247,7 +247,7 @@ sc_data[scale.vars] <- scale(sc_data[scale.vars])
 nodeVars <- c('ruminating', 'stickiness',
               'energetic', 'wakeful', 'satisfied',
               'down', 'irritated', 'anxious', 'restless',
-              'listless', 'distracted',
+              'listless', 'distracted', 'sumNA', 'sumPA',
               'posMax', 'negMax')
 
 #only complete cases
@@ -1524,44 +1524,43 @@ alternativeNodes <- c('ruminating',
                   'PositiveAffect',
                   'NegativeAffect',
                   'EventUnpleasantness',
-                  'EventPleasantness',
                   'distracted')
 
 #grouping the variables --> for later use in network plotting
-alt_list <- list(Rumination = c(1), Affect = c(2,3), Events = c(4,5), Other = c(6))
+alt_list <- list(Rumination = c(1), Affect = c(2,3), Other = c(4,5))
 
 alt_colors <- c("#d60000", "#149F36", "#53B0CF", "#72CF53")
 
 
 #remitted fantasizing pre / peri
-rem_pre_fant_alt2 <- NPT(data_t[which((data_t$group == "remitted") & (data_t$phase == "pre") & (data_t$intervention == "fantasizing")),],
-                            nodes = alternativeNodes, iterations = 100, filepath = "network_permutations/rem_pre_fant_alt2.rda")
+rem_pre_fant_final <- NPT(data_t[which((data_t$group == "remitted") & (data_t$phase == "pre") & (data_t$intervention == "fantasizing")),],
+                            nodes = alternativeNodes, iterations = 100, filepath = "network_permutations/rem_pre_fant_final.rda")
 
 
-rem_peri_fant_alt2 <- NPT(data_t[which((data_t$group == "remitted") & (data_t$phase == "peri") & (data_t$intervention == "fantasizing")),],
-                             nodes = alternativeNodes, iterations = 100, filepath = "network_permutations/rem_peri_fant_alt2.rda")
+rem_peri_fant_final <- NPT(data_t[which((data_t$group == "remitted") & (data_t$phase == "peri") & (data_t$intervention == "fantasizing")),],
+                             nodes = alternativeNodes, iterations = 100, filepath = "network_permutations/rem_peri_fant_final.rda")
 
 
 #remitted mindfulness pre / peri
-rem_pre_mind_alt2 <- NPT(data_t[which((data_t$group == "remitted") & (data_t$phase == "pre") & (data_t$intervention == "mindfulness")),],
-                            nodes = alternativeNodes, iterations = 100, filepath = "network_permutations/rem_pre_mind_alt2.rda")
+rem_pre_mind_final <- NPT(data_t[which((data_t$group == "remitted") & (data_t$phase == "pre") & (data_t$intervention == "mindfulness")),],
+                            nodes = alternativeNodes, iterations = 100, filepath = "network_permutations/rem_pre_mind_final.rda")
 
 
-rem_peri_mind_alt2 <- NPT(data_t[which((data_t$group == "remitted") & (data_t$phase == "peri") & (data_t$intervention == "mindfulness")),],
-                             nodes = alternativeNodes, iterations = 100, filepath = "network_permutations/rem_peri_mind_alt2.rda")
+rem_peri_mind_final <- NPT(data_t[which((data_t$group == "remitted") & (data_t$phase == "peri") & (data_t$intervention == "mindfulness")),],
+                             nodes = alternativeNodes, iterations = 100, filepath = "network_permutations/rem_peri_mind_final.rda")
 
 
 #comparison tests
 
 #compare remitted fantasizing pre / peri
 dat <- data_t[which((data_t$group=="remitted") & (data_t$intervention=="fantasizing")),]
-compare_rem_fant_pre_peri_alt2 <- NPT(dat, nodes = alternativeNodes, iterations = 100, permuteBy = "phase", idvar = "subjP",
-                                         filepath = "network_permutations/compare_rem_fant_pre_peri_alt2.rda")
+compare_rem_fant_pre_peri_final <- NPT(dat, nodes = alternativeNodes, iterations = 100, permuteBy = "phase", idvar = "subjP",
+                                         filepath = "network_permutations/compare_rem_fant_pre_peri_final.rda")
 
 #compare remitted mindfulness pre / peri
 dat <- data_t[which((data_t$group=="remitted") & (data_t$intervention=="mindfulness")),]
-compare_rem_mind_pre_peri_alt2 <- NPT(dat, nodes = alternativeNodes, iterations = 100, permuteBy = "phase", idvar = "subjP",
-                                         filepath = "network_permutations/compare_rem_mind_pre_peri_alt2.rda")
+compare_rem_mind_pre_peri_final <- NPT(dat, nodes = alternativeNodes, iterations = 100, permuteBy = "phase", idvar = "subjP",
+                                         filepath = "network_permutations/compare_rem_mind_pre_peri_final.rda")
 
 
 

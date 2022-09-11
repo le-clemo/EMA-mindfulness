@@ -1564,13 +1564,17 @@ compare_rem_mind_pre_peri_final <- NPT(dat, nodes = alternativeNodes, iterations
 
 
 
+load("network_permutations/rem_peri_mind_final.rda")
+rem_peri_mind_final <- copy(permutationResults)
 
+net1 <- rem_pre_mind_final$network$Temporal$EdgeWeights
+net2 <- rem_peri_mind_final$network$Temporal$EdgeWeights
 
-load("network_permutations/rem_peri_fant_alternative.rda")
-rem_pre_fant_alt <- copy(permutationResults)
+temp_cont <- cont_pre_final$network$Temporal$EdgeWeights
+temp_rem <- rem_pre_final$network$Temporal$EdgeWeights
 
-net1 <- rem_pre_fant_alt$network$Temporal$EdgeWeights
-net2 <- rem_pre_fant_alt$network$Contemporaneous$EdgeWeights
+cont_cont <- cont_pre_final$network$Contemporaneous$EdgeWeights
+cont_rem <- rem_pre_final$network$Contemporaneous$EdgeWeights
 
 layout(matrix(c(1,1,2,2,2), nc=5, byrow = TRUE)) # 40% vs 60% widths
 
@@ -1579,14 +1583,47 @@ L <- averageLayout(net1, net2)
 
 n1 <- qgraph(net1, layout = L, #title=paste("mlVAR: Contemporaneous network", g, i, "Baseline", sep = " - "),
              theme='colorblind', negDashed=FALSE, diag=T, #title=paste("Controls: Temporal - Baseline")
-             groups=alternative_list, legend=FALSE, nodeNames = alternativeNodes, labels=c(1:length(alternativeNodes)),
+             groups=alt_list, legend=FALSE, nodeNames = alternativeNodes, labels=c(1:length(alternativeNodes)),
              vsize=10, asize=8, curve=0.5, esize=3)
 
 
 n2 <- qgraph(net2, layout = L, #title=paste("mlVAR: Contemporaneous network", g, i, "Baseline", sep = " - "),
              theme='colorblind', negDashed=FALSE, diag=T, #title=paste("Controls: Temporal - Baseline")
-             groups=alternative_list, legend=T, nodeNames = alternativeNodes, labels=c(1:length(alternativeNodes)),
+             groups=alt_list, legend=T, nodeNames = alternativeNodes, labels=c(1:length(alternativeNodes)),
              vsize=10, asize=8, curve=0.5, esize=3)
 
-sum((rem_pre_fant_alt$p_values$Temporal$EdgeWeights < 0.025), na.rm = T)
-sum((rem_pre_fant_alt$p_values$Temporal$EdgeWeights != 1), na.rm = T)
+sum((rem_peri_fant_final$p_values$Temporal$EdgeWeights < 0.025), na.rm = T)
+sum((rem_peri_fant_final$p_values$Temporal$EdgeWeights != 1), na.rm = T)
+
+
+temp1 <- compare_group_pre_final$testStats$difference$GlobalStrength$Temporal #$testStats$network$GlobalStrength$Temporal
+cont1 <- compare_group_pre_final$testStats$difference$GlobalStrength$Contemporaneous
+
+diff_new <- c(rep(NA, length(temp1)))
+for(i in 1:length(temp1)){
+  diff_new[i] <- abs(temp1[[i]]) + abs(cont1[[i]])
+}
+overall.gs.pval <- mean((abs(diff_new)) >= ((abs(diff_new[1]))))
+
+print(sum(sum(cont_rem["energetic", c("energetic", "wakeful", "satisfied")]),
+          sum(cont_rem["wakeful", c("wakeful","energetic", "satisfied")]),
+          sum(cont_rem["satisfied", c("satisfied", "wakeful", "energetic")])))
+
+print(sum(sum(temp_cont["down", c("down", "irritated", "anxious", "restless")]),
+          sum(temp_cont["irritated", c("irritated", "down", "anxious", "restless")]),
+          sum(temp_cont["anxious", c("anxious", "irritated", "down", "restless")]),
+          sum(temp_cont["restless", c("restless", "irritated", "down", "anxious")])))
+
+
+sum(cont_rem["ruminating", c("energetic", "wakeful", "satisfied")])
+sum(cont_rem["ruminating", c("down", "irritated", "anxious", "restless")])
+
+sum(temp_rem["ruminating", c("energetic", "wakeful", "satisfied")])
+sum(temp_rem["ruminating", c("down", "irritated", "anxious", "restless")])
+
+
+sum(cont_cont["ruminating", c("energetic", "wakeful", "satisfied")])
+sum(cont_cont["ruminating", c("down", "irritated", "anxious", "restless")])
+
+sum(temp_cont["ruminating", c("energetic", "wakeful", "satisfied")])
+sum(temp_cont["ruminating", c("down", "irritated", "anxious", "restless")])

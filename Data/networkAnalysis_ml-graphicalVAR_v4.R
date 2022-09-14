@@ -48,6 +48,9 @@ for(id in unique(data$subject)){
   }
 }
 
+length(unique(data[which((data$group=="controls")),]$subject)) #23
+length(unique(data[which((data$group=="remitted")),]$subject)) #16
+
 responses_block <- ddply(data, .(subject), plyr::summarise,
                          numCompleted = length(mindcog_db_open_from),
                          noResponse = length(unique(mindcog_db_non_response)),
@@ -68,6 +71,9 @@ pp <- unique(responses_block[which(responses_block$responseRate >= 0.5),]$subjec
 data <- data[which(data$subject %in% pp),]
 data <- data[which(data$dayBeepNum < 11),] #three subjects had extra beeps on a day. Since this messes with the detrending code I just removed
 #the extra beeps (<15 entries)
+
+length(unique(data[which((data$group=="controls")),]$subject)) #21
+length(unique(data[which((data$group=="remitted")),]$subject)) #12
 
 
 #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
@@ -247,8 +253,8 @@ sc_data[scale.vars] <- scale(sc_data[scale.vars])
 nodeVars <- c('ruminating', 'stickiness',
               'energetic', 'wakeful', 'satisfied',
               'down', 'irritated', 'anxious', 'restless',
-              'listless', 'distracted', 'sumNA', 'sumPA',
-              'posMax', 'negMax')
+              'listless', 'distracted',
+              'posMax', 'negMax', 'sumNA', 'sumPA')
 
 #only complete cases
 data_copy <- data.table::copy(sc_data)
@@ -531,8 +537,8 @@ NPT <- function(data, nodes, filepath, permuteBy="nodes", iterations=100,
           contSum <- 0
           tempSum <- 0
           for(cl in clust){
-            contSum <- contSum + sum(real.cont[cl, clust[which(clust %nin% cl)]])
-            tempSum <- tempSum + sum(real.temp[cl, clust[which(clust %nin% cl)]])
+            contSum <- contSum + sum(real.cont[cl, clust]) #clust[which(clust %nin% cl)]])
+            tempSum <- tempSum + sum(real.temp[cl, clust]) #[which(clust %nin% cl)]])
           }
           localStrengths[[l]][[g]]$Contemporaneous[[1]] <- contSum
           localStrengths[[l]][[g]]$Temporal[[1]] <- tempSum
@@ -729,8 +735,8 @@ NPT <- function(data, nodes, filepath, permuteBy="nodes", iterations=100,
           contSum <- 0
           tempSum <- 0
           for(cl in clust){
-            contSum <- contSum + sum(perm.cont[cl, clust[which(clust %nin% cl)]])
-            tempSum <- tempSum + sum(perm.temp[cl, clust[which(clust %nin% cl)]])
+            contSum <- contSum + sum(perm.cont[cl, clust]) #[which(clust %nin% cl)]])
+            tempSum <- tempSum + sum(perm.temp[cl, clust]) #[which(clust %nin% cl)]])
           }
           localStrengths[[l]][[g]]$Contemporaneous[[i]] <- contSum
           localStrengths[[l]][[g]]$Temporal[[i]] <- tempSum
@@ -1032,6 +1038,7 @@ colnames(data_t)[colnames(data_t) == 'PositiveAffect'] <- 'sumPA'
 colnames(data_t)[colnames(data_t) == 'EventUnpleasantness'] <- 'negMax'
 colnames(data_t)[colnames(data_t) == 'EventPleasantness'] <- 'posMax'
 
+
 # baseline networks
 cont_pre_robust <- NPT(data_t[which((data_t$group == "controls") & (data_t$phase == "pre")),], nodes = nodeVars,
                        iterations = 100, filepath = "network_permutations/cont_pre_robust.rda",
@@ -1120,8 +1127,33 @@ compare_group_pre <- NPT(dat, nodes = nodeVars, iterations = 200, permuteBy = "g
 ############################################################## True Networks ################################################################### 
 #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
+colnames(data_t)[colnames(data_t) == 'sumNA'] <- 'NegativeAffect'
+colnames(data_t)[colnames(data_t) == 'sumPA'] <- 'PositiveAffect'
+colnames(data_t)[colnames(data_t) == 'negMax'] <- 'EventUnpleasantness'
+colnames(data_t)[colnames(data_t) == 'posMax'] <- 'EventPleasantness'
+colnames(data_t)[colnames(data_t) == 'ruminating'] <- 'Rumination'
+colnames(data_t)[colnames(data_t) == 'energetic'] <- 'Energy'
+colnames(data_t)[colnames(data_t) == 'wakeful'] <- 'Wakefulness'
+colnames(data_t)[colnames(data_t) == 'satisfied'] <- 'Satisfaction'
+colnames(data_t)[colnames(data_t) == 'down'] <- 'Sadness'
+colnames(data_t)[colnames(data_t) == 'anxious'] <- 'Anxiety'
+colnames(data_t)[colnames(data_t) == 'restless'] <- 'Restlessness'
+colnames(data_t)[colnames(data_t) == 'irritated'] <- 'Irritation'
+colnames(data_t)[colnames(data_t) == 'distracted'] <- 'Distraction'
+
+groups_list <- list(Rumination = c(1), PositiveAffect = c(2,3,4), NegativeAffect = c(5,6,7,8),
+                    Events = c(9,10), 
+                    Other = c(11))#,)#, Sleep = c(11)) , 
+
+nodeVars <- c('Rumination',
+              'Energy', 'Wakefulness', 'Satisfaction',
+              'Sadness', 'Irritation', 'Anxiety', 'Restlessness',
+              'EventPleasantness', 'EventUnpleasantness',
+              'Distraction')#, 'NegativeAffect', 'PositiveAffect')
+
 cont.nets <- list(rep(NA,2))
 temp.nets <- list(rep(NA,2))
+bet.nets <- list(rep(NA,2))
 i = 1
 #creating baseline networks per group
 for(g in c("controls", "remitted")){
@@ -1134,6 +1166,9 @@ for(g in c("controls", "remitted")){
   #subData <- sc_data[which((sc_data$group==g) & (sc_data$phase=="pre")),]
   
   subData <- data_t[which((data_t$group==g) & (data_t$phase=="pre")),]
+  subData$subjB <- factor(subData$subjB)
+  
+  length(unique(subData$subjB))
   
   mlNet <- mlVAR(subData,
                  vars=nodeVars,
@@ -1149,7 +1184,7 @@ for(g in c("controls", "remitted")){
   
   #  # Get mlVAR networks:
   cont.nets[[i]] <- getNet(mlNet, "contemporaneous", layout = "spring", nonsig = "hide", rule = "and")
-  # bet  <- getNet(mlNet, "between", nonsig = "hide", rule = "and")
+  bet.nets[[i]]  <- getNet(mlNet, "between", nonsig = "hide", rule = "and")
   temp.nets[[i]] <- getNet(mlNet, "temporal", nonsig = "hide")
   
   i <- i + 1
@@ -1162,11 +1197,11 @@ L <- averageLayout(cont.nets[[1]], cont.nets[[2]], temp.nets[[1]], temp.nets[[2]
 layout(matrix(c(1,1,2,2,2), nc=5, byrow = TRUE)) # 40% vs 60% widths
 
 n1 <- qgraph(cont.nets[[1]], layout = L, theme='colorblind', negDashed=FALSE, diag=T, #title=paste("Controls: Temporal - Baseline")
-             groups=groups_list, legend=FALSE, nodeNames = nodeVars, labels=c(1:length(nodeVars)),
-             vsize=10, asize=8, curve=0.5, esize=3)
-n2 <- qgraph(cont.nets[[2]], layout = L, theme='colorblind', negDashed=FALSE, diag=T, #title=paste("Remitted: Temporal - Baseline")
-             groups=groups_list, legend.cex=0.6, legend=TRUE, nodeNames = nodeVars, labels=c(1:length(nodeVars)),
-             vsize=10, asize=8, curve=0.5, esize=3)
+             groups=groups_list, legend.cex=1, legend=T, nodeNames = nodeVars, labels=c(1:length(nodeVars)),
+             vsize=6, asize=8, curve=0.5, esize=3)
+n2 <- qgraph(cont_pre_significant, layout = L, theme='colorblind', negDashed=FALSE, diag=T, #title=paste("Remitted: Temporal - Baseline")
+             groups=groups_list, legend.cex=1, legend=TRUE, nodeNames = nodeVars, labels=c(1:length(nodeVars)),
+             vsize=6, asize=8, curve=0.5, esize=3)
 print("Controls:")
 cent_group1 <- centrality_auto(n1, weighted = T)$node.centrality
 print(cent_group1)
@@ -1194,11 +1229,18 @@ print(sum(abs(cont.nets[[2]][which(upper.tri(cont.nets[[2]]))])))
 
 
 n3 <- qgraph(temp.nets[[1]], layout = L, theme='colorblind', negDashed=FALSE, diag=T, #title=paste("Controls: Temporal - Baseline")
-             groups=groups_list, legend=FALSE, nodeNames = nodeVars, labels=c(1:length(nodeVars)),
-             vsize=10, asize=8, curve=0.5, esize=3)
+             groups=groups_list, legend.cex=1, legend=T, nodeNames = nodeVars, labels=c(1:length(nodeVars)),
+             vsize=6, asize=3, curve=0.5, esize=3)
 n4 <- qgraph(temp.nets[[2]], layout = L, theme='colorblind', negDashed=FALSE, diag=T, #title=paste("Remitted: Temporal - Baseline")
-             groups=groups_list, legend.cex=0.6, legend=TRUE, nodeNames = nodeVars, labels=c(1:length(nodeVars)),
-             vsize=10, asize=8, curve=0.5, esize=3)
+             groups=groups_list, legend.cex=1, legend=TRUE, nodeNames = nodeVars, labels=c(1:length(nodeVars)),
+             vsize=6, asize=3, curve=0.5, esize=3)
+
+n5 <- qgraph(bet.nets[[1]], layout = L, theme='colorblind', negDashed=FALSE, diag=T, #title=paste("Controls: Temporal - Baseline")
+             groups=groups_list, legend.cex=1, legend=T, nodeNames = nodeVars, labels=c(1:length(nodeVars)),
+             vsize=6, asize=3, curve=0.5, esize=3)
+n6 <- qgraph(bet.nets[[2]], layout = L, theme='colorblind', negDashed=FALSE, diag=T, #title=paste("Remitted: Temporal - Baseline")
+             groups=groups_list, legend.cex=1, legend=TRUE, nodeNames = nodeVars, labels=c(1:length(nodeVars)),
+             vsize=6, asize=3, curve=0.5, esize=3)
 
 print("Controls:")
 cent_group3 <- centrality_auto(n3, weighted = T)$node.centrality
@@ -1262,11 +1304,11 @@ sum(sum(permutationResults$network$Temporal$EdgeWeights["down", c("irritated", "
 # 
 # xData <- data[which(data$dayBeepNum <=10),]
 
-for(g in c("remitted")){
-  for(i in c("mindfulness")){  
+
+for(i in c("mindfulness", "fantasizing")){  
     
     print('++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++')
-    print(g)
+    # print(g)
     print(i)
     print('++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++')
     
@@ -1276,10 +1318,14 @@ for(g in c("remitted")){
     
     #subData <- sc_data[which((sc_data$group==g) & (sc_data$phase==p) & (sc_data$intervention==i)),]
     
-    subData <- data_t[which((data_t$group==g) & (data_t$intervention==i) & (data_t$phase=="pre")),]
+    subData <- data_t[which((data_t$intervention==i) & (data_t$phase=="pre")),]
+    subData$subjB <- factor(subData$subjB)
+    
+    print("number of subjects - pre:")
+    print(length(unique(subData$subjB)))
     
     preNet <- mlVAR(subData,
-                    vars=reducedNodes,
+                    vars=nodeVars,
                     estimator="lmer",
                     idvar="subjB",
                     dayvar="phaseAssessmentDay",
@@ -1294,10 +1340,14 @@ for(g in c("remitted")){
     #bet  <- getNet(mlNet, "between", nonsig = "hide", rule = "and")
     preTemp <- getNet(preNet, "temporal", nonsig = "hide")
     
-    subData <- data_t[which((data_t$group==g) & (sc_data$intervention==i) & (data_t$phase=="peri")),]
+    subData <- data_t[which((sc_data$intervention==i) & (data_t$phase=="peri")),]
+    subData$subjB <- factor(subData$subjB)
+    
+    print("number of subjects - peri:")
+    print(length(unique(subData$subjB)))
     
     periNet <- mlVAR(subData,
-                     vars=reducedNodes,
+                     vars=nodeVars,
                      estimator="lmer",
                      idvar="subjB",
                      dayvar="assessmentDay",
@@ -1314,19 +1364,19 @@ for(g in c("remitted")){
     
     
     # pdf(paste0(figs, "figure.pdf"), width=6, height=2.5)
-    layout(matrix(c(1,1,2,2,2), nc=5, byrow = TRUE)) # 40% vs 60% widths
+    # layout(matrix(c(1,1,2,2,2), nc=5, byrow = TRUE)) # 40% vs 60% widths
     
     #plot contemporaneous networks
     L <- averageLayout(preCont, periCont,preTemp, periTemp)
     n1 <- qgraph(preCont, layout = L, #title=paste("mlVAR: Contemporaneous network", g, i, "Baseline", sep = " - "),
                  theme='colorblind', negDashed=FALSE, diag=T, #title=paste("Controls: Temporal - Baseline")
-                 groups=reduced_list, legend=FALSE, nodeNames = reducedNodes, labels=c(1:length(reducedNodes)),
-                 vsize=10, asize=8, curve=0.5, esize=3)
+                 groups=groups_list, legend.cex=1, legend=T, nodeNames = nodeVars, labels=c(1:length(nodeVars)),
+                 vsize=6, asize=3, curve=0.5, esize=3)
     
     n2 <- qgraph(periCont, layout = L, #title=paste("mlVAR: Contemporaneous network", g, i, "Peri-intervention", sep = " - ")
                  theme='colorblind', negDashed=FALSE, diag=T,
-                 groups=reduced_list, legend.cex=0.6, legend=TRUE, nodeNames = reducedNodes, labels=c(1:length(reducedNodes)),
-                 vsize=10, asize=8, curve=0.5, esize=3)
+                 groups=groups_list, legend.cex=1, legend=TRUE, nodeNames = nodeVars, labels=c(1:length(nodeVars)),
+                 vsize=6, asize=3, curve=0.5, esize=3)
     
     
     #plot temporal networks
@@ -1334,13 +1384,13 @@ for(g in c("remitted")){
     
     n3 <- qgraph(preTemp, layout = L, #title=paste("mlVAR: Temporal network", g, i, "Baseline", sep = " - "),
                  theme='colorblind', negDashed=FALSE, diag=T, #title=paste("Controls: Temporal - Baseline")
-                 groups=reduced_list, legend=FALSE, nodeNames = reducedNodes, labels=c(1:length(reducedNodes)),
-                 vsize=10, asize=8, curve=0.5, esize=3)
+                 groups=groups_list, legend.cex=1, legend=T, nodeNames = nodeVars, labels=c(1:length(nodeVars)),
+                 vsize=6, asize=3, curve=0.5, esize=3)
     
     n4 <- qgraph(periTemp, layout = L, #title=paste("mlVAR: Temporal network", g, i, "Peri-intervention", sep = " - ")
                  theme='colorblind', negDashed=FALSE, diag=T,
-                 groups=reduced_list, legend.cex=0.6, legend=TRUE, nodeNames = reducedNodes, labels=c(1:length(reducedNodes)),
-                 vsize=10, asize=8, curve=0.5, esize=3)
+                 groups=groups_list, legend.cex=1, legend=TRUE, nodeNames = nodeVars, labels=c(1:length(nodeVars)),
+                 vsize=6, asize=3, curve=0.5, esize=3)
     
     
     print("Contemporaneous Networks:")
@@ -1356,14 +1406,14 @@ for(g in c("remitted")){
     #global strength
     print(sum(abs(preCont[which(upper.tri(preCont))])))
     #local connectivity (PA)
-    print(sum(sum(preCont["energetic", c("wakeful", "satisfied")]),
-              sum(preCont["wakeful", c("energetic", "satisfied")]),
-              sum(preCont["satisfied", c("wakeful", "energetic")])))
-    #local connectivity (NA)
-    print(sum(sum(preCont["down", c("irritated", "anxious", "restless")]),
-              sum(preCont["irritated", c("down", "anxious", "restless")]),
-              sum(preCont["anxious", c("irritated", "down", "restless")]),
-              sum(preCont["restless", c("irritated", "down", "anxious")])))
+    # print(sum(sum(preCont["energetic", c("wakeful", "satisfied")]),
+    #           sum(preCont["wakeful", c("energetic", "satisfied")]),
+    #           sum(preCont["satisfied", c("wakeful", "energetic")])))
+    # #local connectivity (NA)
+    # print(sum(sum(preCont["down", c("irritated", "anxious", "restless")]),
+    #           sum(preCont["irritated", c("down", "anxious", "restless")]),
+    #           sum(preCont["anxious", c("irritated", "down", "restless")]),
+    #           sum(preCont["restless", c("irritated", "down", "anxious")])))
     
     print('Peri')
     cent_measures2 <- centrality_auto(n2, weighted = T)$node.centrality
@@ -1377,14 +1427,14 @@ for(g in c("remitted")){
     #global strength
     print(sum(abs(periCont[which(upper.tri(periCont))])))
     #local connectivity (PA)
-    print(sum(sum(periCont["energetic", c("wakeful", "satisfied")]),
-              sum(periCont["wakeful", c("energetic", "satisfied")]),
-              sum(periCont["satisfied", c("wakeful", "energetic")])))
-    #local connectivity (NA)
-    print(sum(sum(periCont["down", c("irritated", "anxious", "restless")]),
-              sum(periCont["irritated", c("down", "anxious", "restless")]),
-              sum(periCont["anxious", c("irritated", "down", "restless")]),
-              sum(periCont["restless", c("irritated", "down", "anxious")])))
+    # print(sum(sum(periCont["energetic", c("wakeful", "satisfied")]),
+    #           sum(periCont["wakeful", c("energetic", "satisfied")]),
+    #           sum(periCont["satisfied", c("wakeful", "energetic")])))
+    # #local connectivity (NA)
+    # print(sum(sum(periCont["down", c("irritated", "anxious", "restless")]),
+    #           sum(periCont["irritated", c("down", "anxious", "restless")]),
+    #           sum(periCont["anxious", c("irritated", "down", "restless")]),
+    #           sum(periCont["restless", c("irritated", "down", "anxious")])))
     
     print("Temporal Networks:")
     print('Pre')
@@ -1399,14 +1449,14 @@ for(g in c("remitted")){
     #global strength
     print(sum(abs(preTemp[which(upper.tri(preTemp))])))
     #local connectivity (PA)
-    print(sum(sum(preTemp["energetic", c("wakeful", "satisfied")]),
-              sum(preTemp["wakeful", c("energetic", "satisfied")]),
-              sum(preTemp["satisfied", c("wakeful", "energetic")])))
-    #local connectivity (NA)
-    print(sum(sum(preTemp["down", c("irritated", "anxious", "restless")]),
-              sum(preTemp["irritated", c("down", "anxious", "restless")]),
-              sum(preTemp["anxious", c("irritated", "down", "restless")]),
-              sum(preTemp["restless", c("irritated", "down", "anxious")])))
+    # print(sum(sum(preTemp["energetic", c("wakeful", "satisfied")]),
+    #           sum(preTemp["wakeful", c("energetic", "satisfied")]),
+    #           sum(preTemp["satisfied", c("wakeful", "energetic")])))
+    # #local connectivity (NA)
+    # print(sum(sum(preTemp["down", c("irritated", "anxious", "restless")]),
+    #           sum(preTemp["irritated", c("down", "anxious", "restless")]),
+    #           sum(preTemp["anxious", c("irritated", "down", "restless")]),
+    #           sum(preTemp["restless", c("irritated", "down", "anxious")])))
     
     print('Peri')
     cent_measures4 <- centrality_auto(n4, weighted = TRUE)$node.centrality
@@ -1420,21 +1470,20 @@ for(g in c("remitted")){
     #global strength
     print(sum(abs(periTemp[which(upper.tri(periTemp))])))
     #local connectivity (PA)
-    print(sum(sum(periTemp["energetic", c("wakeful", "satisfied")]),
-              sum(periTemp["wakeful", c("energetic", "satisfied")]),
-              sum(periTemp["satisfied", c("wakeful", "energetic")])))
-    #local connectivity (NA)
-    print(sum(sum(periTemp["down", c("irritated", "anxious", "restless")]),
-              sum(periTemp["irritated", c("down", "anxious", "restless")]),
-              sum(periTemp["anxious", c("irritated", "down", "restless")]),
-              sum(periTemp["restless", c("irritated", "down", "anxious")])))
-  }
+    # print(sum(sum(periTemp["energetic", c("wakeful", "satisfied")]),
+    #           sum(periTemp["wakeful", c("energetic", "satisfied")]),
+    #           sum(periTemp["satisfied", c("wakeful", "energetic")])))
+    # #local connectivity (NA)
+    # print(sum(sum(periTemp["down", c("down", "irritated", "anxious", "restless")]),
+    #           sum(periTemp["irritated", c("irritated", "down", "anxious", "restless")]),
+    #           sum(periTemp["anxious", c("anxious", "irritated", "down", "restless")]),
+    #           sum(periTemp["restless", c("restless", "irritated", "down", "anxious")])))
 }
 
 
 
 
-reducedNodes <- c('ruminating', #'stickiness',
+reducedNodes <- c('Rumination', #'stickiness',
                   'energetic', 'wakeful', 'satisfied',
                   'down', 'irritated', 'anxious', 'restless',
                   'EventUnpleasantness', 'EventPleasantness',
@@ -1514,69 +1563,65 @@ compare_group_pre_final <- NPT(dat, nodes = reducedNodes, iterations = 100, perm
 # compare_cont_mind_pre_peri_reduced <- NPT(dat, nodes = reducedNodes, iterations = 100, permuteBy = "phase", idvar = "subjP",
 #                                   filepath = "network_permutations/compare_cont_mind_pre_peri_reduced.rda")
 
-colnames(data_t)[colnames(data_t) == 'sumNA'] <- 'NegativeAffect'
-colnames(data_t)[colnames(data_t) == 'sumPA'] <- 'PositiveAffect'
-colnames(data_t)[colnames(data_t) == 'negMax'] <- 'EventUnpleasantness'
-colnames(data_t)[colnames(data_t) == 'posMax'] <- 'EventPleasantness'
-
-
-alternativeNodes <- c('ruminating',
-                  'PositiveAffect',
-                  'NegativeAffect',
-                  'EventUnpleasantness',
-                  'distracted')
-
-#grouping the variables --> for later use in network plotting
-alt_list <- list(Rumination = c(1), Affect = c(2,3), Other = c(4,5))
-
-alt_colors <- c("#d60000", "#149F36", "#53B0CF", "#72CF53")
+# colnames(data_t)[colnames(data_t) == 'sumNA'] <- 'NegativeAffect'
+# colnames(data_t)[colnames(data_t) == 'sumPA'] <- 'PositiveAffect'
+# colnames(data_t)[colnames(data_t) == 'negMax'] <- 'EventUnpleasantness'
+# colnames(data_t)[colnames(data_t) == 'posMax'] <- 'EventPleasantness'
+# 
+# 
+# alternativeNodes <- c('Rumination',
+#                   'PositiveAffect',
+#                   'NegativeAffect',
+#                   'EventUnpleasantness',
+#                   'Distraction')
+# 
+# #grouping the variables --> for later use in network plotting
+# alt_list <- list(Rumination = c(1), Affect = c(2,3), Other = c(4,5))
+# 
+# alt_colors <- c("#d60000", "#149F36", "#53B0CF")#, "#72CF53")
 
 
 #remitted fantasizing pre / peri
-rem_pre_fant_final <- NPT(data_t[which((data_t$group == "remitted") & (data_t$phase == "pre") & (data_t$intervention == "fantasizing")),],
-                            nodes = alternativeNodes, iterations = 100, filepath = "network_permutations/rem_pre_fant_final.rda")
+all_pre_fant_final <- NPT(data_t[which((data_t$phase == "pre") & (data_t$intervention == "fantasizing")),],
+                            nodes = nodeVars, iterations = 500, filepath = "network_permutations/all_pre_fant_final.rda")
 
 
-rem_peri_fant_final <- NPT(data_t[which((data_t$group == "remitted") & (data_t$phase == "peri") & (data_t$intervention == "fantasizing")),],
-                             nodes = alternativeNodes, iterations = 100, filepath = "network_permutations/rem_peri_fant_final.rda")
+all_peri_fant_final <- NPT(data_t[which((data_t$phase == "peri") & (data_t$intervention == "fantasizing")),],
+                             nodes = nodeVars, iterations = 500, filepath = "network_permutations/all_peri_fant_final.rda")
 
 
 #remitted mindfulness pre / peri
-rem_pre_mind_final <- NPT(data_t[which((data_t$group == "remitted") & (data_t$phase == "pre") & (data_t$intervention == "mindfulness")),],
-                            nodes = alternativeNodes, iterations = 100, filepath = "network_permutations/rem_pre_mind_final.rda")
+all_pre_mind_final <- NPT(data_t[which((data_t$phase == "pre") & (data_t$intervention == "mindfulness")),],
+                            nodes = nodeVars, iterations = 100, filepath = "network_permutations/all_pre_mind_final.rda")
 
 
-rem_peri_mind_final <- NPT(data_t[which((data_t$group == "remitted") & (data_t$phase == "peri") & (data_t$intervention == "mindfulness")),],
-                             nodes = alternativeNodes, iterations = 100, filepath = "network_permutations/rem_peri_mind_final.rda")
+all_peri_mind_final <- NPT(data_t[which((data_t$phase == "peri") & (data_t$intervention == "mindfulness")),],
+                             nodes = nodeVars, iterations = 25, filepath = "network_permutations/all_peri_mind_final.rda")
 
 
 #comparison tests
 
 #compare remitted fantasizing pre / peri
-dat <- data_t[which((data_t$group=="remitted") & (data_t$intervention=="fantasizing")),]
-compare_rem_fant_pre_peri_final <- NPT(dat, nodes = alternativeNodes, iterations = 100, permuteBy = "phase", idvar = "subjP",
-                                         filepath = "network_permutations/compare_rem_fant_pre_peri_final.rda")
+dat <- data_t[which((data_t$intervention=="fantasizing")),]
+compare_all_fant_final <- NPT(dat, nodes = nodeVars, iterations = 300, permuteBy = "phase", idvar = "subjP",
+                                         filepath = "network_permutations/compare_all_fant_final.rda")
 
 #compare remitted mindfulness pre / peri
-dat <- data_t[which((data_t$group=="remitted") & (data_t$intervention=="mindfulness")),]
-compare_rem_mind_pre_peri_final <- NPT(dat, nodes = alternativeNodes, iterations = 100, permuteBy = "phase", idvar = "subjP",
-                                         filepath = "network_permutations/compare_rem_mind_pre_peri_final.rda")
+dat <- data_t[which((data_t$intervention=="mindfulness")),]
+compare_all_mind_final <- NPT(dat, nodes = nodeVars, iterations = 300, permuteBy = "phase", idvar = "subjP",
+                                         filepath = "network_permutations/compare_all_mind_final.rda")
 
 
 
-load("network_permutations/rem_peri_mind_final.rda")
-rem_peri_mind_final <- copy(permutationResults)
 
-net1 <- rem_pre_mind_final$network$Temporal$EdgeWeights
-net2 <- rem_peri_mind_final$network$Temporal$EdgeWeights
 
-temp_cont <- cont_pre_final$network$Temporal$EdgeWeights
-temp_rem <- rem_pre_final$network$Temporal$EdgeWeights
+load("network_permutations/all_peri_fant_final.rda")
+all_peri_fant_final <- copy(permutationResults)
 
-cont_cont <- cont_pre_final$network$Contemporaneous$EdgeWeights
-cont_rem <- rem_pre_final$network$Contemporaneous$EdgeWeights
+net1 <- all_pre_mind_final$network$Temporal$EdgeWeights
+net2 <- all_pre_mind_final$network$Contemporaneous$EdgeWeights
 
-layout(matrix(c(1,1,2,2,2), nc=5, byrow = TRUE)) # 40% vs 60% widths
+# layout(matrix(c(1,1,2,2,2), nc=5, byrow = TRUE)) # 40% vs 60% widths
 
 #plot contemporaneous networks
 L <- averageLayout(net1, net2)
@@ -1587,43 +1632,119 @@ n1 <- qgraph(net1, layout = L, #title=paste("mlVAR: Contemporaneous network", g,
              vsize=10, asize=8, curve=0.5, esize=3)
 
 
-n2 <- qgraph(net2, layout = L, #title=paste("mlVAR: Contemporaneous network", g, i, "Baseline", sep = " - "),
+n2 <- qgraph(net, layout = L, #title=paste("mlVAR: Contemporaneous network", g, i, "Baseline", sep = " - "),
              theme='colorblind', negDashed=FALSE, diag=T, #title=paste("Controls: Temporal - Baseline")
-             groups=alt_list, legend=T, nodeNames = alternativeNodes, labels=c(1:length(alternativeNodes)),
-             vsize=10, asize=8, curve=0.5, esize=3)
+             groups=alt_list, legend.cex=1, legend=T, nodeNames = nodeVars, labels=c(1:length(alt_list)),
+             vsize=6, asize=3, curve=0.5, esize=3)
 
-sum((rem_peri_fant_final$p_values$Temporal$EdgeWeights < 0.025), na.rm = T)
-sum((rem_peri_fant_final$p_values$Temporal$EdgeWeights != 1), na.rm = T)
+sum((rem_pre_final$p_values$Temporal$EdgeWeights < 0.025), na.rm = T)
+sum((rem_pre_final$p_values$Temporal$EdgeWeights != 1), na.rm = T)
 
 
-temp1 <- compare_group_pre_final$testStats$difference$GlobalStrength$Temporal #$testStats$network$GlobalStrength$Temporal
-cont1 <- compare_group_pre_final$testStats$difference$GlobalStrength$Contemporaneous
 
-diff_new <- c(rep(NA, length(temp1)))
-for(i in 1:length(temp1)){
-  diff_new[i] <- abs(temp1[[i]]) + abs(cont1[[i]])
+
+
+
+
+
+#############################################################
+mirror_matrix <- function(m) {
+  m[lower.tri(m)] <- t(m)[lower.tri(m)]
+  return(m)
 }
-overall.gs.pval <- mean((abs(diff_new)) >= ((abs(diff_new[1]))))
 
-print(sum(sum(cont_rem["energetic", c("energetic", "wakeful", "satisfied")]),
-          sum(cont_rem["wakeful", c("wakeful","energetic", "satisfied")]),
-          sum(cont_rem["satisfied", c("satisfied", "wakeful", "energetic")])))
+load("network_permutations/compare_rem_fant_pre_peri_final.rda")
+compare_rem_fant_pre_peri_final <- copy(permutationResults)
 
-print(sum(sum(temp_cont["down", c("down", "irritated", "anxious", "restless")]),
-          sum(temp_cont["irritated", c("irritated", "down", "anxious", "restless")]),
-          sum(temp_cont["anxious", c("anxious", "irritated", "down", "restless")]),
-          sum(temp_cont["restless", c("restless", "irritated", "down", "anxious")])))
+netAll <- rem_peri_fant_final
+net <- netAll[["network"]][["Contemporaneous"]][["EdgeWeights"]]
+
+n2 <- qgraph(net, layout = L, #title=paste("mlVAR: Contemporaneous network", g, i, "Baseline", sep = " - "),
+             theme='colorblind', negDashed=FALSE, diag=T, #title=paste("Controls: Temporal - Baseline")
+             groups=alt_list, legend.cex=1, legend=T, nodeNames = alternativeNodes, labels=c(1:length(alternativeNodes)),
+             vsize=6, asize=3, curve=0.5, esize=3)
+
+net_pvals <- netAll[["p_values"]][["Contemporaneous"]][["EdgeWeights"]]
+net[which(net_pvals > 0.025)] <- 0
+
+net <- mirror_matrix(net)
+
+# net[which(is.na(net))] <- 0
+
+n2 <- qgraph(net, layout = L, #title=paste("mlVAR: Contemporaneous network", g, i, "Baseline", sep = " - "),
+             theme='colorblind', negDashed=FALSE, diag=T, #title=paste("Controls: Temporal - Baseline")
+             groups=alt_list, legend.cex=1, legend=T, nodeNames = alternativeNodes, labels=c(1:length(alternativeNodes)),
+             vsize=6, asize=3, curve=0.5, esize=3)
+
+cont_pre_significant <- cont_pre_robust[["network"]][["Temporal"]][["EdgeWeights"]]
+cont_pre_significant[which(cont_pre_robust[["p_values"]][["Temporal"]][["EdgeWeights"]] > 0.025)] <- 0
+
+compare_rem_mind_pre_peri_final$testStats$difference$LocalStrengths[[2]]$Temporal[1]
+
+mean((abs(test)) >= ((abs(compare_group_pre_final$testStats$difference$LocalStrengths[[2]]$Temporal[[1]]))))
+
+# 
+# len <- length(compare_group_pre_final$testStats$difference$LocalStrengths[[2]]$Temporal)
+# test <- c(rep(NA,len))
+# 
+# for(i in 1:len){
+#   test[i] <- compare_group_pre_final$testStats$difference$LocalStrengths[[2]]$Temporal[[i]]
+# }
+# 
+# test
 
 
-sum(cont_rem["ruminating", c("energetic", "wakeful", "satisfied")])
-sum(cont_rem["ruminating", c("down", "irritated", "anxious", "restless")])
 
-sum(temp_rem["ruminating", c("energetic", "wakeful", "satisfied")])
-sum(temp_rem["ruminating", c("down", "irritated", "anxious", "restless")])
+###################################### Calculate NA connectivity with other nodes###################################################
+nodeVars <- c('ruminating',
+              'energetic', 'wakeful', 'satisfied',
+              'down', 'irritated', 'anxious', 'restless',
+              'EventUnpleasantness', 'EventPleasantness',
+              'distracted')
+
+lenDat <- length(compare_group_pre_final$testStats$controls$GlobalStrength$Temporal)
 
 
-sum(cont_cont["ruminating", c("energetic", "wakeful", "satisfied")])
-sum(cont_cont["ruminating", c("down", "irritated", "anxious", "restless")])
 
-sum(temp_cont["ruminating", c("energetic", "wakeful", "satisfied")])
-sum(temp_cont["ruminating", c("down", "irritated", "anxious", "restless")])
+
+
+
+
+
+
+
+# edge.mat <- matrix(ncol=length(nodeVars), nrow =length(nodeVars))
+# colnames(edge.mat) <- nodeVars
+# rownames(edge.mat) <- nodeVars
+# 
+# test <- list()
+# result <- list()
+# 
+# for(i in 1:lenDat){
+#   test[[i]] <- edge.mat
+#   result[[i]] <- edge.mat
+#   test[[i]] <- as.matrix(dist(compare_group_pre_final$testStats$controls$EdgeWeights$Temporal[[i]], method = "manhattan"))
+# }
+# 
+# test.vec <- c(rep(NA,lenDat))
+# for(i in 1:lenDat){
+#   for(j in 1:length(nodeVars)){
+#     for(k in 1:length(nodeVars)){
+#       # print(paste(n, "--", e, sep = " "))
+#       if((test[[i]][j,k]) != 0){
+#         difference1  <- test[[i]][j,k]
+#         difference2  <- test[[i]][k,j]
+#       }
+#     }
+#     
+#     pval <- mean((test.vec) >= (test.vec[1]))
+#   }
+#     edge.mat[n,e] <- pval
+# }
+# 
+# test[[3]] <- dist(compare_group_pre_final$testStats$controls$EdgeWeights$Temporal[[1]], method = "manhattan")
+# 
+# test[[1]]
+# 
+# 
+# compare_group_pre_final$testStats$controls$EdgeWeights$Temporal[[1]][1,7]

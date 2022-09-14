@@ -1,8 +1,8 @@
 rm(list = ls()) #clean all up
 
-setwd("C:/Users/cleme/Documents/Education/RUG/Thesis/EMA-mindfulness/Data") #/ESM/mindcog_v202204
+#setwd("C:/Users/cleme/Documents/Education/RUG/Thesis/EMA-mindfulness/Data") #/ESM/mindcog_v202204
 
-#setwd("~/Documents/RUG/Thesis/EMA-mindfulness/Data/ESM/mindcog_v202204")
+setwd("~/Documents/RUG/Thesis/EMA-mindfulness/Data/")
 library(tidyverse)
 library(plyr)
 library(dplyr)
@@ -21,6 +21,7 @@ library(plotfunctions)
 library(gratia)
 library(arm)
 library(ggthemes)
+library(ggpattern)
 
 
 R.version.string
@@ -698,6 +699,8 @@ rum.sum.unscaled <- summary(rum.gam_unscaled)
 
 save(rum.gam_unscaled, rum.sum.unscaled, file = "models_rumination/rum_unscaled_contemp.rda")
 
+load("models_rumination/rum_unscaled_contemp.rda")
+
 
 plot_parametric(rum.gam, pred = list(group=c("remitted", "controls")),
                 parametricOnly = T, col = c("red", "blue"))
@@ -872,6 +875,7 @@ na.gam_unscaled <- gam(sumNA ~ group + s(phaseBeepNum, by = group) +
 na.sum.unscaled <- summary(na.gam_unscaled)
 
 save(na.gam_unscaled, na.sum.unscaled, file = "models_na/na_unscaled_contemp.rda")
+load("models_na/na_unscaled_contemp.rda")
 
 ar <- acf_resid(na.gam)
 
@@ -1014,6 +1018,7 @@ pa.gam_unscaled <- gam(sumPA ~ group + s(phaseBeepNum, by = group) +
 pa.sum.unscaled <- summary(pa.gam_unscaled)
 
 save(pa.gam_unscaled, pa.sum.unscaled, file = "models_pa/pa_unscaled_contemp.rda")
+load("models_pa/pa_unscaled_contemp.rda")
 
 ar <- acf_resid(pa.gam)
 
@@ -1124,7 +1129,7 @@ rum.peri.sum.unscaled <- summary(rum.peri_unscaled)
 
 save(rum.peri_unscaled, rum.peri.sum.unscaled, file = "models_rumination/rum_unscaled_peri.rda")
 
-
+load("models_rumination/rum_unscaled_peri.rda")
 
 report_stats(rum.peri)
 
@@ -1234,6 +1239,7 @@ na.peri_unscaled <- gam(sumNA_gam ~ group * intervention + s(phaseBeepNum, by = 
 na.peri.sum.unscaled <- summary(na.peri_unscaled)
 
 save(na.peri_unscaled, na.peri.sum.unscaled, file = "models_na/na_unscaled_peri.rda")
+load("models_na/na_unscaled_peri.rda")
 
 param_tab_na <- parameters::model_parameters(na.peri)
 d <- t_to_d(param_tab_na$t[2:4], param_tab_na$df_error[2:4])
@@ -1313,7 +1319,8 @@ pa.peri.sum.unscaled <- summary(pa.peri_unscaled)
 
 save(pa.peri_unscaled, pa.peri.sum.unscaled, file = "models_pa/pa_unscaled_peri.rda")
 
-save(pa.peri, summary_pa.peri, file = "models_pa/pa_peri.rda")
+save(pa.peri, summary_pa.peri, file = "models_pa/pa_unscaled_peri.rda")
+load("models_pa/pa_unscaled_peri.rda")
 
 param_tab_pa <- parameters::model_parameters(pa.peri)
 d <- t_to_d(param_tab_pa$t[2:4], param_tab_pa$df_error[2:4])
@@ -1409,7 +1416,8 @@ rq2_res <- data.frame(node = c(rep("Rumination",2), rep("Negative Affect",2), re
                       se = c(rum_sds, na_sds, pa_sds))
 
 # Default bar plot
-p<- ggplot(rq2_res, aes(x=factor(node, levels=c("Positive Affect", "Negative Affect", "Rumination")), y=value, fill=intervention)) + 
+p<- ggplot(rq2_res, aes(x=factor(node, levels=c("Positive Affect", "Negative Affect", "Rumination")),
+                        y=value, fill=factor(intervention, levels = c("mindfulness", "fantasizing")))) + 
   geom_bar(stat="identity", color="black", 
            position=position_dodge()) + ylim(-7.5,7.5) +
   geom_errorbar(aes(ymin=value-se, ymax=value+se), width=.2,
@@ -1418,20 +1426,39 @@ p<- ggplot(rq2_res, aes(x=factor(node, levels=c("Positive Affect", "Negative Aff
 # Finished bar plot
 p+labs(x="", y = "")+
   theme_economist_white() +  
-  scale_fill_manual(values=c('#0099FF','#FF3333'))
+  scale_fill_manual(values=c('#1F5B79', '#F29731'))
 
 
 # split by group
 
 
-rum_vals <- c(rum.peri.sum.unscaled$p.coeff[1], rum.peri.sum.unscaled$p.coeff[3]+rum.peri.sum.unscaled$p.coeff[1])
-rum_sds <- c(rum.peri.sum.unscaled$se[1], rum.peri.sum.unscaled$se[3])
+rum_vals <- c(rum.peri.sum.unscaled$p.coeff[1], #rem + mind
+              rum.peri.sum.unscaled$p.coeff[1] + rum.peri.sum.unscaled$p.coeff[3], #rem + fant
+              rum.peri.sum.unscaled$p.coeff[1] + rum.peri.sum.unscaled$p.coeff[2], #cont + mind
+              rum.peri.sum.unscaled$p.coeff[1] + rum.peri.sum.unscaled$p.coeff[2] + rum.peri.sum.unscaled$p.coeff[3] + rum.peri.sum.unscaled$p.coeff[4]) #cont + fant
+rum_sds <- c(rum.peri.sum.unscaled$se[1],
+             rum.peri.sum.unscaled$se[3],
+             rum.peri.sum.unscaled$se[2],
+             rum.peri.sum.unscaled$se[2] + rum.peri.sum.unscaled$se[3])# + rum.peri.sum.unscaled$se[4])
 
-na_vals <- c(na.peri.sum.unscaled$p.coeff[1], na.peri.sum.unscaled$p.coeff[3]+na.peri.sum.unscaled$p.coeff[1])
-na_sds <- c(na.peri.sum.unscaled$se[1], na.peri.sum.unscaled$se[3])
 
-pa_vals <- c(pa.peri.sum.unscaled$p.coeff[1], pa.peri.sum.unscaled$p.coeff[3]+pa.peri.sum.unscaled$p.coeff[1])
-pa_sds <- c(pa.peri.sum.unscaled$se[1], pa.peri.sum.unscaled$se[3])
+na_vals <- c(na.peri.sum.unscaled$p.coeff[1], #rem + mind
+             na.peri.sum.unscaled$p.coeff[1] + na.peri.sum.unscaled$p.coeff[3], #rem + fant
+             na.peri.sum.unscaled$p.coeff[1] + na.peri.sum.unscaled$p.coeff[2], #cont + mind
+             na.peri.sum.unscaled$p.coeff[1] + na.peri.sum.unscaled$p.coeff[2] + na.peri.sum.unscaled$p.coeff[3] + na.peri.sum.unscaled$p.coeff[4]) #cont + fant
+na_sds <- c(na.peri.sum.unscaled$se[1],
+            na.peri.sum.unscaled$se[3],
+            na.peri.sum.unscaled$se[2],
+            na.peri.sum.unscaled$se[2] + na.peri.sum.unscaled$se[3])# + na.peri.sum.unscaled$se[4])
+
+pa_vals <- c(pa.peri.sum.unscaled$p.coeff[1], #rem + mind
+             pa.peri.sum.unscaled$p.coeff[1] + pa.peri.sum.unscaled$p.coeff[3], #rem + fant
+             pa.peri.sum.unscaled$p.coeff[1] + pa.peri.sum.unscaled$p.coeff[2], #cont + mind
+             pa.peri.sum.unscaled$p.coeff[1] + pa.peri.sum.unscaled$p.coeff[2] + pa.peri.sum.unscaled$p.coeff[3] + pa.peri.sum.unscaled$p.coeff[4]) #cont + fant
+pa_sds <- c(pa.peri.sum.unscaled$se[1],
+            pa.peri.sum.unscaled$se[3],
+            pa.peri.sum.unscaled$se[2],
+            pa.peri.sum.unscaled$se[2] + pa.peri.sum.unscaled$se[3])# + pa.peri.sum.unscaled$se[4])
 
 rq2_res <- data.frame(node = c(rep("Rumination",4), rep("Negative Affect",4), rep("Positive Affect",4)),
                       group = c(rep("remitted",2), rep("controls",2)),
@@ -1440,14 +1467,17 @@ rq2_res <- data.frame(node = c(rep("Rumination",4), rep("Negative Affect",4), re
                       se = c(rum_sds, na_sds, pa_sds))
 
 # Default bar plot
-p<- ggplot(rq2_res, aes(x=factor(node, levels=c("Positive Affect", "Negative Affect", "Rumination")), y=value, fill=intervention)) + 
+p<- ggplot(rq2_res, aes(x=factor(node, levels=c("Positive Affect", "Negative Affect", "Rumination")),
+                        y=value,
+                        fill=interaction(intervention, group))) + 
+  # geom_col(aes(fill= factor(intervention))) +
   geom_bar(stat="identity", color="black", 
-           position=position_dodge()) + ylim(-7.5,7.5) +
+           position=position_dodge()) + ylim(-7,7) +
   geom_errorbar(aes(ymin=value-se, ymax=value+se), width=.2,
                 position=position_dodge(.9)) + coord_flip()
 
 # Finished bar plot
 p+labs(x="", y = "")+
   theme_economist_white() +  
-  scale_fill_manual(values=c('#0099FF','#FF3333'))
+  scale_fill_manual(values=c('#0099FF','#FF3333', '#0099FF','#FF3333'))
 

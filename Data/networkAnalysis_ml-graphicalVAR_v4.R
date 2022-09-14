@@ -1145,6 +1145,8 @@ groups_list <- list(Rumination = c(1), PositiveAffect = c(2,3,4), NegativeAffect
                     Events = c(9,10), 
                     Other = c(11))#,)#, Sleep = c(11)) , 
 
+groups_colors <- c("yellow", "#149F36", "#d60000", "#37A7F8" , "#C662F0")
+
 nodeVars <- c('Rumination',
               'Energy', 'Wakefulness', 'Satisfaction',
               'Sadness', 'Irritation', 'Anxiety', 'Restlessness',
@@ -1198,7 +1200,7 @@ layout(matrix(c(1,1,2,2,2), nc=5, byrow = TRUE)) # 40% vs 60% widths
 
 n1 <- qgraph(cont.nets[[1]], layout = L, theme='colorblind', negDashed=FALSE, diag=T, #title=paste("Controls: Temporal - Baseline")
              groups=groups_list, legend.cex=1, legend=T, nodeNames = nodeVars, labels=c(1:length(nodeVars)),
-             vsize=6, asize=8, curve=0.5, esize=3)
+             vsize=6, asize=8, curve=0.5, esize=3, color = groups_colors)
 n2 <- qgraph(cont_pre_significant, layout = L, theme='colorblind', negDashed=FALSE, diag=T, #title=paste("Remitted: Temporal - Baseline")
              groups=groups_list, legend.cex=1, legend=TRUE, nodeNames = nodeVars, labels=c(1:length(nodeVars)),
              vsize=6, asize=8, curve=0.5, esize=3)
@@ -1653,7 +1655,7 @@ mirror_matrix <- function(m) {
   return(m)
 }
 
-load("network_permutations/compare_rem_fant_pre_peri_final.rda")
+load("network_permutations/all_")
 compare_rem_fant_pre_peri_final <- copy(permutationResults)
 
 netAll <- rem_peri_fant_final

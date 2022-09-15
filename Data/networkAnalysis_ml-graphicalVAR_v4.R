@@ -1150,7 +1150,7 @@ groups_colors <- c("yellow", "#149F36", "#d60000", "#37A7F8" , "#C662F0")
 nodeVars <- c('Rumination',
               'Energy', 'Wakefulness', 'Satisfaction',
               'Sadness', 'Irritation', 'Anxiety', 'Restlessness',
-              'EventPleasantness', 'EventUnpleasantness',
+              'EventUnpleasantness', 'EventPleasantness',
               'Distraction')#, 'NegativeAffect', 'PositiveAffect')
 
 cont.nets <- list(rep(NA,2))
@@ -1198,7 +1198,7 @@ L <- averageLayout(cont.nets[[1]], cont.nets[[2]], temp.nets[[1]], temp.nets[[2]
 # pdf(paste0(figs, "figure.pdf"), width=6, height=2.5)
 layout(matrix(c(1,1,2,2,2), nc=5, byrow = TRUE)) # 40% vs 60% widths
 
-n1 <- qgraph(cont.nets[[1]], layout = L, theme='colorblind', negDashed=FALSE, diag=T, #title=paste("Controls: Temporal - Baseline")
+n1 <- qgraph(cont.nets[[2]], layout = L, theme='colorblind', negDashed=FALSE, diag=T, #title=paste("Controls: Temporal - Baseline")
              groups=groups_list, legend.cex=1, legend=T, nodeNames = nodeVars, labels=c(1:length(nodeVars)),
              vsize=6, asize=8, curve=0.5, esize=3, color = groups_colors)
 n2 <- qgraph(cont_pre_significant, layout = L, theme='colorblind', negDashed=FALSE, diag=T, #title=paste("Remitted: Temporal - Baseline")
@@ -1230,9 +1230,9 @@ print(centralityTable(n2, weighted = TRUE, labels = nodeVars))
 print(sum(abs(cont.nets[[2]][which(upper.tri(cont.nets[[2]]))])))
 
 
-n3 <- qgraph(temp.nets[[1]], layout = L, theme='colorblind', negDashed=FALSE, diag=T, #title=paste("Controls: Temporal - Baseline")
+n3 <- qgraph(temp.nets[[2]], layout = L, theme='colorblind', negDashed=FALSE, diag=T, #title=paste("Controls: Temporal - Baseline")
              groups=groups_list, legend.cex=1, legend=T, nodeNames = nodeVars, labels=c(1:length(nodeVars)),
-             vsize=6, asize=3, curve=0.5, esize=3)
+             vsize=6, asize=3, curve=0.5, esize=3, colors = groups_colors)
 n4 <- qgraph(temp.nets[[2]], layout = L, theme='colorblind', negDashed=FALSE, diag=T, #title=paste("Remitted: Temporal - Baseline")
              groups=groups_list, legend.cex=1, legend=TRUE, nodeNames = nodeVars, labels=c(1:length(nodeVars)),
              vsize=6, asize=3, curve=0.5, esize=3)
@@ -1585,20 +1585,20 @@ compare_group_pre_final <- NPT(dat, nodes = reducedNodes, iterations = 100, perm
 
 #remitted fantasizing pre / peri
 all_pre_fant_final <- NPT(data_t[which((data_t$phase == "pre") & (data_t$intervention == "fantasizing")),],
-                            nodes = nodeVars, iterations = 500, filepath = "network_permutations/all_pre_fant_final.rda")
+                            nodes = nodeVars, iterations = 200, filepath = "network_permutations/all_pre_fant_final.rda")
 
 
 all_peri_fant_final <- NPT(data_t[which((data_t$phase == "peri") & (data_t$intervention == "fantasizing")),],
-                             nodes = nodeVars, iterations = 500, filepath = "network_permutations/all_peri_fant_final.rda")
+                             nodes = nodeVars, iterations = 200, filepath = "network_permutations/all_peri_fant_final.rda")
 
 
 #remitted mindfulness pre / peri
 all_pre_mind_final <- NPT(data_t[which((data_t$phase == "pre") & (data_t$intervention == "mindfulness")),],
-                            nodes = nodeVars, iterations = 100, filepath = "network_permutations/all_pre_mind_final.rda")
+                            nodes = nodeVars, iterations = 200, filepath = "network_permutations/all_pre_mind_final.rda")
 
 
 all_peri_mind_final <- NPT(data_t[which((data_t$phase == "peri") & (data_t$intervention == "mindfulness")),],
-                             nodes = nodeVars, iterations = 25, filepath = "network_permutations/all_peri_mind_final.rda")
+                             nodes = nodeVars, iterations = 200, filepath = "network_permutations/all_peri_mind_final.rda")
 
 
 #comparison tests
@@ -1639,8 +1639,7 @@ n2 <- qgraph(net, layout = L, #title=paste("mlVAR: Contemporaneous network", g, 
              groups=alt_list, legend.cex=1, legend=T, nodeNames = nodeVars, labels=c(1:length(alt_list)),
              vsize=6, asize=3, curve=0.5, esize=3)
 
-sum((rem_pre_final$p_values$Temporal$EdgeWeights < 0.025), na.rm = T)
-sum((rem_pre_final$p_values$Temporal$EdgeWeights != 1), na.rm = T)
+
 
 
 
@@ -1655,18 +1654,26 @@ mirror_matrix <- function(m) {
   return(m)
 }
 
-load("network_permutations/all_")
-compare_rem_fant_pre_peri_final <- copy(permutationResults)
+load("network_permutations/rem_pre_final.rda")
+rem_pre_final <- copy(permutationResults)
 
-netAll <- rem_peri_fant_final
-net <- netAll[["network"]][["Contemporaneous"]][["EdgeWeights"]]
+netAll <- rem_pre_final
 
-n2 <- qgraph(net, layout = L, #title=paste("mlVAR: Contemporaneous network", g, i, "Baseline", sep = " - "),
+sum((netAll$p_values$Temporal$EdgeWeights < 0.025), na.rm = T)
+sum((netAll$p_values$Temporal$EdgeWeights != 1), na.rm = T)
+
+netAll <- netAll[["network"]][["Contemporaneous"]][["EdgeWeights"]]
+
+n2 <- qgraph(netAll, layout = L, #title=paste("mlVAR: Contemporaneous network", g, i, "Baseline", sep = " - "),
              theme='colorblind', negDashed=FALSE, diag=T, #title=paste("Controls: Temporal - Baseline")
-             groups=alt_list, legend.cex=1, legend=T, nodeNames = alternativeNodes, labels=c(1:length(alternativeNodes)),
-             vsize=6, asize=3, curve=0.5, esize=3)
+             groups=groups_list, legend.cex=1, legend=T, nodeNames = nodeVars, labels=c(1:length(nodeVars)),
+             vsize=6, asize=3, curve=0.5, esize=3, color = groups_colors)
+
+
 
 net_pvals <- netAll[["p_values"]][["Contemporaneous"]][["EdgeWeights"]]
+
+net <- copy(netAll)
 net[which(net_pvals > 0.025)] <- 0
 
 net <- mirror_matrix(net)
@@ -1675,11 +1682,11 @@ net <- mirror_matrix(net)
 
 n2 <- qgraph(net, layout = L, #title=paste("mlVAR: Contemporaneous network", g, i, "Baseline", sep = " - "),
              theme='colorblind', negDashed=FALSE, diag=T, #title=paste("Controls: Temporal - Baseline")
-             groups=alt_list, legend.cex=1, legend=T, nodeNames = alternativeNodes, labels=c(1:length(alternativeNodes)),
-             vsize=6, asize=3, curve=0.5, esize=3)
+             groups=groups_list, legend.cex=1, legend=T, nodeNames = nodeVars, labels=c(1:length(nodeVars)),
+             vsize=6, asize=3, curve=0.5, esize=3, color = groups_colors)
 
-cont_pre_significant <- cont_pre_robust[["network"]][["Temporal"]][["EdgeWeights"]]
-cont_pre_significant[which(cont_pre_robust[["p_values"]][["Temporal"]][["EdgeWeights"]] > 0.025)] <- 0
+cont_pre_significant <- netAll[["network"]][["Temporal"]][["EdgeWeights"]]
+cont_pre_significant[which(netAll[["p_values"]][["Temporal"]][["EdgeWeights"]] > 0.025)] <- 0
 
 compare_rem_mind_pre_peri_final$testStats$difference$LocalStrengths[[2]]$Temporal[1]
 
@@ -1697,56 +1704,84 @@ mean((abs(test)) >= ((abs(compare_group_pre_final$testStats$difference$LocalStre
 
 
 
-###################################### Calculate NA connectivity with other nodes###################################################
-nodeVars <- c('ruminating',
-              'energetic', 'wakeful', 'satisfied',
-              'down', 'irritated', 'anxious', 'restless',
-              'EventUnpleasantness', 'EventPleasantness',
-              'distracted')
+###################################### Stuff for presentation ###################################################
 
-lenDat <- length(compare_group_pre_final$testStats$controls$GlobalStrength$Temporal)
+## network estimation
+
+build_up <- rem_pre_final[["network"]][["Contemporaneous"]][["EdgeWeights"]]
+
+toAdd1 <- build_up["ruminating", "anxious"]
+toAdd2 <- build_up["restless", "anxious"]
+
+build_up["ruminating",] <- 0
+build_up[,"ruminating"] <- 0
+
+build_up["anxious",] <- 0
+build_up[,"anxious"] <- 0
+
+build_up["restless","distracted"] <- 0
+build_up["distracted","restless"] <- 0
+
+build_up["distracted", "irritated"] <- 0
+build_up["irritated", "distracted"] <- 0
+
+build_up["distracted", "energetic"] <- 0
+build_up["energetic","distracted"] <- 0
+
+build_up["satisfied", "energetic"] <- 0
+build_up["energetic","satisfied"] <- 0
+
+build_up["satisfied", "wakeful"] <- 0
+build_up["wakeful", "satisfied"] <- 0
+
+build_up["satisfied", "down"] <- 0
+build_up["down", "satisfied"] <- 0
+
+build_up["satisfied", "EventUnpleasantness"] <- 0
+build_up["EventUnpleasantness", "satisfied"] <- 0
+
+build_up["satisfied", "EventPleasantness"] <- 0
+build_up["EventPleasantness", "satisfied"] <- 0
+
+build_up["EventUnpleasantness", "EventPleasantness"] <- 0
+build_up["EventPleasantness", "EventUnpleasantness"] <- 0
+
+build_up["ruminating", "anxious"] <- toAdd1
+build_up["anxious","ruminating"] <- toAdd1
+
+build_up["restless","anxious"] <- toAdd2
+build_up["anxious","restless"] <- toAdd2
+
+n2 <- qgraph(build_up, layout = L, #title=paste("mlVAR: Contemporaneous network", g, i, "Baseline", sep = " - "),
+             theme='colorblind', negDashed=FALSE, diag=T, #title=paste("Controls: Temporal - Baseline")
+             groups=groups_list, legend.cex=1, legend=T, nodeNames = nodeVars, labels=c(1:length(nodeVars)),
+             vsize=6, asize=3, curve=0.5, esize=3, color = groups_colors)
+
+## permutation testing
+
+for(k in 1:5){
+  perm.example <- rem_pre_final[["network"]][["Contemporaneous"]][["EdgeWeights"]]
+  for(i in 1:nrow(perm.example)){
+    for(j in 1:ncol(perm.example)){
+      new_val <- sample(perm.example, 1)
+      perm.example[i,j] <- new_val
+    }
+  }  
+  
+  perm.example <- mirror_matrix(perm.example)
+  diag(perm.example) <- 0
+  
+  n2 <- qgraph(perm.example, layout = L, #title=paste("mlVAR: Contemporaneous network", g, i, "Baseline", sep = " - "),
+               theme='colorblind', negDashed=FALSE, diag=T, #title=paste("Controls: Temporal - Baseline")
+               groups=groups_list, legend.cex=1, legend=T, nodeNames = nodeVars, labels=c(1:length(nodeVars)),
+               vsize=6, asize=3, curve=0.5, esize=3, color = groups_colors)
+  print(n2)
+}
+
+
+x <- seq(5, 15, length=1000)
+y <- dnorm(x, mean=10, sd=3)
+plot(x, y, type="l", lwd=1)
 
 
 
-
-
-
-
-
-
-
-# edge.mat <- matrix(ncol=length(nodeVars), nrow =length(nodeVars))
-# colnames(edge.mat) <- nodeVars
-# rownames(edge.mat) <- nodeVars
-# 
-# test <- list()
-# result <- list()
-# 
-# for(i in 1:lenDat){
-#   test[[i]] <- edge.mat
-#   result[[i]] <- edge.mat
-#   test[[i]] <- as.matrix(dist(compare_group_pre_final$testStats$controls$EdgeWeights$Temporal[[i]], method = "manhattan"))
-# }
-# 
-# test.vec <- c(rep(NA,lenDat))
-# for(i in 1:lenDat){
-#   for(j in 1:length(nodeVars)){
-#     for(k in 1:length(nodeVars)){
-#       # print(paste(n, "--", e, sep = " "))
-#       if((test[[i]][j,k]) != 0){
-#         difference1  <- test[[i]][j,k]
-#         difference2  <- test[[i]][k,j]
-#       }
-#     }
-#     
-#     pval <- mean((test.vec) >= (test.vec[1]))
-#   }
-#     edge.mat[n,e] <- pval
-# }
-# 
-# test[[3]] <- dist(compare_group_pre_final$testStats$controls$EdgeWeights$Temporal[[1]], method = "manhattan")
-# 
-# test[[1]]
-# 
-# 
-# compare_group_pre_final$testStats$controls$EdgeWeights$Temporal[[1]][1,7]

@@ -411,6 +411,30 @@ for(g in c("controls", "remitted")){
   }
 }
 
+
+dat <- data[which((data$phase=="pre")),]
+for(v in met.vars){
+  print('')
+  print('##########################################################')
+  print(paste(g, v, sep = " + "))
+  # one.way <- aov(dat[[v]] ~ phase, data = dat)
+  # anova <- TukeyHSD(one.way)
+  test <- var.test(dat[[v]] ~ group, data = dat)
+  if(test$p.value<0.05){
+    print("controls")
+    print(var(dat[which(dat$group=="controls"),][[v]], na.rm=TRUE))
+    print("remitted")
+    print(var(dat[which(dat$group=="remitted"),][[v]], na.rm=TRUE))
+    print(test)
+    # print(anova)
+    # print(eta_squared(one.way))
+  } else {
+    print("No significant difference")
+    # print(anova)
+  }
+}
+}
+
 # Histograms and density lines
 par(mfrow=c(2, 2))
 for(g in c("controls", "remitted")){

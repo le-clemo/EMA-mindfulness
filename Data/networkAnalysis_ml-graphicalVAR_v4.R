@@ -1617,8 +1617,8 @@ compare_all_mind_final <- NPT(dat, nodes = nodeVars, iterations = 300, permuteBy
 
 
 
-load("network_permutations/all_peri_fant_final.rda")
-all_peri_fant_final <- copy(permutationResults)
+load("network_permutations/cont_pre_final.rda")
+cont_pre_final <- copy(permutationResults)
 
 net1 <- all_pre_mind_final$network$Temporal$EdgeWeights
 net2 <- all_pre_mind_final$network$Contemporaneous$EdgeWeights
@@ -1654,17 +1654,17 @@ mirror_matrix <- function(m) {
   return(m)
 }
 
-load("network_permutations/rem_pre_final.rda")
-rem_pre_final <- copy(permutationResults)
+load("network_permutations/all_peri_fant_final.rda")
+all_peri_fant_final <- copy(permutationResults)
 
-netAll <- rem_pre_final
+netAll <- all_peri_mind_final
 
-sum((netAll$p_values$Temporal$EdgeWeights < 0.025), na.rm = T)
-sum((netAll$p_values$Temporal$EdgeWeights != 1), na.rm = T)
+sum((netAll$p_values$Contemporaneous$EdgeWeights < 0.025), na.rm = T)
+sum((netAll$p_values$Contemporaneous$EdgeWeights != 1), na.rm = T)
 
-netAll <- netAll[["network"]][["Contemporaneous"]][["EdgeWeights"]]
+net <- cont_pre_final[["network"]][["Contemporaneous"]][["EdgeWeights"]]
 
-n2 <- qgraph(netAll, layout = L, #title=paste("mlVAR: Contemporaneous network", g, i, "Baseline", sep = " - "),
+n2 <- qgraph(net, layout = L, #title=paste("mlVAR: Contemporaneous network", g, i, "Baseline", sep = " - "),
              theme='colorblind', negDashed=FALSE, diag=T, #title=paste("Controls: Temporal - Baseline")
              groups=groups_list, legend.cex=1, legend=T, nodeNames = nodeVars, labels=c(1:length(nodeVars)),
              vsize=6, asize=3, curve=0.5, esize=3, color = groups_colors)
@@ -1673,7 +1673,7 @@ n2 <- qgraph(netAll, layout = L, #title=paste("mlVAR: Contemporaneous network", 
 
 net_pvals <- netAll[["p_values"]][["Contemporaneous"]][["EdgeWeights"]]
 
-net <- copy(netAll)
+# net <- copy(netAll)
 net[which(net_pvals > 0.025)] <- 0
 
 net <- mirror_matrix(net)
@@ -1701,6 +1701,194 @@ mean((abs(test)) >= ((abs(compare_group_pre_final$testStats$difference$LocalStre
 # }
 # 
 # test
+
+
+######################################## Calculate PA / NA Strength ###################################################
+pa_nodes <- c("Energy", "Wakefulness", "Satisfaction")
+na_nodes <- c("Sadness", "Irritation", "Anxiety", "Restlessness")
+
+
+vars <- c('Rumination',
+              'Energy', 'Wakefulness', 'Satisfaction',
+              'Sadness', 'Irritation', 'Anxiety', 'Restlessness',
+              'EventUnpleasantness', 'EventPleasantness',
+              'Distraction')#, 'NegativeAffect', 'PositiveAffect')
+
+pa_nodes <- c("energetic", "wakeful", "satisfied")
+na_nodes <- c("down", "irritated", "anxious", "restless")
+
+vars <- c('ruminating',
+              'energetic', 'wakeful', 'satisfied',
+              'down', 'irritated', 'anxious', 'restless',
+              'EventUnpleasantness', 'EventPleasantness',
+              'distracted')
+
+non_pa_nodes <- vars[which(vars %nin% pa_nodes)]
+non_na_nodes <- vars[which(vars %nin% na_nodes)]
+
+
+nets <- compare_all_mind_final$testStats$difference$EdgeWeights$Contemporaneous
+lenDat <- length(nets)
+
+pa_results <- list()
+na_results <- list()
+
+pa_results[["Strength"]] <- c(rep(NA, lenDat))
+pa_results[["InStrength"]] <- c(rep(NA, lenDat))
+pa_results[["OutStrength"]] <- c(rep(NA, lenDat))
+
+na_results[["Strength"]] <- c(rep(NA, lenDat))
+na_results[["InStrength"]] <- c(rep(NA, lenDat))
+na_results[["OutStrength"]] <- c(rep(NA, lenDat))
+
+for(i in 1:lenDat){
+  current_net <- nets[[i]]
+  if(isSymmetric(current_net)){
+    
+    pa_strength <-  sum(abs(current_net[pa_nodes, non_pa_nodes])) # [rows, columns]
+    pa_results$Strength[i] <- pa_strength
+    
+    na_strength <-  sum(abs(current_net[na_nodes, non_na_nodes])) # [rows, columns]
+    na_results$Strength[i] <- na_strength
+    
+  } else {
+    
+    pa_out_strength <- sum(abs(current_net[pa_nodes, non_pa_nodes])) #outstrength
+    pa_in_strength <- sum(abs(current_net[non_pa_nodes, pa_nodes])) #instrength
+    pa_results$InStrength[i] <- pa_in_strength
+    pa_results$OutStrength[i] <- pa_out_strength
+    
+    na_out_strength <- sum(abs(current_net[na_nodes, non_na_nodes])) #outstrength
+    na_in_strength <- sum(abs(current_net[non_na_nodes, na_nodes])) #instrength
+    na_results$InStrength[i] <- na_in_strength
+    na_results$OutStrength[i] <- na_out_strength
+  }
+  
+}
+
+if(isSymmetric(current_net)){
+  print("Contemporaneous Network")
+  
+  pa_pval <- mean((pa_results$Strength) >= (pa_results$Strength[1]), na.rm = TRUE)
+  
+  na_pval <- mean((na_results$Strength) >= (na_results$Strength[1]), na.rm = TRUE)
+  
+  print("PA Strength p-value:")
+  print(pa_pval)
+  print(pa_results$Strength[1])
+  
+  print("NA Strength p-value:")
+  print(na_pval)
+  print(na_results$Strength[1])
+  
+} else {
+  print("Temporal Network")
+  
+  pa_in_pval <- mean((pa_results$InStrength) >= (pa_results$InStrength[1]), na.rm = TRUE)
+  pa_out_pval <- mean((pa_results$OutStrength) >= (pa_results$OutStrength[1]), na.rm = TRUE)
+  
+  na_in_pval <- mean((na_results$InStrength) >= (na_results$InStrength[1]), na.rm = TRUE)
+  na_out_pval <- mean((na_results$OutStrength) >= (na_results$OutStrength[1]), na.rm = TRUE)  
+  
+  print("PA InStrength p-value:")
+  print(pa_in_pval)
+  print(pa_results$InStrength[1])
+  
+  print("PA OutStrength p-value:")
+  print(pa_out_pval)
+  print(pa_results$OutStrength[1])
+  
+  print("NA InStrength p-value:")
+  print(na_in_pval)
+  print(na_results$InStrength[1])
+  
+  print("NA OutStrength p-value:")
+  print(na_out_pval)
+  print(na_results$OutStrength[1])
+}
+
+
+
+
+
+
+# 
+# cluster_influence_pval <- function(network){
+#   non_pa_nodes <- vars[which(vars %nin% pa_nodes)]
+#   non_na_nodes <- vars[which(vars %nin% na_nodes)]
+#   
+#   nodes <- colnames(network)
+#   lenDat <- length(network)
+#   
+#   pa_results <- list()
+#   na_results <- list()
+#   
+#   pa_results[["Strength"]] <- c(rep(NA, lenDat))
+#   pa_results[["InStrength"]] <- c(rep(NA, lenDat))
+#   pa_results[["OutStrength"]] <- c(rep(NA, lenDat))
+#   
+#   na_results[["Strength"]] <- c(rep(NA, lenDat))
+#   na_results[["InStrength"]] <- c(rep(NA, lenDat))
+#   na_results[["OutStrength"]] <- c(rep(NA, lenDat))
+#   
+#   isSymmetric(nets[[1]])
+#   
+#   for(i in 1:lenDat){
+#     current_net <- nets[[i]]
+#     if(isSymmetric(current_net)){
+#       
+#       pa_strength <-  sum(abs(current_net[pa_nodes, non_pa_nodes])) # [rows, columns]
+#       pa_results$Strength[i] <- pa_strength
+#       
+#       na_strength <-  sum(abs(current_net[na_nodes, non_na_nodes])) # [rows, columns]
+#       na_results$Strength[i] <- na_strength
+#       
+#     } else {
+#       
+#       pa_out_strength <- sum(abs(current_net[pa_nodes, non_pa_nodes])) #outstrength
+#       pa_in_strength <- sum(abs(current_net[non_pa_nodes, pa_nodes])) #instrength
+#       pa_results$InStrength[i] <- pa_in_strength
+#       pa_results$OutStrength[i] <- pa_out_strength
+#       
+#       na_out_strength <- sum(abs(current_net[na_nodes, non_na_nodes])) #outstrength
+#       na_in_strength <- sum(abs(current_net[non_na_nodes, na_nodes])) #instrength
+#       na_results$InStrength[i] <- na_in_strength
+#       na_results$OutStrength[i] <- na_out_strength
+#     }
+#     
+#   }
+#   
+#   if(isSymmetric(current_net)){
+#     pa_pval <- mean((pa_results$Strength) >= (pa_results$Strength[1]), na.rm = TRUE)
+#     
+#     na_pval <- mean((na_results$Strength) >= (na_results$Strength[1]), na.rm = TRUE)
+#     
+#   } else {
+#     pa_in_pval <- mean((pa_results$InStrength) >= (pa_results$InStrength[1]), na.rm = TRUE)
+#     pa_out_pval <- mean((pa_results$OutStrength) >= (pa_results$OutStrength[1]), na.rm = TRUE)
+#     
+#     na_in_pval <- mean((na_results$InStrength) >= (na_results$InStrength[1]), na.rm = TRUE)
+#     na_out_pval <- mean((na_results$OutStrength) >= (na_results$OutStrength[1]), na.rm = TRUE)  
+#   }
+#   
+#   
+# }
+# 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -1785,3 +1973,11 @@ plot(x, y, type="l", lwd=1)
 
 
 
+
+mean(data[which((data$group == "remitted") & (data$phase == "pre")),]$satisfied, na.rm = T)
+mean(data[which((data$group == "controls") & (data$phase == "pre")),]$satisfied, na.rm = T)
+t.test(data[which((data$group == "remitted") & (data$phase == "pre")),]$satisfied, data[which((data$group == "controls") & (data$phase == "pre")),]$satisfied)
+
+sd(data[which((data$group == "remitted") & (data$phase == "pre")),]$satisfied, na.rm = T)
+sd(data[which((data$group == "controls") & (data$phase == "pre")),]$satisfied, na.rm = T)
+var.test(data[which((data$group == "remitted") & (data$phase == "pre")),]$satisfied, data[which((data$group == "controls") & (data$phase == "pre")),]$satisfied)

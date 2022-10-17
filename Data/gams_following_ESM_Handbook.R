@@ -1,8 +1,9 @@
 rm(list = ls()) #clean all up
 
-#setwd("C:/Users/cleme/Documents/Education/RUG/Thesis/EMA-mindfulness/Data") #/ESM/mindcog_v202204
+source("C:/Users/cleme/Documents/Education/RUG/Thesis/EMA-mindfulness/Data/common_plot_theme.R")
+setwd("C:/Users/cleme/Documents/Education/RUG/Thesis/EMA-mindfulness/Data") #/ESM/mindcog_v202207
 
-setwd("~/Documents/RUG/Thesis/EMA-mindfulness/Data/")
+#setwd("~/Documents/RUG/Thesis/EMA-mindfulness/Data/")
 library(tidyverse)
 library(plyr)
 library(dplyr)
@@ -26,8 +27,8 @@ library(ggpattern)
 
 R.version.string
 
-
-
+#Pick response rate cut-off value
+cutOff <- 0.5
 
 ########################################################## Rescaling function #############################################################
 #source: https://stackoverflow.com/questions/23642111/how-to-unscale-the-coefficients-from-an-lmer-model-fitted-with-a-scaled-respon
@@ -47,6 +48,10 @@ rescale.coefs <- function(beta,mu,sigma) {
 #read in data
 data <- read.csv('merged_data.csv') 
 
+data$group <- factor(data$group, levels = c("remitted", "controls"))
+data$intervention <- factor(data$intervention, levels = c("mindfulness", "fantasizing"))
+data$subjB <- factor(data$subjB)
+
 responses_block <- ddply(data, .(subject, group), plyr::summarise,
                          numBeeped = length(mindcog_db_open_from),
                          noResponse = length(unique(mindcog_db_non_response)),
@@ -54,7 +59,7 @@ responses_block <- ddply(data, .(subject, group), plyr::summarise,
                          responseRate = round(response/numBeeped,2),
                          numDays = max(assessmentDay))
 
-data$subjB <- interaction(data$subject, data$block, drop = TRUE)
+# data$subjB <- interaction(data$subject, data$block, drop = TRUE)
 
 meanResponseRate_block <- mean(responses_block$responseRate) #the mean response rate is ~67.6%
 length(unique(responses_block[which(responses_block$responseRate >= meanResponseRate_block),]$subject)) #20
@@ -64,98 +69,16 @@ length(unique(responses_block[which(responses_block$group == "remitted"),]$subje
 length(unique(responses_block[which(responses_block$group == "controls"),]$subject)) #23
 
 #removing participants with a response rate lower than 50%
-pp <- unique(responses_block[which(responses_block$responseRate >= 0.5),]$subject)
+pp <- unique(responses_block[which(responses_block$responseRate >= cutOff),]$subject)
 data <- data[which(data$subject %in% pp),]
-
-
-###########################################################################################################
-######################################### Some more data prep #############################################
-###########################################################################################################
-
-#same for sleepQuality
-for(id in unique(data$subject)){
-  respondent_rows <- which(data$subject == id)
-  current_day <- 0
-  for(row in respondent_rows){
-    if((data$assessmentDay[row] != current_day) & (!is.na(data$sleepQuality[row]))){
-      sleep_quality <- data$sleepQuality[row]
-      current_day <- data$assessmentDay[row]
-    } else if((data$assessmentDay[row] == current_day) & (is.na(data$sleepQuality[row]))){
-      data$sleepQuality[row] <- sleep_quality
-    }
-  }
-}
-
-#same for sleepDuration
-for(id in unique(data$subject)){
-  respondent_rows <- which(data$subject == id)
-  current_day <- 0
-  for(row in respondent_rows){
-    if((data$assessmentDay[row] != current_day) & (!is.na(data$sleepDuration[row]))){
-      sleep_duration <- data$sleepDuration[row]
-      current_day <- data$assessmentDay[row]
-    } else if((data$assessmentDay[row] == current_day) & (is.na(data$sleepDuration[row]))){
-      data$sleepDuration[row] <- sleep_duration
-    }
-  }
-}
-
-#and for sleepLatency
-for(id in unique(data$subject)){
-  respondent_rows <- which(data$subject == id)
-  current_day <- 0
-  for(row in respondent_rows){
-    if((data$assessmentDay[row] != current_day) & (!is.na(data$sleepLatency[row]))){
-      sleep_latency <- data$sleepLatency[row]
-      current_day <- data$assessmentDay[row]
-    } else if((data$assessmentDay[row] == current_day) & (is.na(data$sleepLatency[row]))){
-      data$sleepLatency[row] <- sleep_latency
-    }
-  }
-}
-
-#aaaaaaand for restednessWakeup
-for(id in unique(data$subject)){
-  respondent_rows <- which(data$subject == id)
-  current_day <- 0
-  for(row in respondent_rows){
-    if((data$assessmentDay[row] != current_day) & (!is.na(data$restednessWakeup[row]))){
-      restedness <- data$restednessWakeup[row]
-      current_day <- data$assessmentDay[row]
-    } else if((data$assessmentDay[row] == current_day) & (is.na(data$restednessWakeup[row]))){
-      data$restednessWakeup[row] <- restedness
-    }
-  }
-}
-
-data$group <- factor(data$group, levels = c("remitted", "controls"))
-data$intervention <- factor(data$intervention, levels = c("mindfulness", "fantasizing"))
-data$phase <- factor(data$phase, levels = c("pre", "peri"))
-data$grInt <- as.factor(paste(data$group, data$intervention, sep = "."))
-data$blockPhase <- as.factor(paste(data$phase, data$block, sep = "."))
-data$grIntPhase <- as.factor(interaction(data$group, data$intervention, data$phase, drop = TRUE))
-data$subject <- as.factor(data$subject)
-data$subjB <- interaction(data$subject, data$block, drop = TRUE)
-data$thoughtsTime <- factor(data$thoughtsTime, levels = c("past", "present", "future"))
-data$thoughtsValence <- factor(data$thoughtsValence, levels = c("negative", "neutral", "positive"))
-data$aloneCompany <- factor(data$aloneCompany, levels = c("alone", "in company"))
-
-
-#add day of the week
-data$weekday <- weekdays(strptime(data$mindcog_db_open_from, "%Y-%m-%d %H:%M:%S"))
-data$weekday <- as.factor(data$weekday)
-
-data$sumNA <- data$sumNA / 4
-data$sumPA <- data$sumPA / 3
-
 
 
 ###########################################################################################################
 ############################################ Scaling Data #################################################
 ###########################################################################################################
 #creating variables minus baseline means per subject
-met.vars <- c('ruminating', 'stickiness', 'sumNA',  'down', 'irritated', 'restless', 'anxious',
-              'sumPA', 'wakeful', 'satisfied', 'energetic',
+met.vars <- c('ruminating', 'stickiness', 'sumNA', 'meanNA',  'down', 'irritated', 'restless', 'anxious',
+              'sumPA', 'meanPA', 'wakeful', 'satisfied', 'energetic',
               'stressed', 'listless',  'distracted',
               'thoughtsPleasant', 'restOfDayPos', 'companyPleasant', 'alonePleasant',
               'posMax', 'posIntensity', 'negMax', 'negIntensity',
@@ -498,8 +421,6 @@ summary(pa.event.bet2)
 # (0.006473  - 0.03313  ) / 0.03313 --> 0%
 
 
-
-
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 #+++++++++++++++++++++++++++++++++++++++++ Non-linear models ++++++++++++++++++++++++++++++++++++++++++++++
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
@@ -701,12 +622,15 @@ save(rum.gam_unscaled, rum.sum.unscaled, file = "models_rumination/rum_unscaled_
 
 load("models_rumination/rum_unscaled_contemp.rda")
 
+check_resid(rum.gam_unscaled)
+plot(rum.gam_unscaled$y, rum.gam_unscaled$residuals)
+
 
 plot_parametric(rum.gam, pred = list(group=c("remitted", "controls")),
                 parametricOnly = T, col = c("red", "blue"))
 
 
-report_stats(rum.gam)
+report_stats(rum.gam_unscaled)
 
 model1.acf <- acf_resid(rum.gam)
 
@@ -743,7 +667,6 @@ d <- t_to_d(param_tab$t[1:2], param_tab$df_error[1:2])
 interpret_cohens_d(d[1])
 
 gam.check(rum.gam)
-
 
 par(mfrow = c(3,2))
 plot_smooth(rum.gam, view = "negMax", ylab = "Rumination", xlab = "Event Unpleasantness")
@@ -876,6 +799,10 @@ na.sum.unscaled <- summary(na.gam_unscaled)
 
 save(na.gam_unscaled, na.sum.unscaled, file = "models_na/na_unscaled_contemp.rda")
 load("models_na/na_unscaled_contemp.rda")
+
+check_resid(na.gam_unscaled)
+
+plot(na.gam_unscaled$y, na.gam_unscaled$residuals)
 
 ar <- acf_resid(na.gam)
 
@@ -1118,7 +1045,7 @@ summary_rum.peri.test <- summary(rum.peri.test)
 
 
 rum.peri_unscaled <- gam(ruminating_gam ~ s(phaseBeepNum, by = interaction(group, intervention)) + group * intervention +
-                  s(sumNA_gam, by = interaction(group, intervention)) + s(sumPA_gam, by = interaction(group, intervention)) +
+                  s(meanNA_gam, by = interaction(group, intervention)) + s(meanPA_gam, by = interaction(group, intervention)) +
                   s(negMax_gam) + s(posMax_gam) +
                   s(stickiness_gam, by = interaction(group, intervention)) +
                   s(distracted_gam) + s(sleepQuality_gam) + s(companyPleasant_gam) +
@@ -1130,6 +1057,21 @@ rum.peri.sum.unscaled <- summary(rum.peri_unscaled)
 save(rum.peri_unscaled, rum.peri.sum.unscaled, file = "models_rumination/rum_unscaled_peri.rda")
 
 load("models_rumination/rum_unscaled_peri.rda")
+
+rum.peri.noGroup_unscaled <- gam(ruminating_gam ~ s(phaseBeepNum, by = intervention) + intervention +
+                           s(meanPA_gam, by = intervention) + s(meanNA_gam, by = intervention) +
+                           s(negMax_gam) + s(posMax_gam) +
+                           s(stickiness_gam, by = intervention) +
+                           s(distracted_gam) + s(sleepQuality_gam) + s(companyPleasant_gam) +
+                           s(phaseBeepNum, by = subjB, bs="fs", m=1),
+                         data = peri_dat_unscaled)
+
+rum.peri.noGroup.unscaled <- summary(rum.peri.noGroup_unscaled)
+
+save(rum.peri.noGroup_unscaled, rum.peri.noGroup.unscaled, file = "models_rumination/rum_unscaled_peri_noGroup.rda")
+
+load("models_rumination/rum_unscaled_peri_noGroup.rda")
+
 
 report_stats(rum.peri)
 
@@ -1200,8 +1142,12 @@ plot_smooth(rum.gam, view = "sleepQuality", ylab = "", xlab = "Sleep Quality")
 plot_smooth(rum.gam, view = "companyPleasant", ylab = "Rumination", xlab = "Company Pleasantness")
 
 
-param_tab <- parameters::model_parameters(rum.peri)
+param_tab <- parameters::model_parameters(rum.peri_unscaled)
 d <- t_to_d(param_tab$t[2:4], param_tab$df_error[2:4])
+interpret_cohens_d(d[1])
+
+param_tab <- parameters::model_parameters(rum.peri.noGroup_unscaled)
+d <- t_to_d(param_tab$t[2], param_tab$df_error[2])
 interpret_cohens_d(d[1])
 
 ######################################################################################################################
@@ -1228,8 +1174,8 @@ summary_na.peri <- summary(na.peri)
 
 save(na.peri, summary_na.peri, file="models_na/na_peri.rda")
 
-na.peri_unscaled <- gam(sumNA_gam ~ group * intervention + s(phaseBeepNum, by = interaction(group, intervention)) +
-                 s(ruminating_gam, by = interaction(group, intervention)) + s(sumPA_gam, by = interaction(group, intervention)) +
+na.peri_unscaled <- gam(meanNA_gam ~ group * intervention + s(phaseBeepNum, by = interaction(group, intervention)) +
+                 s(ruminating_gam, by = interaction(group, intervention)) + s(meanPA_gam, by = interaction(group, intervention)) +
                  s(negMax_gam) + s(posMax_gam) +
                  s(stickiness_gam) +
                  s(distracted_gam) + s(listless_gam) + s(sleepQuality_gam) + s(companyPleasant_gam) +
@@ -1241,10 +1187,31 @@ na.peri.sum.unscaled <- summary(na.peri_unscaled)
 save(na.peri_unscaled, na.peri.sum.unscaled, file = "models_na/na_unscaled_peri.rda")
 load("models_na/na_unscaled_peri.rda")
 
-param_tab_na <- parameters::model_parameters(na.peri)
+param_tab_na <- parameters::model_parameters(na.peri_unscaled)
 d <- t_to_d(param_tab_na$t[2:4], param_tab_na$df_error[2:4])
 interpret_cohens_d(d[1])
 
+param_tab_na <- parameters::model_parameters(na.peri.noGroup_unscaled)
+d <- t_to_d(param_tab_na$t[2], param_tab_na$df_error[2])
+interpret_cohens_d(d[1])
+
+na.peri.noGroup_unscaled <- gam(meanNA_gam ~ intervention + s(phaseBeepNum, by = intervention) +
+                                  s(ruminating_gam, by = intervention) + s(meanPA_gam, by = intervention) +
+                                  s(negMax_gam) + s(posMax_gam) +
+                                  s(stickiness_gam) +
+                                  s(distracted_gam) + s(listless_gam) + s(sleepQuality_gam) + s(companyPleasant_gam) +
+                                  s(phaseBeepNum, by = subjB, bs="fs", m=1),
+                                data = peri_dat_unscaled)
+
+na.peri.noGroup.unscaled <- summary(na.peri.noGroup_unscaled)
+
+save(na.peri.noGroup_unscaled, na.peri.noGroup.unscaled, file = "models_na/na_unscaled_peri_noGroup.rda")
+
+load("models_na/na_unscaled_peri_noGroup.rda")
+
+param_tab_na <- parameters::model_parameters(na.peri.noGroup_unscaled)
+d <- t_to_d(param_tab_na$t[2], param_tab_na$df_error[2])
+interpret_cohens_d(d[1])
 
 
 par(mfrow = c(2,2))
@@ -1305,8 +1272,8 @@ pa.peri <- gam(sumPA_gam ~ group * intervention + s(phaseBeepNum, by = interacti
 
 summary_pa.peri <- summary(pa.peri)
 
-pa.peri_unscaled <- gam(sumPA_gam ~ group * intervention + s(phaseBeepNum, by = interaction(group, intervention)) +
-                 s(ruminating_gam, by = interaction(group, intervention)) + s(sumNA_gam) +
+pa.peri_unscaled <- gam(meanPA_gam ~ group * intervention + s(phaseBeepNum, by = interaction(group, intervention)) +
+                 s(ruminating_gam, by = interaction(group, intervention)) + s(meanNA_gam) +
                  s(negMax_gam, by = interaction(group, intervention)) + s(posMax_gam, by = interaction(group, intervention)) +
                  s(stickiness_gam) +
                  s(distracted_gam) + s(listless_gam) + s(sleepQuality_gam) + s(companyPleasant_gam) +
@@ -1322,9 +1289,27 @@ save(pa.peri_unscaled, pa.peri.sum.unscaled, file = "models_pa/pa_unscaled_peri.
 save(pa.peri, summary_pa.peri, file = "models_pa/pa_unscaled_peri.rda")
 load("models_pa/pa_unscaled_peri.rda")
 
-param_tab_pa <- parameters::model_parameters(pa.peri)
+param_tab_pa <- parameters::model_parameters(pa.peri_unscaled)
 d <- t_to_d(param_tab_pa$t[2:4], param_tab_pa$df_error[2:4])
 interpret_cohens_d(d[1])
+
+param_tab_pa <- parameters::model_parameters(pa.peri.noGroup_unscaled)
+d <- t_to_d(param_tab_pa$t[2], param_tab_pa$df_error[2])
+interpret_cohens_d(d[1])
+
+pa.peri.noGroup_unscaled <- gam(meanPA_gam ~ intervention + s(phaseBeepNum, by = intervention) +
+                                  s(ruminating_gam, by = intervention) + s(meanNA_gam) +
+                                  s(negMax_gam, by = intervention) + s(posMax_gam, by = intervention) +
+                                  s(stickiness_gam) +
+                                  s(distracted_gam) + s(listless_gam) + s(sleepQuality_gam) + s(companyPleasant_gam) +
+                                  s(phaseBeepNum, by = subjB, bs="fs", m=1),
+                                data = peri_dat_unscaled)
+
+pa.peri.noGroup.unscaled <- summary(pa.peri.noGroup_unscaled)
+
+save(pa.peri.noGroup_unscaled, pa.peri.noGroup.unscaled, file = "models_pa/pa_unscaled_peri_noGroup.rda")
+
+load("models_pa/pa_unscaled_peri_noGroup.rda")
 
 
 par(mfrow = c(2,2))
@@ -1387,28 +1372,35 @@ rq1_res <- data.frame(node = c(rep("Rumination",2), rep("Negative Affect",2), re
                       value = c(rum_vals, na_vals, pa_vals),
                       se = c(rum_sds, na_sds, pa_sds))
 
+
 # Default bar plot
+pdf(width = 10, height = 3.75,
+    file = "rq1_gam_results.pdf")
 p<- ggplot(rq1_res, aes(x=factor(node, levels=c("Positive Affect", "Negative Affect", "Rumination")), y=value, fill=group)) + 
   geom_bar(stat="identity", color="black", 
-           position=position_dodge()) + ylim(0,75) +
+           position=position_dodge()) + ylim(0,65) +
   geom_errorbar(aes(ymin=value-se, ymax=value+se), width=.2,
                 position=position_dodge(.9))  + coord_flip()
 
 # Finished bar plot
 p+labs(x="", y = "")+
-  theme_economist_white() +  
-  scale_fill_manual(values=c('#0099FF','#FF3333'))
+  single_plot_theme() +
+  theme(legend.position=c(0.8,.9),
+        legend.background = element_rect("#D5E4EB")) +
+  scale_fill_manual(labels = c("HC", "rMDD"), values=c('#619CFF', '#F8766D'))
+  # guides(fill=guide_legend(title="Group"))
 
+dev.off()
 ## RQ2
 
-rum_vals <- c(rum.peri.sum.unscaled$p.coeff[1], rum.peri.sum.unscaled$p.coeff[3]+rum.peri.sum.unscaled$p.coeff[1])
-rum_sds <- c(rum.peri.sum.unscaled$se[1], rum.peri.sum.unscaled$se[3])
+rum_vals <- c(rum.peri.noGroup.unscaled$p.coeff[1], rum.peri.noGroup.unscaled$p.coeff[2]+rum.peri.noGroup.unscaled$p.coeff[1])
+rum_sds <- c(rum.peri.noGroup.unscaled$se[1], rum.peri.noGroup.unscaled$se[2])
 
-na_vals <- c(na.peri.sum.unscaled$p.coeff[1], na.peri.sum.unscaled$p.coeff[3]+na.peri.sum.unscaled$p.coeff[1])
-na_sds <- c(na.peri.sum.unscaled$se[1], na.peri.sum.unscaled$se[3])
+na_vals <- c(na.peri.noGroup.unscaled$p.coeff[1], na.peri.noGroup.unscaled$p.coeff[2]+na.peri.noGroup.unscaled$p.coeff[1])
+na_sds <- c(na.peri.noGroup.unscaled$se[1], na.peri.noGroup.unscaled$se[2])
 
-pa_vals <- c(pa.peri.sum.unscaled$p.coeff[1], pa.peri.sum.unscaled$p.coeff[3]+pa.peri.sum.unscaled$p.coeff[1])
-pa_sds <- c(pa.peri.sum.unscaled$se[1], pa.peri.sum.unscaled$se[3])
+pa_vals <- c(pa.peri.noGroup.unscaled$p.coeff[1], pa.peri.noGroup.unscaled$p.coeff[2]+pa.peri.noGroup.unscaled$p.coeff[1])
+pa_sds <- c(pa.peri.noGroup.unscaled$se[1], pa.peri.noGroup.unscaled$se[2])
 
 rq2_res <- data.frame(node = c(rep("Rumination",2), rep("Negative Affect",2), rep("Positive Affect",2)),
                       intervention = c("mindfulness", "fantasizing"),
@@ -1416,19 +1408,33 @@ rq2_res <- data.frame(node = c(rep("Rumination",2), rep("Negative Affect",2), re
                       se = c(rum_sds, na_sds, pa_sds))
 
 # Default bar plot
+pdf(width = 10, height = 3.75,
+    file = "rq2_gam_results.pdf")
 p<- ggplot(rq2_res, aes(x=factor(node, levels=c("Positive Affect", "Negative Affect", "Rumination")),
-                        y=value, fill=factor(intervention, levels = c("mindfulness", "fantasizing")))) + 
-  geom_bar(stat="identity", color="black", 
-           position=position_dodge()) + ylim(-7.5,7.5) +
+                        y=value, fill= intervention, pattern = intervention)) + 
+  geom_bar_pattern(stat = "identity",
+                   position = position_dodge(), #preserve = "single"
+                   color = "black", 
+                   pattern_fill = "black",
+                   pattern_angle = 45,
+                   pattern_density = 0.1,
+                   pattern_spacing = 0.025,
+                   pattern_key_scale_factor = 0.2)+ 
+  ylim(-4,4) +
+  
   geom_errorbar(aes(ymin=value-se, ymax=value+se), width=.2,
                 position=position_dodge(.9)) + coord_flip()
 
 # Finished bar plot
 p+labs(x="", y = "")+
-  theme_economist_white() +  
-  scale_fill_manual(values=c('#1F5B79', '#F29731'))
+  single_plot_theme() +  
+  theme(legend.position=c(0.8,.9),
+        legend.background = element_rect("#D5E4EB")) +
+  scale_fill_manual(labels = c("Fantasizing", "Mindfulness"), values=c('#1F5B79', '#F29731')) +
+  scale_pattern_manual(labels = c("Fantasizing", "Mindfulness"), values = c(fantasizing = "stripe", mindfulness = "none"))
+  # guides(fill=guide_legend(title="Intervention"))
 
-
+dev.off()
 # split by group
 
 
@@ -1460,24 +1466,44 @@ pa_sds <- c(pa.peri.sum.unscaled$se[1],
             pa.peri.sum.unscaled$se[2],
             pa.peri.sum.unscaled$se[2] + pa.peri.sum.unscaled$se[3])# + pa.peri.sum.unscaled$se[4])
 
-rq2_res <- data.frame(node = c(rep("Rumination",4), rep("Negative Affect",4), rep("Positive Affect",4)),
+rq2_res_split <- data.frame(node = c(rep("Rumination",4), rep("Negative Affect",4), rep("Positive Affect",4)),
                       group = c(rep("remitted",2), rep("controls",2)),
                       intervention = c("mindfulness", "fantasizing"),
                       value = c(rum_vals, na_vals, pa_vals),
                       se = c(rum_sds, na_sds, pa_sds))
 
-# Default bar plot
-p<- ggplot(rq2_res, aes(x=factor(node, levels=c("Positive Affect", "Negative Affect", "Rumination")),
+
+#with pattern
+pdf(width = 10, height = 3.75,
+    file = "rq2_gam_split_results.pdf")
+p<- ggplot(rq2_res_split, aes(x=factor(node, levels=c("Positive Affect", "Negative Affect", "Rumination")),
                         y=value,
-                        fill=interaction(intervention, group))) + 
-  # geom_col(aes(fill= factor(intervention))) +
-  geom_bar(stat="identity", color="black", 
-           position=position_dodge()) + ylim(-7,7) +
+                        fill=group, pattern = intervention)) + 
+  geom_bar_pattern(stat = "identity",
+                   position = position_dodge(), #preserve = "single"
+                   color = "black", 
+                   pattern_fill = "black",
+                   pattern_angle = 45,
+                   pattern_density = 0.1,
+                   pattern_spacing = 0.025,
+                   pattern_key_scale_factor = 0.2)+
+  ylim(-7.5,7.5) +
   geom_errorbar(aes(ymin=value-se, ymax=value+se), width=.2,
-                position=position_dodge(.9)) + coord_flip()
+                position=position_dodge(.9)) +
+  coord_flip()
 
 # Finished bar plot
 p+labs(x="", y = "")+
-  theme_economist_white() +  
-  scale_fill_manual(values=c('#0099FF','#FF3333', '#0099FF','#FF3333'))
+  single_plot_theme() +
+  theme(legend.position=c(0.8,.9),
+        legend.background = element_rect("#D5E4EB"),
+        legend.direction = "vertical") +
+  guides(fill=guide_legend(title="Group X Intervention")) +
+  scale_fill_manual(labels = c("HC", "rMDD"),
+                    values=c('#619CFF', '#F8766D')) +
+  scale_pattern_manual(labels = c("Fantasizing", "Mindfulness"), values = c(fantasizing = "stripe", mindfulness = "none")) +
+  guides(pattern = guide_legend(override.aes = list(fill = "white")),
+         fill = guide_legend(override.aes = list(pattern = "none")))
+
+dev.off()
 

@@ -2,8 +2,8 @@
 #################################### Set up ####################################
 rm(list = ls()) #clean all up
 
-setwd("C:/Users/cleme/Documents/Education/RUG/Thesis/EMA-mindfulness/Data/ESM/mindcog_v202205")
-
+setwd("C:/Users/cleme/Documents/Education/RUG/Thesis/EMA-mindfulness/Data/ESM/mindcog_v202207")
+source("C:/Users/cleme/Documents/Education/RUG/Thesis/EMA-mindfulness/Data/common_plot_theme.R")
 #setwd("~/Documents/RUG/Thesis/EMA-mindfulness/Data/ESM/mindcog_v202205")
 
 library(readxl)
@@ -29,7 +29,7 @@ library(effectsize)
 library(languageR)
 library(reshape2)
 
-ggplot <- function(...) { 	ggplot2::ggplot(...) + theme_bw() }
+
 
 #read in data
 data <- read.csv('preprocessed_data.csv') 
@@ -1431,48 +1431,74 @@ figure
 idVars <- c("subject", "group", "intervention", "phase", "thoughtsTime", "thoughtsValence", "thoughtsObject", "thinkingOf", "assessmentDay")
 
 
-baselineDat <- data#[which((data$block==1) & data$phase=="pre"),]
+baselineDat <- data[which((data$block==1) & data$phase=="pre"),]
 
-meltTime <-  within( melt(baselineDat[, c(idVars, "ruminating", "sumNA", "sumPA"),], id.vars = idVars), {
+levels(baselineDat$group) <- c("rMDD", "HC")
+
+levels(baselineDat$intervention) <- c("Mindfulness", "Fantasizing")
+
+meltTime <-  within( melt(baselineDat[, c(idVars, "ruminating", "meanNA", "meanPA"),], id.vars = idVars), {
   variable<- gsub("\\_.*","",variable)
   Mean<- ave(value, thoughtsTime, phase, intervention, assessmentDay, variable, subject, FUN=function(x) mean(x,na.rm=T))})
 
 meltTime <- meltTime[!duplicated(meltTime[c(1,5,12)]), ]
 meltTime <- meltTime[which(!is.na(meltTime$thoughtsTime)),]
 
-ans_q0 <- c(
-  `1` = "Past",
-  `2` = "Present",
-  `3` = "Future"
-)
+group.colors = c(rMDD = "#F8766D", HC = "#619CFF")
 
+# ans_q0 <- c(
+#   `1` = "Past",
+#   `2` = "Present",
+#   `3` = "Future"
+# )
+
+pdf(width = 10, height = 6,
+    file = "averages_by_thoughtsTime.pdf")
 #rumination
-ggplot(meltTime[which(meltTime$variable=="ruminating"),]) +
-  geom_boxplot(aes(x=phase, y=Mean, fill = group)) + ylim(0,100) +
-  facet_grid(thoughtsTime ~ group, scale = "free", labeller = as_labeller(ans_q0)) +
-  labs(x = "", y = "Rumination") +  #title = "Rumination and time-orientation of thoughts", 
+p1 <- ggplot(meltTime[which(meltTime$variable=="ruminating"),]) +
+  geom_boxplot(aes(y=Mean, fill = group)) + ylim(0,100) +
+  single_plot_theme() +
+  ylab("Rumination") +
+  facet_grid(thoughtsTime ~ group, scale = "free") +#, labeller = as_labeller(ans_q0)) +
   theme(axis.title.x=element_blank(),
         axis.text.x=element_blank(),
-        axis.ticks.x=element_blank()) + scale_fill_manual(values=group.colors)
+        axis.ticks.x=element_blank(),
+        legend.position = "None",
+        strip.background.y = element_blank(),
+        strip.text.y = element_blank()) + 
+  scale_fill_manual(values=group.colors)
 
 #NA
-ggplot(meltTime[which(meltTime$variable=="sumNA"),]) +
-  geom_boxplot(aes(x=thoughtsTime, y=Mean, fill = group)) + ylim(0,300) +
-  facet_grid(. ~ thoughtsTime, scale = "free", labeller = as_labeller(c("Past", "Present", "Future"))) +
-  labs(x = "", y = "Negative Affect") +  #title = "Rumination and time-orientation of thoughts", 
+p2 <- ggplot(meltTime[which(meltTime$variable=="meanNA"),]) +
+  geom_boxplot(aes(y=Mean, fill = group)) + ylim(0,100) +
+  single_plot_theme() +
+  ylab("Negative Affect") +
+  facet_grid(thoughtsTime ~ group, scale = "free") +#, labeller = as_labeller(ans_q0)) +
   theme(axis.title.x=element_blank(),
         axis.text.x=element_blank(),
-        axis.ticks.x=element_blank()) + scale_fill_manual(values=group.colors)
+        axis.ticks.x=element_blank(),
+        axis.text.y = element_blank(),
+        strip.background.y = element_blank(),
+        strip.text.y = element_blank(),
+        legend.position = "None") +
+  scale_fill_manual(values=group.colors)
 
 #PA
-ggplot(meltTime[which(meltTime$variable=="sumPA"),]) +
-  geom_boxplot(aes(x=thoughtsTime, y=Mean, fill = group)) + ylim(0,300) +
-  facet_grid(. ~ thoughtsTime, scale = "free", labeller = as_labeller(ans_q0)) +
-  labs(x = "", y = "Positive Affect") +  #title = "Rumination and time-orientation of thoughts", 
+p3 <- ggplot(meltTime[which(meltTime$variable=="meanPA"),]) +
+  geom_boxplot(aes(y=Mean, fill = group)) + ylim(0,100) +
+  single_plot_theme() +
+  ylab("Positive Affect") +
+  facet_grid(thoughtsTime ~ group, scale = "free") +#, labeller = as_labeller(ans_q0)) +
   theme(axis.title.x=element_blank(),
         axis.text.x=element_blank(),
-        axis.ticks.x=element_blank()) + scale_fill_manual(values=group.colors)
+        axis.ticks.x=element_blank(),
+        axis.text.y = element_blank(),
+        legend.position = "None") +
+  scale_fill_manual(values=group.colors)
 
+ggarrange(p1, p2, p3, ncol=3) #, common.legend = TRUE, legend="bottom")
+
+dev.off()
 # melt_q0 <- melt(data[which((data$phase=="pre") & (data$block==1)),], id.vars=c( "group","thoughtsTime"), measure.vars=c("ruminating"))
 # melt_q0 <- melt_q0[which(!is.na(melt_q0$thoughtsTime)),]
 # 
@@ -1517,46 +1543,66 @@ pc_val <- ddply(data, .(group, phase, block), plyr::summarize,
 
 
 
-meltVal <-  within( melt(baselineDat[, c(idVars, "ruminating", "sumNA", "sumPA"),], id.vars = idVars), {
+meltVal <-  within( melt(baselineDat[, c(idVars, "ruminating", "meanNA", "meanPA"),], id.vars = idVars), {
   variable<- gsub("\\_.*","",variable)
   Mean<- ave(value, thoughtsValence, assessmentDay, variable, subject, FUN=function(x) mean(x,na.rm=T))})
 
 meltVal <- meltVal[!duplicated(meltVal[c(1,6,12)]), ]
 meltVal <- meltVal[which(!is.na(meltVal$thoughtsValence)),]
 
-ans_q0 <- c(
-  `1` = "Negative",
-  `2` = "Neutral",
-  `3` = "Positive"
-)
+# ans_q0 <- c(
+#   `1` = "Negative",
+#   `2` = "Neutral",
+#   `3` = "Positive"
+# )
 
+pdf(width = 10, height = 6,
+    file = "averages_by_thoughtsValence.pdf")
 #rumination
-ggplot(meltVal[which(meltVal$variable=="ruminating"),]) +
-  geom_boxplot(aes(x=thoughtsTime, y=Mean, fill = group)) + ylim(0,100) +
-  facet_grid(. ~ thoughtsTime, scale = "free", labeller = as_labeller(ans_q0)) +
-  labs(x = "", y = "Rumination") +  #title = "Rumination and valence of thoughts", 
+p1 <- ggplot(meltVal[which(meltVal$variable=="ruminating"),]) +
+  geom_boxplot(aes(y=Mean, fill = group)) + ylim(0,100) +
+  single_plot_theme() +
+  ylab("Rumination") +
+  facet_grid(thoughtsValence ~ group, scale = "free") +#, labeller = as_labeller(ans_q0)) +
   theme(axis.title.x=element_blank(),
         axis.text.x=element_blank(),
-        axis.ticks.x=element_blank()) + scale_fill_manual(values=group.colors)
+        axis.ticks.x=element_blank(),
+        legend.position = "None",
+        strip.background.y = element_blank(),
+        strip.text.y = element_blank()) + 
+  scale_fill_manual(values=group.colors)
 
 #NA
-ggplot(meltVal[which(meltVal$variable=="sumNA"),]) +
-  geom_boxplot(aes(x=thoughtsTime, y=Mean, fill = group)) + ylim(0,300) +
-  facet_grid(. ~ thoughtsTime, scale = "free", labeller = as_labeller(ans_q0)) +
-  labs(x = "", y = "Negative Affect") +  #title = "Rumination and valence of thoughts", 
+p2 <- ggplot(meltVal[which(meltVal$variable=="meanNA"),]) +
+  geom_boxplot(aes(y=Mean, fill = group)) + ylim(0,100) +
+  single_plot_theme() +
+  ylab("Negative Affect") +
+  facet_grid(thoughtsValence ~ group, scale = "free") +#, labeller = as_labeller(ans_q0)) +
   theme(axis.title.x=element_blank(),
         axis.text.x=element_blank(),
-        axis.ticks.x=element_blank()) + scale_fill_manual(values=group.colors)
+        axis.ticks.x=element_blank(),
+        axis.text.y = element_blank(),
+        legend.position = "None",
+        strip.background.y = element_blank(),
+        strip.text.y = element_blank()) + 
+  scale_fill_manual(values=group.colors)
 
 #PA
-ggplot(meltVal[which(meltVal$variable=="sumPA"),]) +
-  geom_boxplot(aes(x=thoughtsTime, y=Mean, fill = group)) + ylim(0,300) +
-  facet_grid(. ~ thoughtsTime, scale = "free", labeller = as_labeller(ans_q0)) +
-  labs(x = "", y = "Positive Affect") +  #title = "Rumination and valence of thoughts", 
+p3 <- ggplot(meltVal[which(meltVal$variable=="meanPA"),]) +
+  geom_boxplot(aes(y=Mean, fill = group)) + ylim(0,100) +
+  single_plot_theme() +
+  ylab("Positive Affect") +
+  facet_grid(thoughtsValence ~ group, scale = "free") +#, labeller = as_labeller(ans_q0)) +
   theme(axis.title.x=element_blank(),
         axis.text.x=element_blank(),
-        axis.ticks.x=element_blank()) + scale_fill_manual(values=group.colors)
+        axis.ticks.x=element_blank(),
+        axis.text.y = element_blank(),
+        legend.position = "None") +
+  scale_fill_manual(values=group.colors)
 
+ggarrange(p1, p2, p3, ncol=3) #, common.legend = TRUE, legend="bottom")
+
+dev.off()
 # melt_q0 <- melt(data[which((data$phase=="pre") & (data$block==1)),], id.vars=c( "subject", "group","thoughtsValence"), measure.vars=c("ruminating"))
 # melt_q0 <- melt_q0[which(!is.na(melt_q0$thoughtsValence)),]
 # 
@@ -1594,47 +1640,71 @@ pc_object_int <- ddply(data, .(group, intervention, phase), plyr::summarize,
 pc_object_int <- drop_na(pc_object_int, intervention)
 
 
-meltObj <-  within( melt(baselineDat[, c(idVars, "ruminating", "sumNA", "sumPA"),], id.vars = idVars), {
+meltObj <-  within( melt(baselineDat[, c(idVars, "ruminating", "meanNA", "meanPA"),], id.vars = idVars), {
   variable<- gsub("\\_.*","",variable)
   Mean<- ave(value, thoughtsObject, assessmentDay, variable, subject, FUN=function(x) mean(x,na.rm=T))})
 
 meltObj <- meltObj[!duplicated(meltObj[c(1,7,12)]), ]
 meltObj <- meltObj[which(!is.na(meltObj$thoughtsObject)),]
 
-ans_q0 <- c(
-  `1` = "Myself",
-  `2` = "Someone else",
-  `3` = "Other"
-)
+meltObj$thoughtsObject <- factor(meltObj$thoughtsObject)
+levels(meltObj$thoughtsObject) <- c("Myself", "Someone else", "Other")
 
+
+# ans_q0 <- c(
+#   `1` = "Myself",
+#   `2` = "Someone else",
+#   `3` = "Other"
+# )
+
+pdf(width = 10, height = 6,
+    file = "averages_by_thoughtsObject.pdf")
 #rumination
-ggplot(meltObj[which(meltObj$variable=="ruminating"),]) +
-  geom_boxplot(aes(x=thoughtsTime, y=Mean, fill = group)) + ylim(0,100) +
-  facet_grid(. ~ thoughtsTime, scale = "free", labeller = as_labeller(ans_q0)) +
-  labs(x = "", y = "Rumination") +  #title = "Rumination and object of thoughts", 
+p1 <- ggplot(meltObj[which(meltObj$variable=="ruminating"),]) +
+  geom_boxplot(aes(y=Mean, fill = group)) + ylim(0,100) +
+  single_plot_theme() +
+  ylab("Rumination") +
+  facet_grid(thoughtsObject ~ group, scale = "free") + #, labeller = as_labeller(ans_q0)) +
   theme(axis.title.x=element_blank(),
         axis.text.x=element_blank(),
-        axis.ticks.x=element_blank()) + scale_fill_manual(values=group.colors)
+        axis.ticks.x=element_blank(),
+        legend.position = "None",
+        strip.background.y = element_blank(),
+        strip.text.y = element_blank()) + 
+  scale_fill_manual(values=group.colors)
 
 #NA
-ggplot(meltObj[which(meltObj$variable=="sumNA"),]) +
-  geom_boxplot(aes(x=thoughtsTime, y=Mean, fill = group)) + ylim(0,300) +
-  facet_grid(. ~ thoughtsTime, scale = "free", labeller = as_labeller(ans_q0)) +
-  labs(x = "", y = "Negative Affect") +  #title = "Rumination and object of thoughts", 
+p2 <- ggplot(meltObj[which(meltObj$variable=="meanNA"),]) +
+  geom_boxplot(aes(y=Mean, fill = group)) + ylim(0,100) +
+  single_plot_theme() +
+  ylab("Negative Affect") +
+  facet_grid(thoughtsObject ~ group, scale = "free") + #, labeller = as_labeller(ans_q0)) +
   theme(axis.title.x=element_blank(),
         axis.text.x=element_blank(),
-        axis.ticks.x=element_blank()) + scale_fill_manual(values=group.colors)
+        axis.ticks.x=element_blank(),
+        axis.text.y = element_blank(),
+        legend.position = "None",
+        strip.background.y = element_blank(),
+        strip.text.y = element_blank()) + 
+  scale_fill_manual(values=group.colors)
 
 
 #PA
-ggplot(meltObj[which(meltObj$variable=="sumPA"),]) +
-  geom_boxplot(aes(x=thoughtsTime, y=Mean, fill = group)) + ylim(0,300) +
-  facet_grid(. ~ thoughtsTime, scale = "free", labeller = as_labeller(ans_q0)) +
-  labs(x = "", y = "Positive Affect") +  #title = "Rumination and object of thoughts", 
+p3 <- ggplot(meltObj[which(meltObj$variable=="meanPA"),]) +
+  geom_boxplot(aes(y=Mean, fill = group)) + ylim(0,100) +
+  single_plot_theme() +
+  ylab("Positive Affect") +
+  facet_grid(thoughtsObject ~ group, scale = "free") + #, labeller = as_labeller(ans_q0)) +
   theme(axis.title.x=element_blank(),
         axis.text.x=element_blank(),
-        axis.ticks.x=element_blank()) + scale_fill_manual(values=group.colors)
+        axis.ticks.x=element_blank(),
+        axis.text.y = element_blank(),
+        legend.position = "None") +
+  scale_fill_manual(values=group.colors)
 
+ggarrange(p1, p2, p3, ncol=3) #, common.legend = TRUE, legend="bottom")
+
+dev.off()
 # 
 # 
 # melt_q0 <- melt(data, id.vars=c( "group","thoughtsObject"), measure.vars=c("sumNA"))
@@ -1674,48 +1744,74 @@ pc_thinkingOf_int <- drop_na(pc_thinkingOf_int, intervention)
 
 
 
-meltThink <-  within( melt(baselineDat[, c(idVars, "ruminating", "sumNA", "sumPA"),], id.vars = idVars), {
+meltThink <-  within( melt(baselineDat[, c(idVars, "ruminating", "meanNA", "meanPA"),], id.vars = idVars), {
   variable<- gsub("\\_.*","",variable)
   Mean<- ave(value, thinkingOf, assessmentDay, variable, subject, FUN=function(x) mean(x,na.rm=T))})
 
 meltThink <- meltThink[!duplicated(meltThink[c(1,8,12)]), ]
 meltThink <- meltThink[which(!is.na(meltThink$thinkingOf)),]
 
-ans_q0 <- c(
-  `1` = "Activity",
-  `2` = "Surroundings",
-  `3` = "Feelings",
-  `4` = "Concerns",
-  `5` = "Daydreaming",
-  `6` = "Other"
-)
+meltThink$thinkingOf <- factor(meltThink$thinkingOf)
+levels(meltThink$thinkingOf) <- c("Activity", "Surroundings", "Feelings", "Concerns",
+                                  "Daydreaming", "Other")
 
+# ans_q0 <- c(
+#   `1` = "Activity",
+#   `2` = "Surroundings",
+#   `3` = "Feelings",
+#   `4` = "Concerns",
+#   `5` = "Daydreaming",
+#   `6` = "Other"
+# )
+
+
+pdf(width = 10, height = 8,
+    file = "averages_by_thinkingOf.pdf")
 #rumination
-ggplot(meltThink[which(meltThink$variable=="ruminating"),]) +
-  geom_boxplot(aes(x=thinkingOf, y=Mean, fill = group)) + ylim(0,100) +
-  facet_grid(. ~ thinkingOf, scale = "free", labeller = as_labeller(ans_q0)) +
-  labs(x = "", y = "Rumination") +  #title = "Rumination and object of thoughts", 
+p1 <- ggplot(meltThink[which(meltThink$variable=="ruminating"),]) +
+  geom_boxplot(aes(y=Mean, fill = group)) + ylim(0,100) +
+  single_plot_theme() +
+  ylab("Rumination") +
+  facet_grid(thinkingOf ~ group, scale = "free") + #, labeller = as_labeller(ans_q0)) +
   theme(axis.title.x=element_blank(),
         axis.text.x=element_blank(),
-        axis.ticks.x=element_blank()) + scale_fill_manual(values=group.colors)
+        axis.ticks.x=element_blank(),
+        legend.position = "None",
+        strip.background.y = element_blank(),
+        strip.text.y = element_blank()) + 
+  scale_fill_manual(values=group.colors)
 
 #NA
-ggplot(meltThink[which(meltThink$variable=="sumNA"),]) +
-  geom_boxplot(aes(x=thinkingOf, y=Mean, fill = group)) + ylim(0,300) +
-  facet_grid(. ~ thinkingOf, scale = "free", labeller = as_labeller(ans_q0)) +
-  labs(x = "", y = "Negative Affect") +  #title = "Rumination and object of thoughts", 
+p2 <- ggplot(meltThink[which(meltThink$variable=="meanNA"),]) +
+  geom_boxplot(aes(y=Mean, fill = group)) + ylim(0,100) +
+  single_plot_theme() +
+  ylab("Negative Affect") +
+  facet_grid(thinkingOf ~ group, scale = "free") + #, labeller = as_labeller(ans_q0)) +
   theme(axis.title.x=element_blank(),
         axis.text.x=element_blank(),
-        axis.ticks.x=element_blank()) + scale_fill_manual(values=group.colors)
+        axis.ticks.x=element_blank(),
+        axis.text.y = element_blank(),
+        legend.position = "None",
+        strip.background.y = element_blank(),
+        strip.text.y = element_blank()) + 
+  scale_fill_manual(values=group.colors)
 
 #PA
-ggplot(meltThink[which(meltThink$variable=="sumPA"),]) +
-  geom_boxplot(aes(x=thinkingOf, y=Mean, fill = group)) + ylim(0,300) +
-  facet_grid(. ~ thinkingOf, scale = "free", labeller = as_labeller(ans_q0)) +
-  labs(x = "", y = "Positive Affect") +  #title = "Rumination and object of thoughts", 
+p3 <- ggplot(meltThink[which(meltThink$variable=="meanPA"),]) +
+  geom_boxplot(aes(y=Mean, fill = group)) + ylim(0,100) +
+  single_plot_theme() +
+  ylab("Positive Affect") +
+  facet_grid(thinkingOf ~ group, scale = "free") + #, labeller = as_labeller(ans_q0)) +
   theme(axis.title.x=element_blank(),
         axis.text.x=element_blank(),
-        axis.ticks.x=element_blank()) + scale_fill_manual(values=group.colors)
+        axis.ticks.x=element_blank(),
+        axis.text.y = element_blank(),
+        legend.position = "None") + 
+  scale_fill_manual(values=group.colors)
+
+ggarrange(p1, p2, p3, ncol=3) #, common.legend = TRUE, legend="bottom")
+
+dev.off()
 
 # melt_q0 <- melt(data, id.vars=c( "group","thinkingOf"), measure.vars=c("ruminating"))
 # melt_q0 <- melt_q0[which(!is.na(melt_q0$thinkingOf)),]

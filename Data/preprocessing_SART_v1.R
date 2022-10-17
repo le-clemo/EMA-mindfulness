@@ -17,7 +17,7 @@ library(reshape)
 library(ggpubr)
 library(lubridate)
 library(igraph)
-library(qgraph)
+
 
 #read in data
 games <- read_csv('SART/SART_games_010922.csv') 
@@ -33,8 +33,8 @@ names(mylist) <- c("wander_all", "wander_pre1", "wander_peri1", "wander_pre2", "
 list2env(mylist ,.GlobalEnv)
 
 #load preprocessed ESM data for matching
-esm <- read_csv('ESM/mindcog_v202205/preprocessed_data.csv')
-matchingData <- read_csv('ESM/mindcog_v202205/matchingData.csv')
+esm <- read_csv('ESM/mindcog_v202207/preprocessed_data.csv')
+matchingData <- read_csv('ESM/mindcog_v202207/matchingData.csv')
 
 # esm$group <- factor(esm$group, levels = c("controls", "remitted"))
 # esm$intervention <- factor(esm$intervention, levels = c("mindfulness", "fantasizing"))
@@ -148,8 +148,8 @@ table(games[which(is.na(games$subject)),]$userID)
 length(unique(games[which(is.na(games$subject)),]$userID))
 
 ################################## Inspecting games ###################################
-length(unique(games$userID)) #75 (participants that took part in both blocks are counted twice!)
-length(games$gameSessionID) #988
+length(unique(games$userID)) #77 (participants that took part in both blocks are counted twice!)
+length(games$gameSessionID) #1061
 
 #class(games$time) #already POSIXct
 
@@ -224,7 +224,7 @@ length(unique(games$subject)) #40
 
 
 
-length(unique(questions$userID)) #65
+length(unique(questions$userID)) #67
 
 questions$fullID <- NA
 questions$subject <- NA
@@ -427,8 +427,6 @@ for(subj in subject_IDs){
 }
 
 
-
-
 numbers$Q0 <- NA
 numbers$Q1 <- NA
 numbers$Q2 <- NA
@@ -503,6 +501,13 @@ numbers$propCor <- NA
 numbers$propCor_Go <- NA
 numbers$propCor_NoGo <- NA
 
+numbers$meanRT_nTrials <- NA
+numbers$meanRT_Go_nTrials <- NA
+numbers$meanRT_NoGo_nTrials <- NA
+numbers$propCor_nTrials <- NA
+numbers$propCor_Go_nTrials <- NA
+numbers$propCor_NoGo_nTrials <- NA
+
 numbers$meanRT_cycle <- NA
 numbers$meanRT_Go_cycle <- NA
 numbers$meanRT_NoGo_cycle <- NA
@@ -531,28 +536,35 @@ for(subj in subject_IDs){
     
     for(d in dates){
       d_rows <- which((numbers$userID==id) & (numbers$subject==subj) & (numbers$date==d))
+      
       #get the mean response time overall (combined for all cycles)
       meanRT <- mean(numbers[d_rows,]$responseTime, na.rm = TRUE)
       #meanRT for Go trials
       meanRT_Go <- mean(numbers[which((numbers$userID==id) & (numbers$date==d) & (numbers$subject==subj) &
                                         (numbers$isGo==TRUE)),]$responseTime, na.rm = TRUE)
+      
       #meanRT for No-Go trials
       meanRT_NoGo <- mean(numbers[which((numbers$userID==id) & (numbers$date==d) & (numbers$subject==subj) &
                                           (numbers$isGo==FALSE)),]$responseTime, na.rm = TRUE)
+      
       #get the proportion of correct trials overall
       propCor <- round(length(numbers[which((numbers$userID==id) & (numbers$date==d) & (numbers$subject==subj) &
                                               (numbers$correct==TRUE)),]$id) / 
                          length(numbers[which((numbers$userID==id) & (numbers$date==d) & (numbers$subject==subj)),]$id), 2)
+      
       #get the proportion of correct trials on Go trials
       propCor_Go <- length(numbers[which((numbers$userID==id) & (numbers$date==d) & (numbers$subject==subj) &
                                            (numbers$isGo==TRUE) & (numbers$correct==TRUE)),]$id) / 
         length(numbers[which((numbers$userID==id) & (numbers$date==d) & (numbers$subject==subj) &
                                (numbers$isGo==TRUE)),]$id)
+      
+      
       #get the proportion of correct trials on No-Go trials
       propCor_NoGo <- round(length(numbers[which((numbers$userID==id) & (numbers$date==d) & (numbers$subject==subj) &
                                                    (numbers$isGo==FALSE) & (numbers$correct==TRUE)),]$id) / 
                               length(numbers[which((numbers$userID==id) & (numbers$date==d) & (numbers$subject==subj) &
                                                      (numbers$isGo==FALSE)),]$id), 2)
+      
       
       #add all measures to the relevant rows
       numbers[d_rows, ]$meanRT_date <- round(meanRT, 2)
@@ -573,12 +585,21 @@ for(subj in subject_IDs){
       
       #get the mean response time overall (combined for all cycles)
       meanRT <- mean(numbers[n_rows,]$responseTime, na.rm = TRUE)
+      
+      meanRT_nTrials <- length(n_rows)
+      
       #meanRT for Go trials
       meanRT_Go <- mean(numbers[which((numbers$userID==id) & (numbers$gameSessionID==gid) & (numbers$subject==subj) &
                                              (numbers$isGo==TRUE)),]$responseTime, na.rm = TRUE)
+      
+      meanRT_Go_nTrials <- length(numbers[which((numbers$userID==id) & (numbers$gameSessionID==gid) & (numbers$subject==subj) &
+                                                  (numbers$isGo==TRUE)),]$responseTime)
       #meanRT for No-Go trials
       meanRT_NoGo <- mean(numbers[which((numbers$userID==id) & (numbers$gameSessionID==gid) & (numbers$subject==subj) &
                                                (numbers$isGo==FALSE)),]$responseTime, na.rm = TRUE)
+      
+      meanRT_NoGo_nTrials <- length(numbers[which((numbers$userID==id) & (numbers$gameSessionID==gid) & (numbers$subject==subj) &
+                                                    (numbers$isGo==FALSE)),]$responseTime)
       
       #number of correct trials
       nCor <- length(numbers[which((numbers$userID==id) & (numbers$gameSessionID==gid) & (numbers$subject==subj) &
@@ -594,12 +615,24 @@ for(subj in subject_IDs){
       propCor <- round(nCor / length(numbers[which((numbers$userID==id) &
                                                      (numbers$gameSessionID==gid) &
                                                      (numbers$subject==subj)),]$id), 2)
+      
+      propCor_nTrials <- length(numbers[which((numbers$userID==id) &
+                                                (numbers$gameSessionID==gid) &
+                                                (numbers$subject==subj)),]$id)
+      
       #get the proportion of correct trials on Go trials
       propCor_Go <- nCor_Go / length(numbers[which((numbers$userID==id) & (numbers$gameSessionID==gid) &
                                                      (numbers$subject==subj) & (numbers$isGo==TRUE)),]$id)
+      
+      propCor_Go_nTrials <- length(numbers[which((numbers$userID==id) & (numbers$gameSessionID==gid) &
+                                                   (numbers$subject==subj) & (numbers$isGo==TRUE)),]$id)
+      
       #get the proportion of correct trials on No-Go trials
       propCor_NoGo <- round(nCor_NoGo / length(numbers[which((numbers$userID==id) & (numbers$gameSessionID==gid) &
                                                                (numbers$subject==subj) & (numbers$isGo==FALSE)),]$id), 2)
+      
+      propCor_NoGo_nTrials <- length(numbers[which((numbers$userID==id) & (numbers$gameSessionID==gid) &
+                                                     (numbers$subject==subj) & (numbers$isGo==FALSE)),]$id)
       
 
       
@@ -610,6 +643,14 @@ for(subj in subject_IDs){
       numbers[n_rows, ]$propCor <- round(propCor, 2)
       numbers[n_rows, ]$propCor_Go <- round(propCor_Go, 2)
       numbers[n_rows, ]$propCor_NoGo <- round(propCor_NoGo, 2)
+      
+      #add number of trials
+      numbers[n_rows, ]$meanRT_nTrials <- meanRT_nTrials
+      numbers[n_rows, ]$meanRT_Go_nTrials <- meanRT_Go_nTrials
+      numbers[n_rows, ]$meanRT_NoGo_nTrials <- meanRT_NoGo_nTrials
+      numbers[n_rows, ]$propCor_nTrials <- propCor_nTrials
+      numbers[n_rows, ]$propCor_Go_nTrials <- propCor_Go_nTrials
+      numbers[n_rows, ]$propCor_NoGo_nTrials <- propCor_NoGo_nTrials
       
       #get the number of cycles performed in this gameSession
       num_cycles <- unique(numbers[n_rows,]$cycle)
@@ -755,7 +796,13 @@ meanTimes <- ddply(numbers, .(userID, subject, gameSessionID), dplyr::summarize,
                      meanRT_NoGo_ = meanRT_NoGo,
                      propCor_ = propCor,
                      propCor_Go_ = propCor_Go,
-                     propCor_NoGo_ = propCor_NoGo)
+                     propCor_NoGo_ = propCor_NoGo,
+                     meanRT_nTrials_ = meanRT_nTrials,
+                     meanRT_Go_nTrials_ = meanRT_Go_nTrials,
+                     meanRT_NoGo_nTrials_ = meanRT_NoGo_nTrials,
+                     propCor_nTrials_ = propCor_nTrials,
+                     propCor_Go_nTrials_ = propCor_Go_nTrials,
+                     propCor_NoGo_nTrials_ = propCor_NoGo_nTrials)
 
 meanTimes <- meanTimes[which(!is.na(meanTimes$subject)),]
 
@@ -774,6 +821,13 @@ esm$meanRT_NoGo <- NA
 esm$propCor <- NA
 esm$propCor_Go <- NA
 esm$propCor_NoGo <- NA
+
+esm$meanRT_nTrials <- NA
+esm$meanRT_Go_nTrials <- NA
+esm$meanRT_NoGo_nTrials <- NA
+esm$propCor_nTrials <- NA
+esm$propCor_Go_nTrials <- NA
+esm$propCor_NoGo_nTrials <- NA
 
 for(row in 1:nrow(meanTimes)){
   subj <- meanTimes$subject[row]
@@ -794,6 +848,13 @@ for(row in 1:nrow(meanTimes)){
       esm$propCor[idx] <- combined$propCor_[r]
       esm$propCor_Go[idx] <- combined$propCor_Go_[r]
       esm$propCor_NoGo[idx] <- combined$propCor_NoGo_[r]
+      
+      esm$meanRT_nTrials[idx] <- combined$meanRT_nTrials_[r]
+      esm$meanRT_Go_nTrials[idx] <- combined$meanRT_Go_nTrials_[r]
+      esm$meanRT_NoGo_nTrials[idx] <- combined$meanRT_NoGo_nTrials_[r]
+      esm$propCor_nTrials[idx] <- combined$propCor_nTrials_[r]
+      esm$propCor_Go_nTrials[idx] <- combined$propCor_Go_nTrials_[r]
+      esm$propCor_NoGo_nTrials[idx] <- combined$propCor_NoGo_nTrials_[r]
     } 
   }
   #esm <- merge(esm, combined, by = c("subject", "mindcog_db_started_at"))
@@ -818,169 +879,6 @@ missing_links <- data.frame(table(games[which(is.na(games$subject)),]$userID))
 colnames(missing_links) <-  c("userID", "gamesPlayed")
 missing_links <- missing_links[with(missing_links, order(-gamesPlayed)), ]
 
+write.csv(numbers, "sart_w_thoughtProbes.csv", row.names = FALSE)
 write.csv(missing_links, file = "missing_links.csv", row.names = FALSE)
 write.csv(esm, file = "merged_data.csv", row.names = FALSE)
-
-
-######################################## Data exploration #################################################
-dat_text <- data.frame(
-  label = c("100% | 97%", "93% | 94%", "97% | 97%", "93% | 96%", "94% | 95%", "95% | 99%"),
-  # label = c("N=261 | 100%", "N=161 | 93%", "N=110 | 97%", "N=184 | 93%", "N=36 | 94%", "N=43 | 95%",
-  #           "N=1014 | 97%", "N=181 | 94%", "N=194 | 97%", "N=423 | 96%", "N=191 | 95%", "N=221 | 99%"),
-  Q0   = c(0, 1, 2, 3, 4, 5, 0, 1, 2, 3, 4, 5),
-  group = c("controls", "controls", "controls", "controls", "controls", "controls",
-            "remitted", "remitted", "remitted", "remitted", "remitted", "remitted")
-)
-
-ans_q0 <- c(
-  `0` = "Task",
-  `1` = "Aspects of task",
-  `2` = "Personal Matters",
-  `3` = "Surroundings",
-  `4` = "Daydreaming",
-  `5`= "Distracted/other"
-)
-
-melt_q0 <- melt(numbers, id.vars=c( "group","Q0"), measure.vars=c("responseTime"))
-melt_q0 <- melt_q0[which(!is.na(melt_q0$Q0)),]
-
-ggplot(melt_q0) +
-  geom_boxplot(aes(x=Q0, y=value, color=group)) +
-  facet_grid(. ~ Q0, scale = "free", labeller = as_labeller(ans_q0)) +
-  labs(title = "Q0: What were you just thinking about?", x = "", y = "Response time") + 
-   theme(axis.title.x=element_blank(),
-          axis.text.x=element_blank(),
-          axis.ticks.x=element_blank()) +
-  geom_text(
-      data    = dat_text,
-      mapping = aes(x = -Inf, y = -Inf, label = label),
-      hjust = -0.45,
-      vjust = -50
-    )
-
-
-dat_text <- data.frame(
-  label = c(
-            "94% | 100%", "92% | 97%", "95% | 97%", "100% | 97%", "98% | 98%"),
-  Q1   = c(0, 1, 2, 3, 4, 0, 1, 2, 3, 4),
-  group = c("controls", "controls", "controls", "controls", "controls",
-            "remitted", "remitted", "remitted", "remitted", "remitted")
-)
-
-ans_q1 <- c(
-  `0` = "Very hard",
-  `1` = "Hard",
-  `2` = "Neither",
-  `3` = "Easy",
-  `4` = "Very easy"
-)
-
-melt_q1 <- melt(numbers, id.vars=c( "group","Q1"), measure.vars=c("responseTime"))
-melt_q1 <- melt_q1[which(!is.na(melt_q1$Q1)),]
-
-ggplot(melt_q1) +
-  geom_boxplot(aes(x=Q1, y=value, color=group)) +
-  facet_grid(. ~ Q1, scale = "free", labeller = as_labeller(ans_q1)) +
-  labs(title = "Q1: How hard was it to let go of the thought?", x = "", y = "Response time") + 
-  theme(axis.title.x=element_blank(),
-        axis.text.x=element_blank(),
-        axis.ticks.x=element_blank()) +
-  geom_text(
-    data    = dat_text,
-    mapping = aes(x = -Inf, y = -Inf, label = label),
-    hjust = -0.45,
-    vjust = -50
-  )
-
-
-dat_text <- data.frame(
-  label = c(
-            "95% | 98%", "96% | 97%", "97% | 97%"),
-  Q2   = c(0, 1, 2, 0, 1, 2),
-  group = c("controls", "controls", "controls",
-            "remitted", "remitted", "remitted")
-)
-
-ans_q2 <- c(
-  `0` = "Negative",
-  `1` = "Neutral",
-  `2` = "Positive"
-)
-
-melt_q2 <- melt(numbers, id.vars=c( "group","Q2"), measure.vars=c("responseTime"))
-melt_q2 <- melt_q2[which(!is.na(melt_q2$Q2)),]
-
-ggplot(melt_q2) +
-  geom_boxplot(aes(x=Q2, y=value, color=group)) +
-  facet_grid(. ~ Q2, scale = "free", labeller = as_labeller(ans_q2)) +
-  labs(title = "Q2: Did your thoughts have a negative, neutral or positive charge?", x = "", y = "Response time") +
-  scale_fill_manual(values = c("green", "red")) + 
-  theme(axis.title.x=element_blank(),
-        axis.text.x=element_blank(),
-        axis.ticks.x=element_blank()) +
-  geom_text(
-    data    = dat_text,
-    mapping = aes(x = -Inf, y = -Inf, label = label),
-    hjust = -1.5,
-    vjust = -50
-  )
-
-
-
-dat_text <- data.frame(
-  label = c(
-            "86% | 98%", "96% | 97%", "99% | 97%"),
-  Q3   = c(0, 1, 2, 0, 1, 2),
-  group = c("controls", "controls", "controls",
-            "remitted", "remitted", "remitted")
-)
-
-ans_q3 <- c(
-  `0` = "Past",
-  `1` = "Present",
-  `2` = "Future"
-)
-
-melt_q3 <- melt(numbers, id.vars=c( "group","Q3"), measure.vars=c("responseTime"))
-melt_q3 <- melt_q3[which(!is.na(melt_q3$Q3)),]
-
-ggplot(melt_q3) +
-  geom_boxplot(aes(x=Q3, y=value, color = group)) +
-  facet_grid(. ~ Q3, scale = "free", labeller = as_labeller(ans_q3)) +
-  labs(title = "Q3: What was the time orientation of your thought?", x = "", y = "Response time") + 
-  theme(axis.title.x=element_blank(),
-        axis.text.x=element_blank(),
-        axis.ticks.x=element_blank()) +
-  geom_text(
-    data    = dat_text,
-    mapping = aes(x = -Inf, y = -Inf, label = label),
-    hjust = -1.5,
-    vjust = -50
-  )
-
-#Q0 = What were you just thinking about?
-#a0 = I was fully concentrated on my task
-#a1 = I rated aspects of the task (e.g. my performance or how long it takes)
-#a2 = I was thinking about personal matters
-#a3 = I was distracted by my surroundings (e.g. sound, temperature, my physical state)
-#a4 = I was daydreaming / I was thinking about task unrelated things
-#a5 = I wasn't paying attention, but I wasn't thinking of anything specific
-
-#Q1 = Did your thoughts have a negative, neutral or positive charge?
-#a0 = negative
-#a1 = neutral
-#a2 = positive
-
-#Q2 = How hard was it to let go of the thought?
-#a0 = very difficult
-#a1 = difficult
-#a2 = neither difficult nor easy
-#a3 = easy
-#a4 = very easy
-
-#Q3 = What was the time orientation of your thought?
-#a0 = past
-#a1 = present
-#a2 = future
-
-

@@ -13,16 +13,27 @@ library(mgcv)
 library(tidyr)           # Simplify R code
 library(car)
 library(MASS)
+library(BayesFactor)
+library(lme4)
+library(lmerTest)
+library(languageR)
+library(effectsize)
+
+packageVersion("lme4") #1.1.28
+packageVersion("BayesFactor") #0.9.12.4.3
+packageVersion("itsadug") #2.4
+packageVersion("mgcv") # 1.8.31
 
 #read in data
 data <- read.csv('merged_data.csv') 
+numbers <- read.csv("sart_w_thoughtProbes.csv")
 
 
 ###########################################################################################################
 ######################################### Some more data prep #############################################
 ###########################################################################################################
 
-data$group <- factor(data$group, levels = c("controls", "remitted"))
+data$group <- factor(data$group, levels = c("remitted", "controls"))
 data$intervention <- factor(data$intervention, levels = c("mindfulness", "fantasizing"))
 data$phase <- factor(data$phase, levels = c("pre", "peri"))
 data$grInt <- as.factor(paste(data$group, data$intervention, sep = "."))
@@ -39,18 +50,22 @@ data$aloneCompany <- factor(data$aloneCompany, levels = c("alone", "in company")
 data$weekday <- weekdays(strptime(data$mindcog_db_open_from, "%Y-%m-%d %H:%M:%S"))
 data$weekday <- as.factor(data$weekday)
 
+data$commissionError <- 1 - data$propCor_NoGo
+
+
 
 ###########################################################################################################
 ############################################ Scaling Data #################################################
 ###########################################################################################################
 #creating variables minus baseline means per subject
-met.vars <- c('ruminating', 'stickiness', 'sumNA',  'down', 'irritated', 'restless', 'anxious',
-              'sumPA', 'wakeful', 'satisfied', 'energetic',
+met.vars <- c('ruminating', 'stickiness', 'meanNA',  'down', 'irritated', 'restless', 'anxious',
+              'meanPA', 'wakeful', 'satisfied', 'energetic',
               'stressed', 'listless',  'distracted',
               'thoughtsPleasant', 'restOfDayPos',
               'posMax', 'posIntensity', 'negMax', 'negIntensity',
               "sleepQuality", "sleepLatency", "sleepDuration", "restednessWakeup",
-              "meanRT", "meanRT_Go", "meanRT_NoGo", "propCor", "propCor_Go", "propCor_NoGo")
+              "meanRT", "meanRT_Go", "meanRT_NoGo", "propCor", "propCor_Go", "propCor_NoGo",
+              "commissionError")
 
 #in addition we create a new list which includes both the changed and unchanged met.vars for scaling later on
 scale.vars <- c(rep(NA, length(met.vars)*3))
@@ -90,14 +105,10 @@ for(v in met.vars){
 # View(subset(data[which(data$subject=="s37"),],
 #             select = c("subject", "phase", "block", "ruminating", "ruminating_gam", "ruminating_diff", "beepNum")))
 
-#creating a scaled version of data
-sc_data <- copy(data)
-sc_data[scale.vars] <- scale(sc_data[scale.vars])
-
 
 #number of participants so far
-length(unique(sc_data$subjB)) #66 subjB (same subject, different block --> viewed as separate)
-responses_block <- ddply(sc_data, .(subjB), plyr::summarise,
+length(unique(data$subjB)) #66 subjB (same subject, different block --> viewed as separate)
+responses_block <- ddply(data, .(subjB), plyr::summarise,
                          numCompleted = length(mindcog_db_open_from),
                          noResponse = length(unique(mindcog_db_non_response)),
                          response = numCompleted - noResponse,
@@ -109,7 +120,7 @@ length(unique(responses_block[which(responses_block$responseRate >= meanResponse
 length(unique(responses_block[which(responses_block$responseRate >= 0.6),]$subjB)) #45
 length(unique(responses_block[which(responses_block$responseRate >= 0.5),]$subjB)) #53
 
-responses_subject <- ddply(sc_data, .(subject), plyr::summarise,
+responses_subject <- ddply(data, .(subject), plyr::summarise,
                            numCompleted = length(mindcog_db_open_from),
                            noResponse = length(unique(mindcog_db_non_response)),
                            response = numCompleted - noResponse,
@@ -126,355 +137,1021 @@ length(unique(responses_subject[which(responses_subject$responseRate >= 0.5),]$s
 
 #removing participants with a response rate lower than 60%
 pp <- unique(responses_block[which(responses_block$responseRate >= 0.6),]$subjB)
-sc_data <- sc_data[which(sc_data$subjB %in% pp),]
 data <- data[which(data$subjB %in% pp),]
 #sc_data <- sc_data[which(sc_data$blockBeepNum <= 140),]
 #sc_data <- sc_data[which(is.na(sc_data$mindcog_db_non_response)),]
 
 sart <- data[which(!is.na(data$meanRT)),]
-sc_sart <- sc_data[which(!is.na(sc_data$meanRT)),]
 
-###########################################################################################################
-######################################### Inspecting Relation #############################################
-###########################################################################################################
-#The correlations are very weak
+sart$gameNumSubject <- NA
+subjectIDs <- unique(sart$subject)
+for(id in subjectIDs){
+  lenDat <- length(sart[which(sart$subject==id),]$subject)
+  sart[which(sart$subject==id),]$gameNumSubject <- 1:lenDat
+}
 
-cor(sart$meanRT, sart$ruminating)
-#[1] 0.02175574
-cor(sart$meanRT, sart$distracted)
-#[1] -0.01042558
-cor(sart$meanRT, sart$stickiness)
-#[1] 0.04576742
-cor(sart$meanRT, sart$wakeful)
-#[1] -0.06633524
-cor(sart$meanRT, sart$sumNA)
-#[1] -0.02192623
-cor(sart$meanRT, sart$sumPA)
-#[1] -0.07724179
-plot(sart$meanRT, sart$ruminating)
-plot(sart$meanRT, sart$stickiness)
-plot(sart$meanRT, sart$distracted)
-plot(sart$meanRT, sart$sumPA)
+sart$gameNumSubjB <- NA
+subjBIDs <- unique(sart$subjB)
+for(id in subjBIDs){
+  lenDat <- length(sart[which(sart$subjB==id),]$subjB)
+  sart[which(sart$subjB==id),]$gameNumSubjB <- 1:lenDat
+}
+
+#creating a scaled version of data
+sc_sart <- copy(sart)
+sc_sart[scale.vars] <- scale(sc_sart[scale.vars])
+
+sc_sart <- sc_sart[which(!is.na(sc_sart$meanRT)),]
 
 
-#let's look at change scores instead
-cor(sart$meanRT, sart$ruminating_diff)
-#[1] 0.02175574
-cor(sart$meanRT, sart$distracted_diff)
-#[1] 0.01155531
-cor(sart$meanRT, sart$stickiness_diff)
-#[1] -0.01699151
-cor(sart$meanRT, sart$wakeful_diff)
-#[1] 0.0581514
-cor(sart$meanRT, sart$sumNA_diff)
-#[1] 0.02787691
-cor(sart$meanRT, sart$sumPA_diff)
-#[1] -0.07349336
-plot(sart$meanRT, sart$ruminating_diff)
-plot(sart$meanRT, sart$stickiness_diff)
-plot(sart$meanRT, sart$distracted_diff)
-plot(sart$meanRT, sart$sumPA_diff)
-
-#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-#+++++++++++++++++++++++++++++++++++ Creating models with gam-variables +++++++++++++++++++++++++++++++++++
-#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-#gam varialbes are NA for entire pre-phase (while diff-variables are actual - baselineMean for all data)
-
-avg2 <- ddply(sart, c("group", "intervention", "phaseBeepNum", "meanRT"), summarise,
-              N    = length(meanRT),
-              sd   = sd(meanRT),
-              se   = sd / sqrt(N))
-plot2 <- ggplot(avg2, aes(y=meanRT, x=phaseBeepNum, color=intervention)) +
-  geom_point(position = position_jitter(w=0.1,h=0))+ facet_grid(.~group) +
-  ylab("meanRT Difference peri-pre")+ xlab("Phase Assessment Number") + labs(color = "Intervention") +
-  geom_hline(yintercept=0) + geom_smooth()  #+ scale_x_discrete(limits=c("1","2","3", "4", "5", "6", "7"))
-
-plot2
+baseSart <- sart[which((sart$phase=="pre") & (sart$block==1)),]
+sc_baseSart <- sc_sart[which((sc_sart$phase=="pre") & (sc_sart$block==1)),]
 
 
-#Maximum model with REML
-rt.max.reml <- gam(meanRT ~ s(phaseBeepNum) + group * intervention +
-                     s(ruminating_gam) + s(stickiness_gam) +
-                     s(distracted_gam) +
-                     s(phaseBeepNum, by = subject, bs="fs", m=1),
-                   data = sc_sart)
+#creating variables minus baseline means per subject
+met.vars <- c('responseTime', 'meanRT', 'meanRT_Go', 'meanRT_NoGo', 'propCor', 'propCor_Go', 'propCor_NoGo')
 
-summary(rt.max.reml)
-
-#Maximum model with ML
-rt.max <- gam(meanRT ~ s(phaseBeepNum) + group * intervention +
-                    s(ruminating_gam) + s(stickiness_gam) +
-                    s(distracted_gam) +
-                    s(phaseBeepNum, by = subject, bs="fs", m=1),
-                  data = sc_sart, method = "ML")
-
-#removing interaction between group and intervention
-rt1 <- gam(meanRT ~ s(phaseBeepNum) + group + intervention +
-                s(ruminating_gam) + s(stickiness_gam) +
-                s(distracted_gam) +
-                s(phaseBeepNum, by = subject, bs="fs", m=1),
-              data = sc_sart, method = "ML")
-
-compareML(rt.max, rt1) #not signficant
-
-
-#removing distracted
-rt2 <- gam(meanRT ~ s(phaseBeepNum) + group + intervention +
-             s(ruminating_gam) + s(stickiness_gam) +
-             s(phaseBeepNum, by = subject, bs="fs", m=1),
-           data = sc_sart, method = "ML")
-
-compareML(rt2, rt1) #not signficant
-
-
-#removing stickiness
-rt3 <- gam(meanRT ~ s(phaseBeepNum) + group + intervention +
-             s(ruminating_gam) +
-             s(phaseBeepNum, by = subject, bs="fs", m=1),
-           data = sc_sart, method = "ML")
-
-compareML(rt2, rt3) #signficant
-
-#removing ruminating
-rt4 <- gam(meanRT ~ s(phaseBeepNum) + group + intervention +
-             s(stickiness_gam) +
-             s(phaseBeepNum, by = subject, bs="fs", m=1),
-           data = sc_sart, method = "ML")
-
-compareML(rt2, rt4) #signficant
-
-
-#removing intervention
-rt5 <- gam(meanRT ~ s(phaseBeepNum) + group +
-             s(ruminating_gam) + s(stickiness_gam) +
-             s(phaseBeepNum, by = subject, bs="fs", m=1),
-           data = sc_sart, method = "ML")
-
-compareML(rt2, rt5) #signficant
-
-
-#removing group
-rt6 <- gam(meanRT ~ s(phaseBeepNum) + intervention +
-             s(ruminating_gam) + s(stickiness_gam) +
-             s(phaseBeepNum, by = subject, bs="fs", m=1),
-           data = sc_sart, method = "ML")
-
-compareML(rt2, rt6) #not signficant
-
-#rt6 is the winnter but we might opt to keep group as a predictor anyways(?)
-rt.m1 <- gam(meanRT ~ s(phaseBeepNum) + group + intervention +
-             s(ruminating_gam) + s(stickiness_gam) +
-             s(phaseBeepNum, by = subject, bs="fs", m=1),
-           data = sc_sart)
-
-summary(rt.m1)
-
-
-plot_smooth(rt.m1, view="phaseBeepNum", rug=F, plot_all="intervention")
-plot_smooth(rt.m1, view="phaseBeepNum", rug=F, plot_all="group")
-
-# check autocorrelation
-model1.acf <- acf_resid(rt.m1)
-
-#check model fit
-gam.check(rt.m1)
-
-#plot the model based predicted differences between interventions (summed effects)
-plot_parametric(rt.m1, pred=list(intervention=c("mindfulness", "fantasizing")))
-#and between groups
-plot_parametric(rt.m1, pred=list(intervention=c("mindfulness", "fantasizing"), group=c("controls", "remitted")))
-
-# plot differences
-plot_diff(rt.m1, view="phaseBeepNum", comp=list("intervention"=c("mindfulness", "fantasizing")), main="mindfulness vs fantasizing")
-plot_diff(rt.m1, view="phaseBeepNum", comp=list( group=c("remitted", "remitted"), intervention=c("mindfulness", "fantasizing")))
-#,main="mindfulness vs fantasizing")
-plot_diff(rt.m1, view="phaseBeepNum", comp=list( group=c("controls", "controls"), intervention=c("mindfulness", "fantasizing")))
-
-
-# intercept model to compare with winner model
-rt.int <- bam(meanRT ~ 1 + s(phaseBeepNum, by=subject, bs="fs", m=1), data=sc_sart, method="ML")
-summary(rt.int)
-
-compareML(rt.int, rt2) #rt2 clearly outperforms the intercept model
-
-
-
+#in addition we create a new list which includes both the changed and unchanged met.vars for scaling later on
+scale.vars <- c(rep(NA, length(met.vars)*3))
+i = 0
+for(v in met.vars){
+  new_var <- paste(v, "_diff", sep = "")
+  numbers[[new_var]] <- NA
+  
+  gam_var <- paste(v, "_gam", sep = "")
+  numbers[[gam_var]] <- NA
+  i = i+1
+  scale.vars[[i]] <- v
+  i = i+1
+  scale.vars[[i]] <- new_var
+  i = i+1
+  scale.vars[[i]] <- gam_var
+  
+  for(id in unique(numbers$userID)){
+    for(b in 1:2){
+      pre_rows <- which((numbers$userID == id) & (numbers$phase=="pre") & (numbers$block==b))
+      peri_rows <- which((numbers$userID == id) & (numbers$phase=="peri") & (numbers$block==b))
+      s_rows <- which((numbers$userID == id) & (numbers$block==b))
+      baselineMean <- mean(numbers[[v]][pre_rows], na.rm=TRUE)
+      
+      if(is.na(baselineMean)){
+        baselineMean <- 0
+      }
+      
+      numbers[[new_var]][s_rows] <- round(numbers[[v]][s_rows] - baselineMean, 2)
+      
+      numbers[[gam_var]][pre_rows] <- NA
+      numbers[[gam_var]][peri_rows] <- round(numbers[[v]][peri_rows] - baselineMean, 2)
+    }
+  }  
+}
 
 
 #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-############################################################ Raw scores #################################################################### 
+########################################################### SART + ESM ################################################################## 
 #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
-#Maximum model with REML
-rt.max.reml <- gam(meanRT ~ s(phaseBeepNum) + group * intervention * phase +
-                     s(ruminating) + s(stickiness) +
-                     s(distracted) + s(sumNA) + s(sumPA) +
-                     s(phaseBeepNum, by = subject, bs="fs", m=1),
-                   data = sc_sart)
+#### baseline
 
-summary(rt.max.reml)
+## meanRT
 
-#Maximum model with ML
-rt.max <- gam(meanRT ~ s(phaseBeepNum) + group * intervention * phase +
-                s(ruminating) + s(stickiness) +
-                s(distracted) + s(sumNA) + s(sumPA) +
-                s(phaseBeepNum, by = subject, bs="fs", m=1),
-              data = sc_sart, method = "ML")
+RT.base.lin0 <- lmer(meanRT ~ group * gameNumSubject + (1 | subject) +
+                       ruminating + meanNA + meanPA + distracted + propCor,
+                     data = baseSart)
 
-#removing interaction between group and phase
-rt1 <- gam(meanRT ~ s(phaseBeepNum) + group * intervention + phase + phase:intervention +
-                s(ruminating) + s(stickiness) +
-                s(distracted) + s(sumNA) + s(sumPA) +
-                s(phaseBeepNum, by = subject, bs="fs", m=1),
-              data = sc_sart, method = "ML")
+RT.base.lin1 <- lmer(meanRT ~ group * gameNumSubject + (1 | subject) +
+                       ruminating + meanNA + meanPA + distracted,
+                     data = baseSart)
 
-compareML(rt.max, rt1) #not significant
+anova(RT.base.lin0, RT.base.lin1)
 
-#removing interaction between intervention and phase
-rt2 <- gam(meanRT ~ s(phaseBeepNum) + group * intervention + phase +
-             s(ruminating) + s(stickiness) +
-             s(distracted) + s(sumNA) + s(sumPA) +
-             s(phaseBeepNum, by = subject, bs="fs", m=1),
-           data = sc_sart, method = "ML")
+RT.base.lin2 <- lmer(meanRT ~ group + gameNumSubject + (1 | subject) +
+                       ruminating + meanNA + meanPA + distracted,
+                     data = baseSart)
 
-compareML(rt2, rt1) #not significant
+anova(RT.base.lin1, RT.base.lin2) #lin2 preferred
 
+RT.base.lin3 <- lmer(meanRT ~ group + gameNumSubject + (1 | subject) +
+                       ruminating + meanNA + distracted,
+                     data = baseSart)
 
-#removing interaction between intervention and group
-rt3 <- gam(meanRT ~ s(phaseBeepNum) + group + intervention + phase +
-             s(ruminating) + s(stickiness) +
-             s(distracted) + s(sumNA) + s(sumPA) +
-             s(phaseBeepNum, by = subject, bs="fs", m=1),
-           data = sc_sart, method = "ML")
+anova(RT.base.lin3, RT.base.lin2) #lin3 preferred
 
-compareML(rt2, rt3) #not significant
+RT.base.lin4 <- lmer(meanRT ~ group + gameNumSubject + (1 | subject) +
+                       ruminating + distracted,
+                     data = baseSart)
 
+anova(RT.base.lin3, RT.base.lin4) #lin4 preferred
 
-#removing phase
-rt4 <- gam(meanRT ~ s(phaseBeepNum) + group + intervention +
-             s(ruminating) + s(stickiness) +
-             s(distracted) + s(sumNA) + s(sumPA) +
-             s(phaseBeepNum, by = subject, bs="fs", m=1),
-           data = sc_sart, method = "ML")
+RT.base.lin5 <- lmer(meanRT ~ group + gameNumSubject + (1 | subject) +
+                       ruminating,
+                     data = baseSart)
 
-compareML(rt4, rt3) #significant
+anova(RT.base.lin5, RT.base.lin4) #lin5 preferred
+
+RT.base.lin6 <- lmer(meanRT ~ group + gameNumSubject + (1 | subject),
+                     data = baseSart)
+
+anova(RT.base.lin5, RT.base.lin6) #lin6 preferred
+
+RT.base.lin7 <- lmer(meanRT ~ gameNumSubject + (1 | subject),
+                     data = baseSart)
+
+anova(RT.base.lin7, RT.base.lin6) #lin7 preferred
 
 
-#removing intervention
-rt5 <- gam(meanRT ~ s(phaseBeepNum) + group + phase +
-             s(ruminating) + s(stickiness) +
-             s(distracted) + s(sumNA) + s(sumPA) +
-             s(phaseBeepNum, by = subject, bs="fs", m=1),
-           data = sc_sart, method = "ML")
+RT.base.lin8 <- lmer(meanRT ~ group + (1 | subject),
+                     data = baseSart)
+anova(RT.base.lin8, RT.base.lin6) #lin6 preferred
+# --> so we compare lin7 with lin6 on Bayes Factor
 
-compareML(rt5, rt3) #not significant
+RT.base.lin9 <- lmer(meanRT ~ gameNumSubject + ruminating + (1 | subject),
+                     data = baseSart)
 
-#removing group
-rt6 <- gam(meanRT ~ s(phaseBeepNum) + phase +
-             s(ruminating) + s(stickiness) +
-             s(distracted) + s(sumNA) + s(sumPA) +
-             s(phaseBeepNum, by = subject, bs="fs", m=1),
-           data = sc_sart, method = "ML")
+anova(RT.base.lin7, RT.base.lin9) #lin7 preferred
+# --> so we compare lin7 with lin6 on Bayes Factor
 
-compareML(rt5, rt6) #significant
+summary(RT.base.lin6)
+summary(RT.base.lin7)
 
-
-#removing sumPA
-rt7 <- gam(meanRT ~ s(phaseBeepNum) + group + phase +
-             s(ruminating) + s(stickiness) +
-             s(distracted) + s(sumNA) +
-             s(phaseBeepNum, by = subject, bs="fs", m=1),
-           data = sc_sart, method = "ML")
-
-compareML(rt5, rt7) #significant
+param_tab <- parameters::model_parameters(RT.base.lin6, effects = "fixed")
+d <- t_to_d(param_tab$t[2:3], param_tab$df_error[2:3])
+interpret_cohens_d(d[1])
 
 
-#removing sumNA
-rt8 <- gam(meanRT ~ s(phaseBeepNum) + group + phase +
-             s(ruminating) + s(stickiness) +
-             s(distracted) + s(sumPA) +
-             s(phaseBeepNum, by = subject, bs="fs", m=1),
-           data = sc_sart, method = "ML")
+baseBF1 <- lmBF(meanRT ~ group + gameNumSubject + subject,
+                whichRandom = c("subject"),
+                data = baseSart)
 
-compareML(rt5, rt8) #not significant
+baseBF0 <- lmBF(meanRT ~ gameNumSubject + subject,
+                whichRandom = c("subject"),
+                data = baseSart)
+
+baseBF1 / baseBF0
+# BF = 0.413
+
+baseBF3 <- lmBF(meanRT ~ gameNumSubject + ruminating + subject,
+                whichRandom = c("subject"),
+                data = baseSart)
+
+baseBF3 / baseBF0
+# BF = 0.271
+
+baseBF4 <- lmBF(meanRT ~ gameNumSubject + distracted + subject,
+                whichRandom = c("subject"),
+                data = baseSart)
+
+baseBF4 / baseBF0
+# BF = 0.311
+
+baseBF5 <- lmBF(meanRT ~ gameNumSubject + meanNA + subject,
+                whichRandom = c("subject"),
+                data = baseSart)
+
+baseBF5 / baseBF0
+# BF = 2.203
+
+baseBF6 <- lmBF(meanRT ~ gameNumSubject + meanPA + subject,
+                whichRandom = c("subject"),
+                data = baseSart)
+
+baseBF6 / baseBF0
+# BF = 0.297
+
+baseBF7 <- lmBF(meanRT ~ subject, whichRandom = c("subject"),
+                data = baseSart)
+
+baseBF0 / baseBF7
+
+## proportionCorrect on NoGo trials
+
+pc.base1 <- glmer(propCor_NoGo ~ group * gameNumSubject +
+                    ruminating + distracted + meanNA +
+                    (1 | subject),
+                  data = baseSart, family = binomial(), weights = propCor_NoGo_nTrials)
+
+summary(pc.base1)
+
+## ruminating
+
+rum.base1 <- lmer(ruminating ~ group * gameNumSubject + meanRT +
+                     commissionError + distracted + meanNA + meanPA +
+                     (1|subject),
+                   data = baseSart)
+
+summary(rum.base1)
+
+param_tab <- parameters::model_parameters(rum.base1, effects = "fixed")
+d <- t_to_d(param_tab$t[2:9], param_tab$df_error[2:9])
+interpret_cohens_d(d[1])
+
+rum.base.BF1 <- lmBF(ruminating ~ group * gameNumSubject + distracted + meanNA + meanPA +
+                       meanRT + commissionError + subject,
+                whichRandom = c("subject"),
+                data = baseSart[which(!is.na(baseSart$commissionError)),])
+
+rum.base.BF2 <- lmBF(ruminating ~ group * gameNumSubject + distracted + meanNA + meanPA +
+                       meanRT + subject,
+                     whichRandom = c("subject"),
+                     data = baseSart[which(!is.na(baseSart$commissionError)),])
+
+rum.base.BF1 / rum.base.BF2
+# BF = 0.253
+
+rum.base.BF3 <- lmBF(ruminating ~ group * gameNumSubject + distracted + meanNA + meanPA +
+                       commissionError + subject,
+                     whichRandom = c("subject"),
+                     data = baseSart[which(!is.na(baseSart$commissionError)),])
+
+rum.base.BF1 / rum.base.BF3
+# BF = 0.309  
+
+rum.base.Go1 <- lmer(ruminating ~ group * gameNumSubject + meanRT_Go +
+                       propCor_Go + distracted + meanNA + meanPA +
+                       (1|subject),
+                     data = sc_baseSart)
+
+summary(rum.base.Go1)
+
+rum.Go.BF1 <- lmBF(ruminating ~ group * gameNumSubject + distracted + meanNA + meanPA +
+                       meanRT_Go + propCor_Go + subject,
+                     whichRandom = c("subject"),
+                     data = sc_baseSart)
+
+rum.Go.BF2 <- lmBF(ruminating ~ group * gameNumSubject + distracted + meanNA + meanPA +
+                       meanRT_Go + subject,
+                     whichRandom = c("subject"),
+                     data = sc_baseSart)
+
+rum.Go.BF1 / rum.Go.BF2
+# BF = 0.311
+
+rum.Go.BF3 <- lmBF(ruminating ~ group * gameNumSubject + distracted + meanNA + meanPA +
+                       propCor_Go + subject,
+                     whichRandom = c("subject"),
+                     data = sc_baseSart)
+
+rum.Go.BF1 / rum.Go.BF3
+# BF = 0.294
 
 
-#removing stickiness
-rt9 <- gam(meanRT ~ s(phaseBeepNum) + group + phase +
-             s(ruminating) +
-             s(distracted) + s(sumPA) +
-             s(phaseBeepNum, by = subject, bs="fs", m=1),
-           data = sc_sart, method = "ML")
+rum.base.NoGo1 <- lmer(ruminating ~ group * gameNumSubject + meanRT_NoGo +
+                       propCor_NoGo + distracted + meanNA + meanPA +
+                       (1|subject),
+                     data = sc_baseSart)
 
-compareML(rt9, rt8) #not significant
+summary(rum.base.NoGo1)
+
+rum.NoGo.BF1 <- lmBF(ruminating ~ group * gameNumSubject + distracted + meanNA + meanPA +
+                     meanRT_NoGo + propCor_NoGo + subject,
+                   whichRandom = c("subject"),
+                   data = sc_baseSart[which((!is.na(sc_baseSart$meanRT_NoGo))),])
+
+rum.NoGo.BF2 <- lmBF(ruminating ~ group * gameNumSubject + distracted + meanNA + meanPA +
+                     meanRT_NoGo + subject,
+                   whichRandom = c("subject"),
+                   data = sc_baseSart[which((!is.na(sc_baseSart$meanRT_NoGo))),])
+
+rum.NoGo.BF1 / rum.NoGo.BF2
+# BF = 0.345
+
+rum.NoGo.BF3 <- lmBF(ruminating ~ group * gameNumSubject + distracted + meanNA + meanPA +
+                     propCor_NoGo + subject,
+                   whichRandom = c("subject"),
+                   data = sc_baseSart[which((!is.na(sc_baseSart$meanRT_NoGo))),])
+
+rum.NoGo.BF1 / rum.NoGo.BF3
+# BF = 0.272
+
+## distraction
+
+dist.base1 <- lmer(distracted ~ group * gameNumSubject + ruminating + meanNA + meanPA +
+                    meanRT + commissionError +
+                    (1|subject),
+                  data = baseSart)
+
+summary(dist.base1)
+
+param_tab <- parameters::model_parameters(dist.base1, effects = "fixed")
+d <- t_to_d(param_tab$t[2:9], param_tab$df_error[2:9])
+interpret_cohens_d(d[1])
+
+dist.base.BF1 <- lmBF(distracted ~ group * gameNumSubject + ruminating + meanNA +
+                        meanRT + commissionError + subject,
+                     whichRandom = c("subject"),
+                     data = baseSart[which(!is.na(baseSart$commissionError)),])
+
+dist.base.BF2 <- lmBF(distracted ~ group * gameNumSubject + ruminating + meanNA +
+                        meanRT + subject,
+                     whichRandom = c("subject"),
+                     data = baseSart[which(!is.na(baseSart$commissionError)),])
+
+dist.base.BF1 / dist.base.BF2
+# BF = 0.322
+
+dist.base.BF3 <- lmBF(distracted ~ group * gameNumSubject + ruminating + meanNA +
+                        commissionError + subject,
+                      whichRandom = c("subject"),
+                      data = baseSart[which(!is.na(baseSart$commissionError)),])
+
+dist.base.BF1 / dist.base.BF3
+# BF = 0.377
+
+dist.Go.base1 <- lmer(distracted ~ group * gameNumSubject + ruminating + meanNA +
+                     meanRT_Go + propCor_Go +
+                     (1|subject),
+                   data = sc_baseSart)
+
+summary(dist.Go.base1)
+
+dist.Go.BF1 <- lmBF(distracted ~ group * gameNumSubject + ruminating + meanNA +
+                        meanRT_Go + propCor_Go + subject,
+                      whichRandom = c("subject"),
+                      data = sc_baseSart)
+
+dist.Go.BF2 <- lmBF(distracted ~ group * gameNumSubject + ruminating + meanNA +
+                        meanRT_Go + subject,
+                      whichRandom = c("subject"),
+                      data = sc_baseSart)
+
+dist.Go.BF1 / dist.Go.BF2
+# BF = 3.904
+
+dist.Go.BF3 <- lmBF(distracted ~ group * gameNumSubject + ruminating + meanNA +
+                      propCor_Go + subject,
+                    whichRandom = c("subject"),
+                    data = sc_baseSart)
+
+dist.Go.BF1 / dist.Go.BF3
+# BF = 0.640
+
+dist.NoGo.base1 <- lmer(distracted ~ group * gameNumSubject + ruminating + meanNA +
+                        meanRT_NoGo + propCor_NoGo +
+                        (1|subject),
+                      data = sc_baseSart[which((!is.na(sc_baseSart$meanRT_NoGo))),])
+
+summary(dist.NoGo.base1)
+
+dist.NoGo.BF1 <- lmBF(distracted ~ group * gameNumSubject + ruminating + meanNA +
+                      meanRT_NoGo + propCor_NoGo + subject,
+                    whichRandom = c("subject"),
+                    data = sc_baseSart[which((!is.na(sc_baseSart$meanRT_NoGo))),])
+
+dist.NoGo.BF2 <- lmBF(distracted ~ group * gameNumSubject + ruminating + meanNA +
+                      meanRT_NoGo + subject,
+                    whichRandom = c("subject"),
+                    data = sc_baseSart[which((!is.na(sc_baseSart$meanRT_NoGo))),])
+
+dist.NoGo.BF1 / dist.NoGo.BF2
+# BF = 0.240
+
+dist.NoGo.BF3 <- lmBF(distracted ~ group * gameNumSubject + ruminating + meanNA +
+                        propCor_NoGo + subject,
+                      whichRandom = c("subject"),
+                      data = sc_baseSart[which((!is.na(sc_baseSart$meanRT_NoGo))),])
+
+dist.NoGo.BF1 / dist.NoGo.BF3
+# BF = 0.271
+
+## negative affect
+
+na.base1 <- lmer(meanNA ~ group * gameNumSubject + ruminating + distracted + meanPA +
+                     meanRT + propCor +
+                     (1|subject),
+                   data = baseSart)
+
+summary(na.base1)
+
+param_tab <- parameters::model_parameters(na.base1, effects = "fixed")
+d <- t_to_d(param_tab$t[2:9], param_tab$df_error[2:9])
+interpret_cohens_d(d[1])
+
+na.base.BF1 <- lmBF(meanNA ~ group * gameNumSubject + ruminating + distracted +
+                        meanRT + propCor + subject,
+                      whichRandom = c("subject"),
+                      data = sc_baseSart)
+
+na.base.BF2 <- lmBF(meanNA ~ group * gameNumSubject + ruminating + distracted +
+                        meanRT + subject,
+                      whichRandom = c("subject"),
+                      data = sc_baseSart)
+
+na.base.BF1 / na.base.BF2
+# BF = 0.194
+
+na.base.BF3 <- lmBF(meanNA ~ group * gameNumSubject + ruminating + distracted +
+                      propCor + subject,
+                    whichRandom = c("subject"),
+                    data = sc_baseSart)
+
+na.base.BF1 / na.base.BF3
+# BF = 0.917
+
+### peri-intervention
+
+RT.peri1 <- lmer(meanRT_gam ~ group * intervention * gameNumSubjB +
+                   ruminating_gam + meanNA_gam + meanPA_gam + distracted_gam +
+                   (1 | subjB),
+                 data = sart[which(!is.na(sart$meanRT_gam)),])
+
+RT.peri2 <- lmer(meanRT_gam ~ group * intervention + gameNumSubjB + gameNumSubjB:group +
+                   ruminating_gam + meanNA_gam + meanPA_gam + distracted_gam +
+                   (1 | subjB),
+                 data = sart[which(!is.na(sart$meanRT_gam)),])
+
+anova(RT.peri1, RT.peri2) #peri2 preferred
+
+RT.peri3 <- lmer(meanRT_gam ~ intervention * group + gameNumSubjB + gameNumSubjB:intervention +
+                   ruminating_gam + meanNA_gam + meanPA_gam + distracted_gam +
+                   (1 | subjB),
+                 data = sart[which(!is.na(sart$meanRT_gam)),])
+
+anova(RT.peri3, RT.peri1) #peri3 preferred
 
 
-#removing distracted
-rt10 <- gam(meanRT ~ s(phaseBeepNum) + group + phase +
-             s(ruminating) +
-             s(sumPA) +
-             s(phaseBeepNum, by = subject, bs="fs", m=1),
-           data = sc_sart, method = "ML")
+RT.peri4 <- lmer(meanRT_gam ~ intervention * group + gameNumSubjB +
+                   ruminating_gam + meanNA_gam + meanPA_gam + distracted_gam +
+                   (1 | subjB),
+                 data = sart[which(!is.na(sart$meanRT_gam)),])
 
-compareML(rt9, rt10) #not significant
+anova(RT.peri3, RT.peri4) #peri3 preferred
+anova(RT.peri2, RT.peri4) #peri4 preferred
 
-#removing ruminating
-rt11 <- gam(meanRT ~ s(phaseBeepNum) + group + phase +
-              s(sumPA) +
-              s(phaseBeepNum, by = subject, bs="fs", m=1),
-            data = sc_sart, method = "ML")
 
-compareML(rt11, rt10) #not significant
+RT.peri5 <- lmer(meanRT_gam ~ intervention + group + gameNumSubjB + gameNumSubjB:intervention +
+                   ruminating_gam + meanNA_gam + meanPA_gam + distracted_gam +
+                   (1 | subjB),
+                 data = sart[which(!is.na(sart$meanRT_gam)),])
 
+anova(RT.peri3, RT.peri5) #peri5 preferred
+
+RT.peri6 <- lmer(meanRT_gam ~ group + intervention * gameNumSubjB +
+                   ruminating_gam + meanNA_gam + meanPA_gam +
+                   (1 | subjB),
+                 data = sart[which(!is.na(sart$meanRT_gam)),])
+
+anova(RT.peri6, RT.peri5) #peri6 preferred
+
+
+RT.peri7 <- lmer(meanRT_gam ~ group + intervention * gameNumSubjB +
+                   ruminating_gam + meanNA_gam +
+                   (1 | subjB),
+                 data = sart[which(!is.na(sart$meanRT_gam)),])
+
+anova(RT.peri6, RT.peri7) #peri7 preferred
+
+
+RT.peri8 <- lmer(meanRT_gam ~ group + intervention * gameNumSubjB +
+                   ruminating_gam +
+                   (1 | subjB),
+                 data = sart[which(!is.na(sart$meanRT_gam)),])
+
+anova(RT.peri8, RT.peri7) #peri8 preferred
+
+
+RT.peri9 <- lmer(meanRT_gam ~ group + intervention * gameNumSubjB +
+                   (1 | subjB),
+                 data = sart[which(!is.na(sart$meanRT_gam)),])
+
+anova(RT.peri8, RT.peri9) #peri9 preferred
+
+RT.peri10 <- lmer(meanRT_gam ~ intervention * gameNumSubjB +
+                   (1 | subjB),
+                 data = sart[which(!is.na(sart$meanRT_gam)),])
+
+anova(RT.peri10, RT.peri9) #peri10 preferred
+
+RT.peri11 <- lmer(meanRT_gam ~ intervention + gameNumSubjB +
+                    (1 | subjB),
+                  data = sart[which(!is.na(sart$meanRT_gam)),])
+
+anova(RT.peri10, RT.peri11) #peri10 preferred
+
+
+summary(RT.peri10)
+
+param_tab <- parameters::model_parameters(RT.peri10, effects = "fixed")
+d <- t_to_d(param_tab$t[2:4], param_tab$df_error[2:4])
+interpret_cohens_d(d[1])
+
+
+periBF0 <- lmBF(meanRT_gam ~ intervention + gameNumSubjB + subjB,
+     whichRandom = c("subjB"),
+     data = sart[which(!is.na(sart$meanRT_gam)),])
+
+
+periBF1 <- lmBF(meanRT_gam ~ intervention * gameNumSubjB + subjB,
+                whichRandom = c("subjB"),
+                data = sart[which(!is.na(sart$meanRT_gam)),])
+
+periBF1 / periBF0
+#1.815
+
+periBF1b <- lmBF(meanRT_gam ~  gameNumSubjB + subjB,
+                whichRandom = c("subjB"),
+                data = sart[which(!is.na(sart$meanRT_gam)),])
+
+periBF1b / periBF0
+#1.1562
+
+periBF2 <- lmBF(meanRT_gam ~ intervention * gameNumSubjB + ruminating_gam+ subjB,
+                whichRandom = c("subjB"),
+                data = sart[which(!is.na(sart$meanRT_gam)),])
+
+periBF2 / periBF1
+#0.278
+
+periBF3 <- lmBF(meanRT_gam ~ intervention * gameNumSubjB + distracted_gam+ subjB,
+                whichRandom = c("subjB"),
+                data = sart[which(!is.na(sart$meanRT_gam)),])
+
+periBF3 / periBF1
+#0.370
+
+
+periBF4 <- lmBF(meanRT_gam ~ intervention * gameNumSubjB + meanNA_gam + subjB,
+                whichRandom = c("subjB"),
+                data = sart[which(!is.na(sart$meanRT_gam)),])
+
+periBF4 / periBF1
+#0.287
+
+
+periBF5 <- lmBF(meanRT_gam ~ intervention * gameNumSubjB + meanPA_gam + subjB,
+                whichRandom = c("subjB"),
+                data = sart[which(!is.na(sart$meanRT_gam)),])
+
+periBF5 / periBF1
+#0.421
+
+
+## rumination
+
+rum.peri1 <- lmer(ruminating_gam ~ group + intervention * gameNumSubjB +
+                   meanNA_gam + meanPA_gam + distracted_gam +
+                   meanRT_gam + commissionError_gam +
+                   (1 | subjB),
+                 data = sart[which(!is.na(sart$meanRT_gam)),])
+
+summary(rum.peri1)
+
+param_tab <- parameters::model_parameters(rum.peri1, effects = "fixed")
+d <- t_to_d(param_tab$t[2:10], param_tab$df_error[2:10])
+interpret_cohens_d(d[1])
+
+rum.peri.BF1 <- lmBF(ruminating_gam ~ group + intervention * gameNumSubjB +
+                       meanNA_gam + meanPA_gam + distracted_gam +
+                       meanRT_gam + commissionError_gam + subjB,
+                     whichRandom = c("subjB"),
+                     data = sart[which((!is.na(sart$meanRT_gam)) & (!is.na(sart$commissionError))),])
+
+rum.peri.BF2 <- lmBF(ruminating_gam ~ group + intervention * gameNumSubjB +
+                       meanNA_gam + meanPA_gam + distracted_gam +
+                       meanRT_gam + subjB,
+                     whichRandom = c("subjB"),
+                     data = sart[which((!is.na(sart$meanRT_gam)) & (!is.na(sart$commissionError))),])
+
+rum.peri.BF1 / rum.peri.BF2
+#BF = 0.254
+
+rum.peri.BF3 <- lmBF(ruminating_gam ~ group + intervention * gameNumSubjB +
+                       meanNA_gam + meanPA_gam + distracted_gam +
+                       commissionError_gam + subjB,
+                     whichRandom = c("subjB"),
+                     data = sart[which((!is.na(sart$meanRT_gam)) & (!is.na(sart$commissionError))),])
+
+rum.peri.BF1 / rum.peri.BF3
+#BF = 0.342
+
+rum.Go.peri1 <- lmer(ruminating_gam ~ group * intervention * gameNumSubjB +
+                    meanNA_gam + meanPA_gam + distracted_gam +
+                    meanRT_Go_gam + propCor_Go_gam +
+                    (1 | subjB),
+                  data = sart[which(!is.na(sart$meanRT_Go_gam)),])
+
+summary(rum.Go.peri1)
+
+rum.peri.Go1 <- lmBF(ruminating_gam ~ group * intervention * gameNumSubjB +
+                       meanNA_gam + meanPA_gam + distracted_gam +
+                       meanRT_Go_gam + propCor_Go_gam + subjB,
+                     whichRandom = c("subjB"),
+                     data = sart[which(!is.na(sart$meanRT_Go_gam)),])
+
+rum.peri.Go2 <- lmBF(ruminating_gam ~ group * intervention * gameNumSubjB +
+                       meanNA_gam + meanPA_gam + distracted_gam +
+                       meanRT_Go_gam + subjB,
+                     whichRandom = c("subjB"),
+                     data = sart[which(!is.na(sart$meanRT_Go_gam)),])
+
+rum.peri.Go1 / rum.peri.Go2
+#BF = 0.381
+
+rum.peri.Go3 <- lmBF(ruminating_gam ~ group * intervention * gameNumSubjB +
+                       meanNA_gam + meanPA_gam + distracted_gam +
+                       propCor_Go_gam + subjB,
+                     whichRandom = c("subjB"),
+                     data = sart[which(!is.na(sart$meanRT_Go_gam)),])
+
+rum.peri.Go1 / rum.peri.Go3
+#BF = 0.296
+
+rum.NoGo.peri1 <- lmer(ruminating_gam ~ group * intervention * gameNumSubjB +
+                       meanNA_gam + meanPA_gam + distracted_gam +
+                       meanRT_NoGo_gam + propCor_NoGo_gam +
+                       (1 | subjB),
+                     data = sart[which(!is.na(sart$meanRT_NoGo_gam)),])
+
+summary(rum.NoGo.peri1)
+
+rum.peri.NoGo1 <- lmBF(ruminating_gam ~ group * intervention * gameNumSubjB +
+                       meanNA_gam + meanPA_gam + distracted_gam +
+                       meanRT_NoGo_gam + propCor_NoGo_gam + subjB,
+                     whichRandom = c("subjB"),
+                     data = sart[which(!is.na(sart$meanRT_NoGo_gam)),])
+
+rum.peri.NoGo2 <- lmBF(ruminating_gam ~ group * intervention * gameNumSubjB +
+                         meanNA_gam + meanPA_gam + distracted_gam +
+                         meanRT_NoGo_gam + subjB,
+                       whichRandom = c("subjB"),
+                       data = sart[which(!is.na(sart$meanRT_NoGo_gam)),])
+
+rum.peri.NoGo1 / rum.peri.NoGo2
+#BF = 0.294
+
+rum.peri.NoGo3 <- lmBF(ruminating_gam ~ group * intervention * gameNumSubjB +
+                         meanNA_gam + meanPA_gam + distracted_gam +
+                         propCor_NoGo_gam + subjB,
+                       whichRandom = c("subjB"),
+                       data = sart[which(!is.na(sart$meanRT_NoGo_gam)),])
+
+rum.peri.NoGo1 / rum.peri.NoGo3
+#BF = 0.332
+
+## distraction
+
+dist.peri1 <- lmer(distracted_gam ~ group + intervention * gameNumSubjB +
+                    meanNA_gam + meanPA_gam + ruminating_gam +
+                    meanRT_gam + commissionError_gam +
+                    (1 | subjB),
+                  data = sart[which(!is.na(sart$meanRT_gam)),])
+
+summary(dist.peri1)
+
+param_tab <- parameters::model_parameters(dist.peri1, effects = "fixed")
+d <- t_to_d(param_tab$t[2:10], param_tab$df_error[2:10])
+interpret_cohens_d(d[1])
+
+dist.peri.BF1 <- lmBF(distracted_gam ~ group + intervention * gameNumSubjB +
+                       meanNA_gam + meanPA_gam + ruminating_gam +
+                       meanRT_gam + commissionError_gam + subjB,
+                     whichRandom = c("subjB"),
+                     data = sart[which((!is.na(sart$meanRT_gam)) & (!is.na(sart$commissionError))),])
+
+dist.peri.BF2 <- lmBF(distracted_gam ~ group + intervention * gameNumSubjB +
+                       meanNA_gam + meanPA_gam + ruminating_gam +
+                       meanRT_gam + subjB,
+                     whichRandom = c("subjB"),
+                     data = sart[which((!is.na(sart$meanRT_gam)) & (!is.na(sart$commissionError))),])
+
+dist.peri.BF1 / dist.peri.BF2
+#BF = 0.283
+
+dist.peri.BF3 <- lmBF(distracted_gam ~ group + intervention * gameNumSubjB +
+                        meanNA_gam + meanPA_gam + ruminating_gam +
+                        commissionError_gam + subjB,
+                      whichRandom = c("subjB"),
+                      data = sart[which((!is.na(sart$meanRT_gam)) & (!is.na(sart$commissionError))),])
+
+dist.peri.BF1 / dist.peri.BF3
+#BF = 0.445
+
+dist.peri.Go1 <- lmer(distracted_gam ~ group * intervention * gameNumSubjB +
+                     meanNA_gam + meanPA_gam + ruminating_gam +
+                     meanRT_Go_gam + propCor_Go_gam +
+                     (1 | subjB),
+                   data = sart[which(!is.na(sart$meanRT_Go_gam)),])
+
+summary(dist.peri.Go1)
+
+dist.peri.Go.BF1 <- lmBF(distracted_gam ~ group * intervention * gameNumSubjB +
+                        meanNA_gam + meanPA_gam + ruminating_gam +
+                        meanRT_Go_gam + propCor_Go_gam + subjB,
+                      whichRandom = c("subjB"),
+                      data = sart[which(!is.na(sart$meanRT_Go_gam)),])
+
+dist.peri.Go.BF2 <- lmBF(distracted_gam ~ group * intervention * gameNumSubjB +
+                           meanNA_gam + meanPA_gam + ruminating_gam +
+                           meanRT_Go_gam + subjB,
+                         whichRandom = c("subjB"),
+                         data = sart[which(!is.na(sart$meanRT_Go_gam)),])
+
+dist.peri.Go.BF1 / dist.peri.Go.BF2
+#BF = 0.569
+
+dist.peri.Go.BF3 <- lmBF(distracted_gam ~ group * intervention * gameNumSubjB +
+                           meanNA_gam + meanPA_gam + ruminating_gam +
+                           propCor_Go_gam + subjB,
+                         whichRandom = c("subjB"),
+                         data = sart[which(!is.na(sart$meanRT_Go_gam)),])
+
+dist.peri.Go.BF1 / dist.peri.Go.BF3
+#BF = 0.399
+
+dist.peri.NoGo1 <- lmer(distracted_gam ~ group * intervention * gameNumSubjB +
+                        meanNA_gam + meanPA_gam + ruminating_gam +
+                        meanRT_NoGo_gam + propCor_NoGo_gam +
+                        (1 | subjB),
+                      data = sart[which(!is.na(sart$meanRT_NoGo_gam)),])
+
+summary(dist.peri.NoGo1)
+
+dist.peri.NoGo.BF1 <- lmBF(distracted_gam ~ group * intervention * gameNumSubjB +
+                        meanNA_gam + meanPA_gam + ruminating_gam +
+                        meanRT_NoGo_gam + propCor_NoGo_gam + subjB,
+                      whichRandom = c("subjB"),
+                      data = sart[which(!is.na(sart$meanRT_NoGo_gam)),])
+
+dist.peri.NoGo.BF2 <- lmBF(distracted_gam ~ group * intervention * gameNumSubjB +
+                             meanNA_gam + meanPA_gam + ruminating_gam +
+                             meanRT_NoGo_gam + subjB,
+                           whichRandom = c("subjB"),
+                           data = sart[which(!is.na(sart$meanRT_NoGo_gam)),])
+
+dist.peri.NoGo.BF1 / dist.peri.NoGo.BF2
+#BF = 0.720
+
+dist.peri.NoGo.BF3 <- lmBF(distracted_gam ~ group * intervention * gameNumSubjB +
+                             meanNA_gam + meanPA_gam + ruminating_gam +
+                             propCor_NoGo_gam + subjB,
+                           whichRandom = c("subjB"),
+                           data = sart[which(!is.na(sart$meanRT_NoGo_gam)),])
+
+dist.peri.NoGo.BF1 / dist.peri.NoGo.BF3
+#BF = 1.028
 
 #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-######################################################### individual predictors ################################################################ 
-#+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-RT_rum <- gam(meanRT ~ group * intervention * phase + s(ruminating) +
-              s(phaseBeepNum, by = subject, bs="fs", m=1),
-            data = sc_sart)
-
-summary(RT_rum)
-
-
-RT_dis <- gam(meanRT ~ group * intervention * phase + s(distracted) +
-                s(phaseBeepNum, by = subject, bs="fs", m=1),
-              data = sc_sart)
-
-summary(RT_dis)
-
-
-RT_sti <- gam(meanRT ~ group * intervention * phase + s(stickiness) +
-                s(phaseBeepNum, by = subject, bs="fs", m=1),
-              data = sc_sart)
-
-summary(RT_sti)
-
-
-
-#+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-########################################################### linear regression ################################################################## 
+########################################################### SART only ################################################################## 
 #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
-##### meanRT #####
-#ruminating
-plot(meanRT ~ ruminating, data = sc_sart)
-lin.mod1 <- lm(meanRT ~ ruminating, data = sc_sart) 
-summary(lin.mod1)
+#### baseline
 
-plot(propCor ~ ruminating, data = sc_sart)
-lin.mod1 <- lm(meanRT ~ ruminating, data = sc_sart) 
-summary(lin.mod1)
+numbers$cRT <- numbers$responseTime - mean(numbers$responseTime, na.rm = TRUE)
+numbers$scaledRT <- scale(numbers$responseTime)
 
-#distracted
-plot(meanRT ~ distracted, data = sc_sart)
-lin.mod2 <- lm(meanRT ~ distracted, data = sc_sart) 
-summary(lin.mod2)
+## all responseTimes
 
-#stickiness
-plot(meanRT ~ stickiness, data = sc_sart)
-lin.mod3 <- lm(meanRT ~ stickiness, data = sc_sart) 
-summary(lin.mod3)
+length(numbers[which(numbers$phase=="pre"),]$subject) #19608 trials
+
+base.m1 <- lmer(responseTime ~ group * isGo + factor(correct) + gameSessionID + (1 | subject),
+                data = numbers[which(numbers$phase == "pre"),])
+
+base.m2 <- lmer(responseTime ~ group + isGo + factor(correct) + gameSessionID + (1 | subject),
+                data = numbers[which(numbers$phase == "pre"),])
+
+anova(base.m1, base.m2) #m1 preferred
+
+base.m3 <- lmer(responseTime ~ group * isGo + gameSessionID + (1 | subject),
+                data = numbers[which(numbers$phase == "pre"),])
+
+anova(base.m1, base.m3) #m3 preferred
+
+base.m4 <- lmer(responseTime ~ group * isGo + (1 | subject),
+                data = numbers[which(numbers$phase == "pre"),])
+
+anova(base.m4, base.m3) #m3 preferred
+
+summary(base.m3)
+
+base.m3b <- lmer(responseTime ~ group * isGo + gameSessionID + factor(correct) + (1 | subject),
+                data = numbers[which(numbers$phase == "pre"),])
+
+summary(base.m3b)
+
+param_tab <- parameters::model_parameters(base.m3, effects = "fixed")
+d <- t_to_d(param_tab$t[2:5], param_tab$df_error[2:5])
+interpret_cohens_d(d[1])
+
+
+## Go responseTimes
+
+numbersGo <- numbers[which(numbers$isGo==TRUE),]
+
+length(numbersGo[which(numbersGo$phase=="pre"),]$subject) #17643 trials
+
+base.Go.m1 <- lmer(responseTime ~ group + gameSessionID + (1 | subject),
+                data = numbersGo[which(numbersGo$phase == "pre"),]) #correct is being dropped --> rank deficient matrix
+
+base.Go.m2 <- lmer(responseTime ~  group + (1 | subject),
+                data = numbersGo[which(numbersGo$phase == "pre"),])
+
+anova(base.Go.m1, base.Go.m2) #m1 preferred
+
+summary(base.Go.m1)
+
+param_tab <- parameters::model_parameters(base.Go.m1, effects = "fixed")
+d <- t_to_d(param_tab$t[2:3], param_tab$df_error[2:3])
+interpret_cohens_d(d[1])
+
+## No responseTimes
+
+numbersNoGo <- numbers[which(numbers$isGo==FALSE),]
+
+length(numbersNoGo[which(numbersNoGo$phase=="pre"),]$subject) #1965 trials
+
+base.NoGo.m1 <- lmer(responseTime ~ group + correct + gameSessionID + (1 | subject),
+                   data = numbersNoGo[which(numbersNoGo$phase == "pre"),]) 
+
+base.NoGo.m2 <- lmer(responseTime ~  group + correct + (1 | subject),
+                   data = numbersNoGo[which(numbersNoGo$phase == "pre"),])
+
+anova(base.NoGo.m1, base.NoGo.m2) #m1 preferred
+
+base.NoGo.m3 <- lmer(responseTime ~ group + gameSessionID + (1 | subject),
+                     data = numbersNoGo[which(numbersNoGo$phase == "pre"),])
+
+anova(base.NoGo.m1, base.NoGo.m3) #m3 preferred
+
+summary(base.NoGo.m3)
+
+param_tab <- parameters::model_parameters(base.NoGo.m3, effects = "fixed")
+d <- t_to_d(param_tab$t[2:3], param_tab$df_error[2:3])
+interpret_cohens_d(d[1])
+
+## correct 
+correct.m1 <- glmer(factor(correct) ~ group * scale(responseTime) * isGo + gameSessionID + (1 | subject),
+                data = numbers, family = binomial())
+
+summary(correct.m1)
+
+
+#### peri
+
+## all responseTimes
+
+peri.m1 <- lmer(responseTime_gam ~ group * intervention * isGo + factor(correct) + gameSessionID + intervention:gameSessionID +
+                  (1 | subject),
+                data = numbers)
+
+peri.m1b <- lmer(responseTime_gam ~ group * intervention * isGo + factor(correct) + gameSessionID +
+                  (1 | subject),
+                data = numbers)
+
+anova(peri.m1, peri.m1b) #m1 preferred
+
+peri.m1c <- lmer(responseTime_gam ~ group * intervention * isGo + gameSessionID + intervention:gameSessionID +
+                   (1 | subject),
+                 data = numbers)
+
+anova(peri.m1, peri.m1c) #m1c preferred
+
+peri.m2 <- lmer(responseTime_gam ~ group * intervention + isGo + group:isGo + gameSessionID + intervention:gameSessionID +
+                  (1 | subject),
+                data = numbers)
+
+anova(peri.m1c, peri.m2) #m2 preferred
+
+peri.m3 <- lmer(responseTime_gam ~ group * intervention + isGo + intervention:isGo + gameSessionID + intervention:gameSessionID +
+                  (1 | subject),
+                data = numbers)
+
+anova(peri.m1c, peri.m3) #m3 preferred
+
+peri.m4 <- lmer(responseTime_gam ~ group * intervention + isGo + gameSessionID + intervention:gameSessionID +
+                  (1 | subject),
+                data = numbers)
+
+anova(peri.m4, peri.m2) #m4 preferred
+anova(peri.m4, peri.m3) #m4 preferred
+
+peri.m5 <- lmer(responseTime_gam ~ group + intervention + isGo + gameSessionID + intervention:gameSessionID +
+                  (1 | subject),
+                data = numbers)
+
+anova(peri.m4, peri.m5) #m5 preferred
+
+peri.m7 <- lmer(responseTime_gam ~ group + intervention + gameSessionID + intervention:gameSessionID +
+                  (1 | subject),
+                data = numbers)
+
+anova(peri.m7, peri.m5) #m7 preferred
+
+summary(peri.m7)
+
+param_tab <- parameters::model_parameters(peri.m7, effects = "fixed")
+d <- t_to_d(param_tab$t[2:5], param_tab$df_error[2:5])
+interpret_cohens_d(d[1])
+
+## Go responseTimes
+
+peri.Go.m1 <- lmer(responseTime_gam ~ group * intervention * gameSessionID + correct +
+                  (1 | subject),
+                data = numbersGo) #adding correct interactions lead to rank deficiency
+
+peri.Go.m2 <- lmer(responseTime_gam ~ group + intervention + gameSessionID + correct +
+                     group:gameSessionID + group:intervention + intervention:gameSessionID + group:gameSessionID +
+                   (1 | subject),
+                 data = numbersGo)
+
+anova(peri.Go.m1, peri.Go.m2) #m1 preferred
+
+peri.Go.m3 <- lmer(responseTime_gam ~ group * intervention * gameSessionID +
+                     (1 | subject),
+                   data = numbersGo)
+
+anova(peri.Go.m1, peri.Go.m3) #m1 preferred
+
+summary(peri.Go.m1)
+
+param_tab <- parameters::model_parameters(peri.Go.m1, effects = "fixed")
+d <- t_to_d(param_tab$t[2:9], param_tab$df_error[2:9])
+interpret_cohens_d(d[1])
+
+
+## NoGo responseTimes
+
+peri.NoGo.m1 <- lmer(responseTime_gam ~ group * intervention * gameSessionID + correct +
+                       intervention:correct + gameSessionID:correct +
+                     (1 | subject),
+                   data = numbersNoGo) #adding group:correct leads to rank deficiency
+
+peri.NoGo.m2 <- lmer(responseTime_gam ~ group + intervention + gameSessionID +
+                       group:intervention + group:gameSessionID + intervention:gameSessionID +
+                       correct + intervention:correct + gameSessionID:correct +
+                       (1 | subject),
+                     data = numbersNoGo)
+
+anova(peri.NoGo.m1, peri.NoGo.m2) #m2 preferred
+
+peri.NoGo.m3 <- lmer(responseTime_gam ~ group + intervention + gameSessionID +
+                       group:intervention + group:gameSessionID +
+                       correct + intervention:correct + gameSessionID:correct +
+                       (1 | subject),
+                     data = numbersNoGo)
+
+anova(peri.NoGo.m3, peri.NoGo.m2) #m2 preferred
+
+peri.NoGo.m4 <- lmer(responseTime_gam ~ group + intervention + gameSessionID +
+                       group:intervention + intervention:gameSessionID +
+                       correct + intervention:correct + gameSessionID:correct +
+                       (1 | subject),
+                     data = numbersNoGo)
+
+anova(peri.NoGo.m4, peri.NoGo.m2) #m4 preferred
+
+peri.NoGo.m5 <- lmer(responseTime_gam ~ group + intervention + gameSessionID +
+                       intervention:gameSessionID +
+                       correct + intervention:correct + gameSessionID:correct +
+                       (1 | subject),
+                     data = numbersNoGo)
+
+anova(peri.NoGo.m4, peri.NoGo.m5) #m4 preferred
+
+peri.NoGo.m6 <- lmer(responseTime_gam ~ group + intervention + gameSessionID +
+                       group:intervention +
+                       correct + intervention:correct + gameSessionID:correct +
+                       (1 | subject),
+                     data = numbersNoGo)
+
+anova(peri.NoGo.m4, peri.NoGo.m6) #m6 preferred
+
+peri.NoGo.m7 <- lmer(responseTime_gam ~ group + intervention + gameSessionID +
+                       correct + intervention:correct + gameSessionID:correct +
+                       (1 | subject),
+                     data = numbersNoGo)
+
+anova(peri.NoGo.m7, peri.NoGo.m6) #m7 preferred
+
+peri.NoGo.m8 <- lmer(responseTime_gam ~ group + intervention + gameSessionID +
+                       correct + intervention:correct +
+                       (1 | subject),
+                     data = numbersNoGo)
+
+anova(peri.NoGo.m7, peri.NoGo.m8) #m8 preferred
+
+peri.NoGo.m9 <- lmer(responseTime_gam ~ group + intervention + gameSessionID +
+                       correct +
+                       (1 | subject),
+                     data = numbersNoGo)
+
+anova(peri.NoGo.m9, peri.NoGo.m8) #m9 preferred
+
+peri.NoGo.m10 <- lmer(responseTime_gam ~ group + intervention + gameSessionID +
+                       (1 | subject),
+                     data = numbersNoGo)
+
+anova(peri.NoGo.m9, peri.NoGo.m10) #m10 preferred
+
+peri.NoGo.m11 <- lmer(responseTime_gam ~ group + gameSessionID +
+                        (1 | subject),
+                      data = numbersNoGo)
+
+anova(peri.NoGo.m11, peri.NoGo.m10) #m11 preferred
+
+summary(peri.NoGo.m11)
+
+param_tab <- parameters::model_parameters(peri.NoGo.m11, effects = "fixed")
+d <- t_to_d(param_tab$t[2:3], param_tab$df_error[2:3])
+interpret_cohens_d(d[1])
 
 
 #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++

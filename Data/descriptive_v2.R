@@ -2,7 +2,10 @@
 #################################### Set up ####################################
 rm(list = ls()) #clean all up
 
-setwd("C:/Users/cleme/Documents/Education/RUG/Thesis/EMA-mindfulness/Data/ESM/mindcog_v202205")
+
+source("C:/Users/cleme/Documents/Education/RUG/Thesis/EMA-mindfulness/Data/common_plot_theme.R")
+
+setwd("C:/Users/cleme/Documents/Education/RUG/Thesis/EMA-mindfulness/Data/ESM/mindcog_v202207")
 
 #setwd("~/Documents/RUG/Thesis/EMA-mindfulness/Data/ESM/mindcog_v202205")
 
@@ -24,19 +27,19 @@ library(RColorBrewer)
 library(broom)
 library(effectsize)
 library(languageR)
+library(ggthemes)
+library(tikzDevice)
 
 #read in data
 data <- read.csv('preprocessed_data.csv') 
 
-data$group <- factor(data$group, levels = c("remitted", "controls"))
-data$intervention <- factor(data$intervention, levels = c("mindfulness", "fantasizing"))
-data$phase <- factor(data$phase, levels = c("pre", "peri"))
-data$subjB <- interaction(data$subject, data$block, drop = TRUE) #unique identifier for subject per block
 
+#Pick response rate cut-off value
+cutOff <- 0.5
 
 # unique(responses_block[which(responses_block$responseRate >= 0.6),]$subjB)
-falseDays <- which(data$phaseAssessmentDay==0)
-data <- data[-falseDays,]
+# falseDays <- which(data$phaseAssessmentDay==0)
+# data <- data[-falseDays,]
 
 ################################# response-related measures #####################################
 # #group by id and count the number of nonresponses
@@ -64,15 +67,6 @@ sdResponseRateRem <- round(sd(participant_responses[which(participant_responses$
 quantile(participant_responses$responseRate, probs = c(.1, .9))
 quantile(participant_responses[which(participant_responses$group == "controls"),]$responseRate, probs = c(.1, .9))
 quantile(participant_responses[which(participant_responses$group == "remitted"),]$responseRate, probs = c(.1, .9))
-
-# View(subset(data[which(data$phaseAssessmentDay>7),],
-#             select=c("group", "intervention", "id", "phase", "block",
-#                      "phaseAssessmentDay", "mindcog_db_open_from", "mindcog_db_non_response", "mindcog_db_date")))
-
-
-
-
-#numDays = max(phaseAssessmentDay))
 
 group_responses <- ddply(data, .(group), plyr::summarise,
                                 nSubj = length(unique(subject)),
@@ -142,10 +136,10 @@ responses_phase <- ddply(data, .(phase), plyr::summarise,
 #Chi-squared tests
 #group difference?
 chisq.test(group_responses[,c("noResponse", "response")]) #significant difference
-#x-sq = 12.5, p = 0.0004
+#x-sq = 5.92, p = 0.01496
 
 chisq.test(group_responses_baseline[,c("noResponse", "response")]) #significant difference
-#X-squared = 7.0587, df = 1, p-value = 0.007888
+#X-squared = 7.01, df = 1, p-value = 0.008106
 
 #general difference between blocks
 chisq.test(responses_block[, c("noResponse", "response")])
@@ -184,7 +178,7 @@ length(unique(responses_block[which(responses_block$group == "remitted"),]$subje
 length(unique(responses_block[which(responses_block$group == "controls"),]$subject)) #23
 
 #removing participants with a response rate lower than 50%
-pp <- unique(responses_block[which(responses_block$responseRate >= 0.5),]$subject)
+pp <- unique(responses_block[which(responses_block$responseRate >= cutOff),]$subject)
 data <- data[which(data$subject %in% pp),]
 
 length(unique(data[which(data$group == "remitted"),]$subject)) #12
@@ -216,8 +210,8 @@ meltDat <- melt(data, id.vars = c("group", "intervention", "phase"), measure.var
 avgByPhase <- ddply(meltDat, ~group + intervention + phase + variable, plyr::summarize, mean=mean(value, na.rm = TRUE))
 
 
-met.vars <- c('ruminating', 'stickiness', 'sumNA',  'down', 'irritated', 'restless', 'anxious',
-              'sumPA', 'wakeful', 'satisfied', 'energetic',
+met.vars <- c('ruminating', 'stickiness', 'sumNA', 'meanNA',  'down', 'irritated', 'restless', 'anxious',
+              'sumPA', 'meanPA', 'wakeful', 'satisfied', 'energetic',
               'stressed', 'listless',  'distracted',
               'thoughtsPleasant', 'restOfDayPos', 'companyPleasant', 'alonePleasant',
               'posMax', 'posIntensity', 'negMax', 'negIntensity',
@@ -433,7 +427,7 @@ for(v in met.vars){
     # print(anova)
   }
 }
-}
+
 
 # Histograms and density lines
 par(mfrow=c(2, 2))
@@ -457,7 +451,7 @@ par(mfrow=c(1,1))
 ##################################### Daily avg per individual ########################################
 
 melt.dat <- melt(data, id.vars=c("subject", "group", "assessmentDay"),
-                 measure.vars = c("ruminating", "sumPA", "sumNA"), na.rm = TRUE)
+                 measure.vars = c("ruminating", "meanPA", "meanNA"), na.rm = TRUE)
 melt.dat <- aggregate(melt.dat$value, by=list(subject=melt.dat$subject, assessmentDay=melt.dat$assessmentDay,
                                               group=melt.dat$group, variable=melt.dat$variable), FUN=mean)
 
@@ -470,7 +464,7 @@ ggplot(melt.dat[which((melt.dat$variable=="ruminating") & (melt.dat$assessmentDa
 
 
 melt.dat <- melt(data, id.vars=c("subjB", "group", "intervention", "phase", "block", "phaseAssessmentDay"),
-                 measure.vars = c("ruminating", "sumPA", "sumNA"), na.rm = TRUE)
+                 measure.vars = c("ruminating", "meanPA", "meanNA"), na.rm = TRUE)
 melt.dat <- aggregate(melt.dat$value, by=list(subject=melt.dat$subjB, phaseAssessmentDay=melt.dat$phaseAssessmentDay,
                                               group=melt.dat$group, intervention=melt.dat$intervention, block=melt.dat$block,
                                               phase=melt.dat$phase, variable=melt.dat$variable), FUN=mean)
@@ -494,6 +488,9 @@ ggplot(melt.dat[which((melt.dat$variable=="ruminating") & (melt.dat$phase=="pre"
 
 
 #################################################### random subject scores ###############################################
+data$group <- factor(data$group, levels = c("remitted", "controls"))
+data$intervention <- factor(data$intervention, levels = c("mindfulness", "fantasizing"))
+
 set.seed(1)
 control_subj <- unique(data[which(data$group == "controls"),]$subject)
 remitted_subj <- unique(data[which(data$group == "remitted"),]$subject)
@@ -502,122 +499,167 @@ rand.cs <- sample(control_subj, 6)
 rand.rm <- sample(remitted_subj, 6)
 rand.subj <- append(rand.cs, rand.rm)
 
-subCon <- data[which((data$subject %in% rand.cs) & (data$block==1) & (data$phase == "pre")),] 
-subRem <- data[which((data$subject %in% rand.rm) & (data$block==1) & (data$phase == "pre")),]
+subCon <- data[which((data$subject %in% rand.cs) &
+                       (data$block==1) &
+                       (data$phase == "pre") & 
+                       (data$phaseBeepNum <= 70)),] 
+subRem <- data[which((data$subject %in% rand.rm) &
+                       (data$block==1) &
+                       (data$phase == "pre") &
+                       (data$phaseBeepNum <= 70)),]
+
+
 
 idVars <- c("subject", "group", "intervention", "phase", "beepNum")
 
-meltCon <- melt(subCon[, c(idVars, "ruminating", "sumNA", "sumPA"),], id.vars = idVars)
-meltRem <- melt(subRem[, c(idVars, "ruminating", "sumNA", "sumPA"),], id.vars = idVars)
+meltCon <- melt(subCon[, c(idVars, "ruminating", "meanNA", "meanPA"),], id.vars = idVars)
+meltRem <- melt(subRem[, c(idVars, "ruminating", "meanNA", "meanPA"),], id.vars = idVars)
 
 
-meltCon <-  within( melt(subCon[, c(idVars, "ruminating", "sumNA", "sumPA"),], id.vars = idVars), {
+meltCon <-  within( melt(subCon[, c(idVars, "ruminating", "meanNA", "meanPA"),], id.vars = idVars), {
   variable<- gsub("\\_.*","",variable)
   Mean<- ave(value, beepNum, variable, subject, FUN=function(x) mean(x,na.rm=T))})
 
-meltRem <-  within( melt(subRem[, c(idVars, "ruminating", "sumNA", "sumPA"),], id.vars = idVars), {
+meltRem <-  within( melt(subRem[, c(idVars, "ruminating", "meanNA", "meanPA"),], id.vars = idVars), {
   variable<- gsub("\\_.*","",variable)
   Mean<- ave(value, beepNum, variable, subject, FUN=function(x) mean(x,na.rm=T))})
 
 meltCon <- meltCon[!duplicated(meltCon[c(1,8)]), ]
 meltRem <- meltRem[!duplicated(meltRem[c(1,8)]), ]
 
+levels(meltCon$group) <- c("rMDD", "HC")
+levels(meltRem$group) <- c("rMDD", "HC")
+
+levels(meltCon$intervention) <- c("Mindfulness", "Fantasizing")
+levels(meltRem$intervention) <- c("Mindfulness", "Fantasizing")
+
+# Reduce the opacity of the grid lines: Default is 255
+# col_grid <- rgb(255, 255, 255, 60, maxColorValue = 255)
+
+pdf(width = 10, height = 5.5,
+    file = "individual_rum_plots.pdf")  #bg = "#D5E4EB"
 #individual rumination plots
 p1 <- ggplot(data = meltCon[which(meltCon$variable=="ruminating"),],
              aes(x=beepNum, y=Mean)) +
   geom_line(color = "#619CFF") + geom_point(color = "#619CFF") + ylim(0,100) +
-  xlab('Beep Number') + ylab("Rumination") + #geom_vline(xintercept = 70, lty = "dashed")) +
-  facet_grid(group~factor(subject), scale = "free") + theme(legend.position="none", axis.title.y=element_blank())
+  facet_grid(group~factor(subject), scale = "free") +
+  multi_plot_theme() + 
+  scale_x_continuous(breaks=c(1,11,21,31,41,51,61), labels = c(1:7))
 
 p2 <- ggplot(data = meltRem[which(meltRem$variable=="ruminating"),],
              aes(x=beepNum, y=Mean, color = "pink")) +
   geom_line() + geom_point() + ylim(0,100) +
-  xlab('Beep Number') + ylab("Rumination") + #geom_vline(xintercept = 70, lty = "dashed") +
-  facet_grid(group~factor(subject), scale = "free") + theme(legend.position="none",
-                                                            axis.title.x=element_blank(), axis.title.y=element_blank())
+  facet_grid(group~factor(subject), scale = "free") +
+  multi_plot_theme() +
+  theme(axis.text.x = element_blank()) +
+  scale_x_continuous(breaks=c(1,11,21,31,41,51,61))
+  # scale_y_continuous(minor_breaks = seq(0,100,25))
 
-grid.arrange(p2, p1, ncol=1, nrow = 2, left = "Rumination")
+grid.arrange(p2, p1, ncol=1, nrow = 2, left = "Rumination", bottom = "Assessment Day")
+
+dev.off()
 
 
 #individual NA plots
-p1 <- ggplot(data = meltCon[which(meltCon$variable=="sumNA"),],
+pdf(width = 10, height = 5.5,
+    file = "individual_NA_plots.pdf")  #bg = "#D5E4EB"
+p1 <- ggplot(data = meltCon[which(meltCon$variable=="meanNA"),],
              aes(x=beepNum, y=Mean)) +
-  geom_line(color = "#619CFF") + geom_point(color = "#619CFF") + ylim(0,300) +
-  xlab('Beep Number') + #geom_vline(xintercept = 70, lty = "dashed") +
-  facet_grid(group~factor(subject), scale = "free") + theme(legend.position="none", axis.title.y=element_blank())
+  geom_line(color = "#619CFF") + geom_point(color = "#619CFF") + ylim(0,100) +
+  facet_grid(group~factor(subject), scale = "free") +
+  multi_plot_theme() + 
+  scale_x_continuous(breaks=c(1,11,21,31,41,51,61), labels = c(1:7))
 
-p2 <- ggplot(data = meltRem[which(meltRem$variable=="sumNA"),],
+p2 <- ggplot(data = meltRem[which(meltRem$variable=="meanNA"),],
              aes(x=beepNum, y=Mean, color = "pink")) +
-  geom_line() + geom_point() + ylim(0,300) +
-  xlab('Beep Number') + #geom_vline(xintercept = 70, lty = "dashed") +
-  facet_grid(group~factor(subject), scale = "free") + theme(legend.position="none",
-                                                            axis.title.x=element_blank(), axis.title.y=element_blank())
+  geom_line() + geom_point() + ylim(0,100) +
+  facet_grid(group~factor(subject), scale = "free") +
+  multi_plot_theme() +
+  theme(axis.text.x = element_blank()) +
+  scale_x_continuous(breaks=c(1,11,21,31,41,51,61))
+# scale_y_continuous(minor_breaks = seq(0,100,25))
 
-grid.arrange(p2, p1, ncol=1, nrow = 2, left = "Negative Affect")
+grid.arrange(p2, p1, ncol=1, nrow = 2, left = "Negative Affect", bottom = "Assessment Day")
+
+dev.off()
 
 
 #individual PA plots
-p1 <- ggplot(data = meltCon[which(meltCon$variable=="sumPA"),],
+pdf(width = 10, height = 5.5,
+    file = "individual_PA_plots.pdf")  #bg = "#D5E4EB"
+p1 <- ggplot(data = meltCon[which(meltCon$variable=="meanPA"),],
              aes(x=beepNum, y=Mean)) +
-  geom_line(color = "#619CFF") + geom_point(color = "#619CFF") + ylim(0,300) +
-  xlab('Beep Number') +
-  facet_grid(group~factor(subject), scale = "free") + theme(legend.position="none", axis.title.y=element_blank())
+  geom_line(color = "#619CFF") + geom_point(color = "#619CFF") + ylim(0,100) +
+  facet_grid(group~factor(subject), scale = "free") +
+  multi_plot_theme() + 
+  scale_x_continuous(breaks=c(1,11,21,31,41,51,61), labels = c(1:7))
 
-p2 <- ggplot(data = meltRem[which(meltRem$variable=="sumPA"),],
+p2 <- ggplot(data = meltRem[which(meltRem$variable=="meanPA"),],
              aes(x=beepNum, y=Mean, color = "pink")) +
-  geom_line() + geom_point() + ylim(0,300) +
-  xlab('Beep Number') +
-  facet_grid(group~factor(subject), scale = "free") + theme(legend.position="none",
-                                                            axis.title.x=element_blank(), axis.title.y=element_blank())
+  geom_line() + geom_point() + ylim(0,100) +
+  facet_grid(group~factor(subject), scale = "free") +
+  multi_plot_theme() +
+  theme(axis.text.x = element_blank()) +
+  scale_x_continuous(breaks=c(1,11,21,31,41,51,61))
+# scale_y_continuous(minor_breaks = seq(0,100,25))
 
-grid.arrange(p2, p1, ncol=1, nrow = 2, left = "Positive Affect")
+grid.arrange(p2, p1, ncol=1, nrow = 2, left = "Positive Affect", bottom = "Assessment Day")
+
+dev.off()
 
 
 ###################################### variable as a function of most unpleasant previous event ###################################################
 idVars <- c("subject", "group", "intervention", "phase", "negMax")
 
-meltCon <- melt(subCon[, c(idVars, "ruminating", "sumNA", "sumPA"),], id.vars = idVars)
-meltRem <- melt(subRem[, c(idVars, "ruminating", "sumNA", "sumPA"),], id.vars = idVars)
+meltCon <- melt(subCon[, c(idVars, "ruminating", "meanNA", "meanPA"),], id.vars = idVars)
+meltRem <- melt(subRem[, c(idVars, "ruminating", "meanNA", "meanPA"),], id.vars = idVars)
 
 
-meltCon <-  within( melt(subCon[, c(idVars, "ruminating", "sumNA", "sumPA"),], id.vars = idVars), {
+meltCon <-  within( melt(subCon[, c(idVars, "ruminating", "meanNA", "meanPA"),], id.vars = idVars), {
   variable<- gsub("\\_.*","",variable)
   Mean<- ave(value, negMax, variable, subject, FUN=function(x) mean(x,na.rm=T))})
 
-meltRem <-  within( melt(subRem[, c(idVars, "ruminating", "sumNA", "sumPA"),], id.vars = idVars), {
+meltRem <-  within( melt(subRem[, c(idVars, "ruminating", "meanNA", "meanPA"),], id.vars = idVars), {
   variable<- gsub("\\_.*","",variable)
   Mean<- ave(value, negMax, variable, subject, FUN=function(x) mean(x,na.rm=T))})
+
+levels(meltCon$group) <- c("rMDD", "HC")
+levels(meltRem$group) <- c("rMDD", "HC")
 
 #rumination
+pdf(width = 10, height = 5.5,
+    file = "individual_rum_by_negMax.pdf")  #bg = "#D5E4EB"
 p1 <- ggplot(data = meltCon[which(meltCon$variable=="ruminating"),],
+             aes(x=negMax, y=Mean)) +
+  geom_point(color = "#619CFF") + ylim(0,100) + xlim(0,100) +
+  multi_plot_theme() +
+  facet_grid(group~factor(subject), scale = "free") +
+  geom_smooth(method = "lm", se = FALSE, col = "black")
+
+p2 <- ggplot(data = meltRem[which(meltRem$variable=="ruminating"),],
+             aes(x=negMax, y=Mean, color = "pink")) +
+  geom_point() + ylim(0,100) + xlim(0,100) +
+  multi_plot_theme() +
+  facet_grid(group~factor(subject), scale = "free") +
+  geom_smooth(method = "lm", se = FALSE, col = "black")
+
+grid.arrange(p2, p1, ncol=1, nrow = 2, left = "Rumination",
+             bottom = "Event Unpleasantness")
+
+dev.off()
+
+
+#positive affect
+p1 <- ggplot(data = meltCon[which(meltCon$variable=="meanPA"),],
              aes(x=negMax, y=Mean)) +
   geom_point(color = "#619CFF") + ylim(0,100) + xlim(0,100) +
   xlab('Unpleasantness of Event') +
   facet_grid(group~factor(subject), scale = "free") + theme(legend.position="none", axis.title.y=element_blank()) +
   geom_smooth(method = "lm", se = FALSE, col = "black") 
 
-p2 <- ggplot(data = meltRem[which(meltRem$variable=="ruminating"),],
+p2 <- ggplot(data = meltRem[which(meltRem$variable=="meanPA"),],
              aes(x=negMax, y=Mean, color = "pink")) +
   geom_point() + ylim(0,100) + xlim(0,100) +
-  xlab('Unpleasant of Event') +
-  facet_grid(group~factor(subject), scale = "free") + theme(legend.position="none",
-                                                            axis.title.x=element_blank(), axis.title.y=element_blank()) +
-  geom_smooth(method = "lm", se = FALSE, col = "black") 
-
-grid.arrange(p2, p1, ncol=1, nrow = 2, left = "Rumination")
-
-
-#positive affect
-p1 <- ggplot(data = meltCon[which(meltCon$variable=="sumPA"),],
-             aes(x=negMax, y=Mean)) +
-  geom_point(color = "#619CFF") + ylim(0,300) + xlim(0,100) +
-  xlab('Unpleasantness of Event') +
-  facet_grid(group~factor(subject), scale = "free") + theme(legend.position="none", axis.title.y=element_blank()) +
-  geom_smooth(method = "lm", se = FALSE, col = "black") 
-
-p2 <- ggplot(data = meltRem[which(meltRem$variable=="sumPA"),],
-             aes(x=negMax, y=Mean, color = "pink")) +
-  geom_point() + ylim(0,300) + xlim(0,100) +
   xlab('Unpleasant of Event') +
   facet_grid(group~factor(subject), scale = "free") + theme(legend.position="none",
                                                             axis.title.x=element_blank(), axis.title.y=element_blank()) +
@@ -627,16 +669,16 @@ grid.arrange(p2, p1, ncol=1, nrow = 2, left = "Positive Affect")
 
 
 #negative affect
-p1 <- ggplot(data = meltCon[which(meltCon$variable=="sumNA"),],
+p1 <- ggplot(data = meltCon[which(meltCon$variable=="meanNA"),],
              aes(x=negMax, y=Mean)) +
-  geom_point(color = "#619CFF") + ylim(0,300) + xlim(0,100) +
+  geom_point(color = "#619CFF") + ylim(0,100) + xlim(0,100) +
   xlab('Unpleasantness of Event') +
   facet_grid(group~factor(subject), scale = "free") + theme(legend.position="none", axis.title.y=element_blank()) +
   geom_smooth(method = "lm", se = FALSE, col = "black") 
 
-p2 <- ggplot(data = meltRem[which(meltRem$variable=="sumNA"),],
+p2 <- ggplot(data = meltRem[which(meltRem$variable=="meanNA"),],
              aes(x=negMax, y=Mean, color = "pink")) +
-  geom_point() + ylim(0,300) + xlim(0,100) +
+  geom_point() + ylim(0,100) + xlim(0,100) +
   xlab('Unpleasant of Event') +
   facet_grid(group~factor(subject), scale = "free") + theme(legend.position="none",
                                                             axis.title.x=element_blank(), axis.title.y=element_blank()) +
@@ -721,7 +763,7 @@ grid.arrange(p2, p1, ncol=1, nrow = 2, left = "Negative Affect")
 ### boxplot comparisons with all data points separately
 
 
-group.colors = c(remitted = "#F8766D", controls = "#619CFF")
+group.colors = c(rMDD = "#F8766D", HC = "#619CFF")
 
 meltData1 <- melt(data[, c("group", met.vars[1:2])])
 #boxplot(data=meltData, value~variable)
@@ -747,36 +789,94 @@ p2 + geom_boxplot() + facet_wrap(~variable, scale="free")
 ### boxplots of daily avg
 idVars <- c("subject", "group", "intervention", "phase", "assessmentDay")
 
-meltDat <-  within( melt(data[, c(idVars, "ruminating", "sumNA", "sumPA", "negMax", "posMax",
+meltDat <-  within( melt(data[, c(idVars, "ruminating", "meanNA", "meanPA", "negMax", "posMax",
                                   "down", "irritated", "restless", "anxious",
                                   "satisfied", "wakeful", "energetic"),], id.vars = idVars), {
   variable<- gsub("\\_.*","",variable)
   Mean<- ave(value, assessmentDay, variable, subject, FUN=function(x) mean(x,na.rm=T))})
 
 meltDat <- meltDat[!duplicated(meltDat[c(1,5,8)]), ]
+meltDat$group <- factor(meltDat$group, levels = c("remitted", "controls"))
+meltDat$intervention <- factor(meltDat$intervention, levels = c("mindfulness", "fantasizing"))
 
+levels(meltDat$group) <- c("rMDD", "HC")
+levels(meltDat$intervention) <- c("Mindfulness", "Fantasizing")
+
+pdf(width = 8, height = 6,
+    file = "daily_avg_rum_boxplots.pdf")
 ggplot(data = meltDat[which(meltDat$variable=="ruminating"),],
-             aes(x= phase, y=Mean, fill = group)) +
+             aes(x= factor(phase, levels = c("pre", "peri")), y=Mean,
+                 fill = group)) +
   geom_boxplot() + ylim(0,100) +
-  ylab("Rumination score") +
-  facet_grid(factor(intervention)~factor(group), scale = "free") + theme(legend.position="none", axis.title.x=element_blank(),
-                                                     axis.ticks.x=element_blank())  + scale_fill_manual(values=group.colors)
-#PANA
-p1 <- ggplot(data = meltDat[which(meltDat$variable=="sumNA"),],
-             aes(x= phase, y=Mean, fill = group)) +
-  geom_boxplot() + ylim(0,300) +
-  ylab("Negative Affect") +
-  facet_grid(factor(intervention)~factor(group), scale = "free") + theme(legend.position="none", axis.title.x=element_blank(), axis.text.x=element_blank(),
-                                                                         axis.ticks.x=element_blank()) + scale_fill_manual(values=group.colors)
-p2 <- ggplot(data = meltDat[which(meltDat$variable=="sumPA"),],
-       aes(x= phase, y=Mean, fill = group)) +
-  geom_boxplot() + ylim(0,300) +
-  ylab("Positive Affect") +
+  single_plot_theme() +
+  ylab("Rumination") + 
+  xlab("Phase") +
   facet_grid(factor(intervention)~factor(group), scale = "free") +
-  theme(legend.position="none", axis.title.x=element_blank(), axis.ticks.x=element_blank(), strip.text.x = element_blank()) +
+  theme(legend.position="none", strip.text.x = element_text(size = 15),
+        strip.text.y = element_text(size =15),
+        axis.text.x = element_text(size=15)) +
   scale_fill_manual(values=group.colors)
 
-grid.arrange(p1, p2, ncol=1, nrow = 2)
+dev.off()
+
+#NA
+pdf(width = 8, height = 6,
+    file = "daily_avg_NA_boxplots.pdf")
+ggplot(data = meltDat[which(meltDat$variable=="meanNA"),],
+       aes(x= factor(phase, levels = c("pre", "peri")), y=Mean,
+           fill = group)) +
+  geom_boxplot() + ylim(0,100) +
+  single_plot_theme() +
+  ylab("Negative Affect") +
+  xlab("Phase") +
+  facet_grid(factor(intervention)~factor(group), scale = "free") +
+  theme(legend.position="none", strip.text.x = element_text(size = 15),
+        strip.text.y = element_text(size =15),
+        axis.text.x = element_text(size=15)) +
+  # axis.ticks.x=element_blank()) +
+  scale_fill_manual(values=group.colors)
+
+dev.off()
+
+
+#PA
+pdf(width = 8, height = 6,
+    file = "daily_avg_PA_boxplots.pdf")
+ggplot(data = meltDat[which(meltDat$variable=="meanPA"),],
+       aes(x= factor(phase, levels = c("pre", "peri")), y=Mean,
+           fill = group)) +
+  geom_boxplot() + ylim(0,100) +
+  single_plot_theme() +
+  ylab("Positive Affect") +
+  xlab("Phase") +
+  facet_grid(factor(intervention)~factor(group), scale = "free") +
+  theme(legend.position="none", strip.text.x = element_text(size = 15),
+        strip.text.y = element_text(size =15),
+        axis.text.x = element_text(size=15)) +
+  # axis.ticks.x=element_blank()) +
+  scale_fill_manual(values=group.colors)
+
+dev.off()
+# p1 <- ggplot(data = meltDat[which(meltDat$variable=="meanNA"),],
+#              aes(x= phase, y=Mean, fill = group)) +
+#   geom_boxplot() + ylim(0,100) +
+#   ylab("Negative Affect") +
+#   facet_grid(factor(intervention)~factor(group), scale = "free") +
+#   single_plot_theme() +
+#   theme(legend.position="none", axis.title.x=element_blank(), axis.text.x=element_blank()) +
+#   scale_fill_manual(values=group.colors)
+# p2 <- ggplot(data = meltDat[which(meltDat$variable=="meanPA"),],
+#        aes(x= phase, y=Mean, fill = group)) +
+#   geom_boxplot() + ylim(0,100) +
+#   ylab("Positive Affect") +
+#   facet_grid(factor(intervention)~factor(group), scale = "free") +
+#   single_plot_theme( ) +
+#   theme(legend.position="none", axis.title.x=element_blank(), axis.ticks.x=element_blank(), strip.text.x = element_blank()) +
+#   scale_fill_manual(values=group.colors)
+# 
+# grid.arrange(p1, p2, ncol=1, nrow = 2)
+# 
+# dev.off()
 
 #event (un)pleasantness
 p1 <- ggplot(data = meltDat[which(meltDat$variable=="negMax"),],

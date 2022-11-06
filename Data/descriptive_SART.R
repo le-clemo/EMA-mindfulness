@@ -133,7 +133,10 @@ ggplot(meltDat[which((!is.na(meltDat$intervention) & (!is.na(meltDat$group)))),]
   labs(y = "Mean response time", x = "Phase") + 
   ylim(300,1000) +
   single_plot_theme() +
-  theme(legend.position = "None") +
+  theme(legend.position = "None",
+        strip.text.x = element_text(size = 15),
+        strip.text.y = element_text(size =15),
+        axis.text.x = element_text(size=15)) +
   scale_fill_manual(values=group.colors)
 
 dev.off()

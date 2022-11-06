@@ -97,5 +97,5 @@ collin.fnc(dat_clust[,-c(5, 6, 7, 8, 9, 10, 11, 12, 14, 16, 17, 19, 22, 23, 24)]
 plot(varclus(as.matrix(dat_clust[,-c(5, 6, 7, 8, 9, 10, 11, 12, 14, 16, 17, 19, 22, 23, 24)])))
 
 #for the network models, we ideally want to keep more of the PA and NA variables, not just their aggregate
-collin.fnc(dat_clust[,-c(3, 4, 12, 14, 16, 17, 19, 22, 23, 24)])$cnumber #~23.4
-plot(varclus(as.matrix(dat_clust[,-c(3, 4, 12, 14, 16, 17, 19, 22, 23, 24)])))
+collin.fnc(dat_clust[,-c(2, 3, 4, 12, 13, 14, 16, 18, 20, 21, 22, 23, 24)])$cnumber #~23.4
+plot(varclus(as.matrix(dat_clust[,-c(2, 3, 4, 12, 13, 14, 16, 18, 20, 21, 22, 23, 24)])))

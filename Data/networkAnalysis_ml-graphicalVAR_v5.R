@@ -28,6 +28,7 @@ library(networktools)
 library(NetworkComparisonTest)
 library(psychNet)
 library(parallel)
+library(xtable)
 
 packageVersion("mlVAR") #0.5
 packageVersion("qgraph") #1.9.1
@@ -715,8 +716,8 @@ mirror_matrix <- function(m) {
   return(m)
 }
 
-load("network_permutations/compare_all_fant_final.rda")
-compare_all_fant_final <- copy(permutationResults)
+load("network_permutations/cont_pre_final.rda")
+cont_pre_final <- copy(permutationResults)
 
 length(unique(cont_pre_final$data$subjB)) #38
 length(unique(rem_pre_final$data$subjB)) #21
@@ -728,12 +729,12 @@ length(unique(all_pre_mind_final$data$subjB)) #27
 length(unique(all_peri_mind_final$data$subjB)) #27
 
 
-netAll <- compare_all_fant_final
+netAll <- all_pre_fant_final
 
-sum((netAll$p_values$Contemporaneous$EdgeWeights < 0.025), na.rm = T)
-sum((netAll$p_values$Contemporaneous$EdgeWeights != 1), na.rm = T)
+sum((netAll$p_values$Temporal$EdgeWeights < 0.025), na.rm = T)
+sum((netAll$p_values$Temporal$EdgeWeights != 1), na.rm = T)
 
-net <- all_peri_fant_final[["network"]][["Temporal"]][["EdgeWeights"]]
+net <- compare_group_pre_final[["testStats"]][["difference"]][["EdgeWeights"]][["Temporal"]][[1]] #[["network"]][["Temporal"]][["EdgeWeights"]]
 
 n2 <- qgraph(net, layout = L, #title=paste("mlVAR: Contemporaneous network", g, i, "Baseline", sep = " - "),
              theme='colorblind', negDashed=FALSE, diag=T, #title=paste("Controls: Temporal - Baseline")
@@ -742,7 +743,7 @@ n2 <- qgraph(net, layout = L, #title=paste("mlVAR: Contemporaneous network", g, 
 
 
 
-net_pvals <- netAll[["p_values"]][["Contemporaneous"]][["EdgeWeights"]]
+net_pvals <- netAll[["p_values"]][["Temporal"]][["EdgeWeights"]]
 
 # net <- copy(netAll)
 net[which(net_pvals > 0.025)] <- 0
@@ -774,9 +775,163 @@ mean((abs(test)) >= ((abs(compare_group_pre_final$testStats$difference$LocalStre
 # test
 
 
+######################################## NST / NCT Latex tables ###################################################
+load("network_permutations/rem_pre_final.rda")
+rem_pre_final <- permutationResults
+
+net_type <- "Contemporaneous"
+
+net1 <- rem_pre_final[["network"]][[net_type]][["EdgeWeights"]]
+pvals1 <- rem_pre_final[["p_values"]][[net_type]][["EdgeWeights"]]
+net2 <- cont_pre_final[["network"]][[net_type]][["EdgeWeights"]]
+pvals2 <- cont_pre_final[["p_values"]][[net_type]][["EdgeWeights"]]
+netDiff <- compare_group_pre_final[["testStats"]][["difference"]][["EdgeWeights"]][[net_type]][[1]]
+pvalsDiff <- compare_group_pre_final[["p_values"]][[net_type]][["EdgeWeights"]]
+
+nets <- list(list(net1, pvals1), list(net2, pvals2), list(netDiff, pvalsDiff))
+#if net_type == "Contemporaneous 66 else 121
+mlength <- 66
+
+m <- matrix(rep(NA,mlength), ncol = 1)
+sign_m <- matrix(rep(NA,mlength), ncol = 1)
+
+for(net in nets){
+  
+  for(n in net){
+    rownames(n)[rownames(n) == 'sumNA'] <- 'NegativeAffect'
+    rownames(n)[rownames(n) == 'sumPA'] <- 'PositiveAffect'
+    rownames(n)[rownames(n) == 'negMax'] <- 'EventUnpleasantness'
+    rownames(n)[rownames(n) == 'posMax'] <- 'EventPleasantness'
+    rownames(n)[rownames(n) == 'ruminating'] <- 'Rumination'
+    rownames(n)[rownames(n) == 'energetic'] <- 'Energy'
+    rownames(n)[rownames(n) == 'wakeful'] <- 'Wakefulness'
+    rownames(n)[rownames(n) == 'satisfied'] <- 'Satisfaction'
+    rownames(n)[rownames(n) == 'down'] <- 'Sadness'
+    rownames(n)[rownames(n) == 'anxious'] <- 'Anxiety'
+    rownames(n)[rownames(n) == 'restless'] <- 'Restlessness'
+    rownames(n)[rownames(n) == 'irritated'] <- 'Irritation'
+    rownames(n)[rownames(n) == 'distracted'] <- 'Distraction'
+  }
+
+  net[[2]] <- as.matrix(net[[2]])
+  
+  if(net_type == "Contemporaneous"){
+    
+    e <- t(net[[1]])[lower.tri(t(net[[1]]), diag=TRUE)]
+    e <- matrix(round(e,2), ncol = 1)
+    p <- t(net[[2]])[lower.tri(t(net[[2]]), diag=TRUE)]
+    p <- matrix(round(p,3), ncol = 1)
+    
+    #create significant only matrix  
+    net[[1]][which(net[[2]]>0.025)] <- NA
+    net[[2]][which(net[[2]]>0.025)] <- NA
+    
+    sign_e <- t(net[[1]])[lower.tri(t(net[[1]]), diag=TRUE)]
+    sign_e <- matrix(round(sign_e,2), ncol = 1)
+    sign_p <- t(net[[2]])[lower.tri(t(net[[2]]), diag=TRUE)]
+    sign_p <- matrix(round(sign_p,3), ncol = 1)
+    
+  } else {
+    
+    #create full matrix
+    e <- as.vector(t(net[[1]]))
+    e <- matrix(round(e,2), ncol = 1)
+    p <- as.vector(t(net[[2]]))
+    p <- matrix(round(p,3), ncol = 1)
+    
+    #create significant only matrix  
+    net[[1]][which(net[[2]]>0.025)] <- NA
+    net[[2]][which(net[[2]]>0.025)] <- NA
+    
+    sign_e <- as.vector(t(net[[1]]))
+    sign_e <- matrix(round(sign_e, 2), ncol = 1)
+    sign_p <- as.vector(t(net[[2]]))
+    sign_p <- matrix(round(sign_p, 3), ncol = 1)
+    
+  }
+  
+  m <- cbind(m, e, p)
+  sign_m <- cbind(sign_m, sign_e, sign_p)
+}
+
+var_names <- rownames(n)
+
+if(net_type=="Contemporaneous"){
+  rnames <- c()
+  loop_names <- var_names
+  j <- 1
+  for(n1 in loop_names){
+    for(n2 in loop_names){
+      rnames[j] <- paste(n1, n2, sep = " -- ")  
+      j <- j + 1
+    }
+    loop_names <- loop_names[-1]
+  } 
+  
+} else {
+  rnames <- paste(rep(var_names, each = length(var_names)), var_names, sep = " --> ")
+  
+}
+
+rownames(m) <- rnames
+rownames(sign_m) <- rnames
+
+m <- m[,-1]
+sign_m <- sign_m[,-1]
+sign_m <- sign_m[rowSums(is.na(sign_m)) != ncol(sign_m), ]
+
+colnames(m) <- c("C-EW", "C-PV", "R-EW", "R-PV", "Diff", "Diff-PV")
+colnames(sign_m) <- c("C-EW", "C-PV", "R-EW", "R-PV", "Diff", "Diff-PV")
+
+df <- data.frame(m)
+df <- df[df$C.PV < 0.025 | df$R.PV < 0.025 | df$Diff.PV < 0.025,]
+df <- df[complete.cases(df),] 
+
+Hmisc::latex(df, cdec=c(0,2,2,2,4), na.blank=TRUE,
+      booktabs=TRUE, table.env=TRUE, center="none", file="", title="")
+
+net_type <- "Contemporaneous"
+
+net1 <- round(rem_pre_final[["network"]][[net_type]][["Centrality"]], 2)
+pvals1 <- round(rem_pre_final[["p_values"]][[net_type]][["Centrality"]], 3)
+net2 <- round(cont_pre_final[["network"]][[net_type]][["Centrality"]], 2)
+pvals2 <- round(cont_pre_final[["p_values"]][[net_type]][["Centrality"]], 3)
+# netDiff <- round(compare_group_pre_final[["testStats"]][["difference"]][["Centrality"]][[net_type]][[1]], 2)
+pvalsDiff <- round(compare_group_pre_final[["p_values"]][[net_type]][["Centrality"]], 3)
+
+if(net_type=="Contemporaneous"){
+  centDF <- cbind(net1[,1], pvals1[,1],
+                  net2[,1], pvals2[,1],
+                  round(net1[,1]-net2[,1], 2), pvalsDiff[,1])
+  
+  colnames(centDF) <- c("R.Strength", "p", "C.Strength", "p", "Diff.Strength", "p")
+  
+} else {
+  centDF <- cbind(net1[,1], pvals1[,1],
+                  net1[,2], pvals1[,2],
+                  net2[,1], pvals2[,1],
+                  net2[,2], pvals2[,2],
+                  round(net1[,1]-net2[,1], 2), pvalsDiff[,1],
+                  round(net1[,2]-net2[,2], 2), pvalsDiff[,2])
+  
+  colnames(centDF) <- c("R.InS", "p", "R.Out", "p", "C.InS", "p", "C.OutS", "p", "Diff.InS", "p", "Diff.OutS", "p")  
+  
+}
+
+
+rownames(centDF) <- var_names
+
+
+Hmisc::latex(centDF, cdec=c(0,2,2,2,4), na.blank=TRUE,
+             booktabs=TRUE, table.env=TRUE, center="none", file="", title="")
+
 ######################################## Calculate PA / NA Strength ###################################################
-load("network_permutations/all_pre_fant_final.rda")
-all_pre_fant_final <- permutationResults
+
+cont_pre_significant <- netAll[["network"]][["Temporal"]][["EdgeWeights"]]
+cont_pre_significant[which(netAll[["p_values"]][["Temporal"]][["EdgeWeights"]] > 0.025)] <- 0
+
+
+net
 
 pa_nodes <- c("Energy", "Wakefulness", "Satisfaction")
 na_nodes <- c("Sadness", "Irritation", "Anxiety", "Restlessness")

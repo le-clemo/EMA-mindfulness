@@ -51,6 +51,7 @@ data <- read.csv('merged_data.csv')
 data$group <- factor(data$group, levels = c("remitted", "controls"))
 data$intervention <- factor(data$intervention, levels = c("mindfulness", "fantasizing"))
 data$subjB <- factor(data$subjB)
+data$subject <- factor(data$subject)
 
 responses_block <- ddply(data, .(subject, group), plyr::summarise,
                          numBeeped = length(mindcog_db_open_from),
@@ -1008,6 +1009,9 @@ gam.check(pa.gam)
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 peri_dat <- sc_data[which(sc_data$phase=="peri"),]
 peri_dat_unscaled <- data[which(data$phase=="peri"),]
+DF <- within(peri_dat_unscaled, group <- relevel(group, ref = "controls"))
+rem_fant <- within(peri_dat_unscaled, intervention <- relevel(intervention, ref = "fantasizing"))
+cont_fant <- within(DF, intervention <- relevel(intervention, ref = "fantasizing"))
 
 ### rumination
 
@@ -1037,26 +1041,41 @@ rum.peri.test <- gam(ruminating_gam ~ s(phaseBeepNum, by = interaction(group, in
                   s(negMax_gam) + s(posMax_gam) +
                   s(stickiness_gam) +
                   s(distracted_gam) + s(sleepQuality_gam) + s(companyPleasant_gam) +
-                  s(phaseBeepNum, by = subjB, bs="fs", m=1),
+                  s(phaseBeepNum, by = subject, bs="fs", m=1),
                 data = peri_dat)
 
 summary_rum.peri.test <- summary(rum.peri.test)
 
+peri_dat_unscaled$subject <- factor(peri_dat_unscaled$subject)
 
-
-rum.peri_unscaled <- gam(ruminating_gam ~ s(phaseBeepNum, by = interaction(group, intervention)) + group * intervention +
-                  s(meanNA_gam, by = interaction(group, intervention)) + s(meanPA_gam, by = interaction(group, intervention)) +
-                  s(negMax_gam) + s(posMax_gam) +
-                  s(stickiness_gam, by = interaction(group, intervention)) +
-                  s(distracted_gam) + s(sleepQuality_gam) + s(companyPleasant_gam) +
-                  s(phaseBeepNum, by = subjB, bs="fs", m=1),
+rum.peri_unscaled <- gam(ruminating_gam ~ s(phaseBeepNum) + group * intervention +
+                  # s(meanNA_gam, by = interaction(group, intervention)) + s(meanPA_gam, by = interaction(group, intervention)) +
+                  # s(negMax_gam) + s(posMax_gam) +
+                  # s(stickiness_gam, by = interaction(group, intervention)) +
+                  # s(distracted_gam) + s(sleepQuality_gam) + s(companyPleasant_gam) +
+                  s(phaseBeepNum, by = subject, bs="fs", m=1),
                 data = peri_dat_unscaled)
 
 rum.peri.sum.unscaled <- summary(rum.peri_unscaled)
 
-save(rum.peri_unscaled, rum.peri.sum.unscaled, file = "models_rumination/rum_unscaled_peri.rda")
+
+rum.peri_relevel <- gam(ruminating_gam ~ s(phaseBeepNum) + group * intervention +
+                           # s(meanNA_gam, by = interaction(group, intervention)) + s(meanPA_gam, by = interaction(group, intervention)) +
+                           # s(negMax_gam) + s(posMax_gam) +
+                           # s(stickiness_gam, by = interaction(group, intervention)) +
+                           # s(distracted_gam) + s(sleepQuality_gam) + s(companyPleasant_gam) +
+                           s(phaseBeepNum, by = subject, bs="fs", m=1),
+                         data = cont_fant)
+
+rum_sum_relevel <- summary(rum.peri_relevel)
+
+save(rum.peri_unscaled, rum.peri.sum.unscaled, rum.peri_relevel, rum_sum_relevel, file = "models_rumination/rum_unscaled_peri.rda")
 
 load("models_rumination/rum_unscaled_peri.rda")
+
+param_tab <- parameters::model_parameters(rum.peri_relevel, effects = "fixed")
+d <- t_to_d(param_tab$t[1:4], param_tab$df_error[1:4])
+interpret_cohens_d(d[1])
 
 rum.peri.noGroup_unscaled <- gam(ruminating_gam ~ s(phaseBeepNum, by = intervention) + intervention +
                            s(meanPA_gam, by = intervention) + s(meanNA_gam, by = intervention) +
@@ -1174,21 +1193,36 @@ summary_na.peri <- summary(na.peri)
 
 save(na.peri, summary_na.peri, file="models_na/na_peri.rda")
 
-na.peri_unscaled <- gam(meanNA_gam ~ group * intervention + s(phaseBeepNum, by = interaction(group, intervention)) +
-                 s(ruminating_gam, by = interaction(group, intervention)) + s(meanPA_gam, by = interaction(group, intervention)) +
-                 s(negMax_gam) + s(posMax_gam) +
-                 s(stickiness_gam) +
-                 s(distracted_gam) + s(listless_gam) + s(sleepQuality_gam) + s(companyPleasant_gam) +
-                 s(phaseBeepNum, by = subjB, bs="fs", m=1),
+na.peri_unscaled <- gam(meanNA_gam ~ group * intervention + s(phaseBeepNum) + #, by = interaction(group, intervention)
+                 # s(ruminating_gam) + s(meanPA_gam) + #  , by = interaction(group, intervention)) + #, by = interaction(group, intervention)
+                 # s(negMax_gam) + s(posMax_gam) +
+                 # s(stickiness_gam) +
+                 # s(distracted_gam) + s(listless_gam) + s(sleepQuality_gam) + s(companyPleasant_gam) +
+                 s(phaseBeepNum, by = subject, bs="fs", m=1),
                data = peri_dat_unscaled)
 
 na.peri.sum.unscaled <- summary(na.peri_unscaled)
 
-save(na.peri_unscaled, na.peri.sum.unscaled, file = "models_na/na_unscaled_peri.rda")
+na.peri_relevel <- gam(meanNA_gam ~ group * intervention + s(phaseBeepNum) + #, by = interaction(group, intervention)
+                         # s(ruminating_gam) + s(meanPA_gam) + #  , by = interaction(group, intervention)) + #, by = interaction(group, intervention)
+                         # s(negMax_gam) + s(posMax_gam) +
+                         # s(stickiness_gam) +
+                         # s(distracted_gam) + s(listless_gam) + s(sleepQuality_gam) + s(companyPleasant_gam) +
+                         s(phaseBeepNum, by = subject, bs="fs", m=1),
+                       data = cont_fant)
+
+na_sum_relevel <- summary(na.peri_relevel)
+
+save(na.peri_unscaled, na.peri.sum.unscaled, na.peri_relevel, na_sum_relevel, file = "models_na/na_unscaled_peri.rda")
+
 load("models_na/na_unscaled_peri.rda")
 
+param_tab <- parameters::model_parameters(na.peri_relevel, effects = "fixed")
+d <- t_to_d(param_tab$t[1:4], param_tab$df_error[1:4])
+interpret_cohens_d(d[1])
+
 param_tab_na <- parameters::model_parameters(na.peri_unscaled)
-d <- t_to_d(param_tab_na$t[2:4], param_tab_na$df_error[2:4])
+d <- t_to_d(param_tab_na$t[1:4], param_tab_na$df_error[1:4])
 interpret_cohens_d(d[1])
 
 param_tab_na <- parameters::model_parameters(na.peri.noGroup_unscaled)
@@ -1272,25 +1306,36 @@ pa.peri <- gam(sumPA_gam ~ group * intervention + s(phaseBeepNum, by = interacti
 
 summary_pa.peri <- summary(pa.peri)
 
-pa.peri_unscaled <- gam(meanPA_gam ~ group * intervention + s(phaseBeepNum, by = interaction(group, intervention)) +
-                 s(ruminating_gam, by = interaction(group, intervention)) + s(meanNA_gam) +
-                 s(negMax_gam, by = interaction(group, intervention)) + s(posMax_gam, by = interaction(group, intervention)) +
-                 s(stickiness_gam) +
-                 s(distracted_gam) + s(listless_gam) + s(sleepQuality_gam) + s(companyPleasant_gam) +
-                 s(phaseBeepNum, by = subjB, bs="fs", m=1),
+pa.peri_unscaled <- gam(meanPA_gam ~ group * intervention + s(phaseBeepNum) +
+                 # s(ruminating_gam, by = interaction(group, intervention)) + s(meanNA_gam) +
+                 # s(negMax_gam, by = interaction(group, intervention)) + s(posMax_gam, by = interaction(group, intervention)) +
+                 # s(stickiness_gam) +
+                 # s(distracted_gam) + s(listless_gam) + s(sleepQuality_gam) + s(companyPleasant_gam) +
+                 s(phaseBeepNum, by = subject, bs="fs", m=1),
                data = peri_dat_unscaled)
-
 
 pa.peri.sum.unscaled <- summary(pa.peri_unscaled)
 
+pa.peri_relevel <- gam(meanPA_gam ~ group * intervention + s(phaseBeepNum) +
+                          # s(ruminating_gam) + s(meanNA_gam), # by = interaction(group, intervention)) +
+                          # s(negMax_gam, by = interaction(group, intervention)) + s(posMax_gam, by = interaction(group, intervention)) +
+                          # s(stickiness_gam) +
+                          # s(distracted_gam) + s(listless_gam) + s(sleepQuality_gam) + s(companyPleasant_gam) +
+                        s(phaseBeepNum, by = subject, bs="fs", m=1),
+                        data = cont_fant)
 
-save(pa.peri_unscaled, pa.peri.sum.unscaled, file = "models_pa/pa_unscaled_peri.rda")
+pa_sum_relevel <- summary(pa.peri_relevel)
 
-save(pa.peri, summary_pa.peri, file = "models_pa/pa_unscaled_peri.rda")
+save(pa.peri_unscaled, pa.peri.sum.unscaled, pa.peri_relevel, pa_sum_relevel, file = "models_pa/pa_unscaled_peri.rda")
+
 load("models_pa/pa_unscaled_peri.rda")
 
+param_tab_pa <- parameters::model_parameters(pa.peri_relevel)
+d <- t_to_d(param_tab_pa$t[1:4], param_tab_pa$df_error[1:4])
+interpret_cohens_d(d[1])
+
 param_tab_pa <- parameters::model_parameters(pa.peri_unscaled)
-d <- t_to_d(param_tab_pa$t[2:4], param_tab_pa$df_error[2:4])
+d <- t_to_d(param_tab_pa$t[1:4], param_tab_pa$df_error[1:4])
 interpret_cohens_d(d[1])
 
 param_tab_pa <- parameters::model_parameters(pa.peri.noGroup_unscaled)
@@ -1358,6 +1403,9 @@ plot_smooth(pa.peri, view = "companyPleasant_gam", ylab = "", xlab = "Company Pl
 
 ############################################## Plotting main results ##############################################################
 ### RQ1
+load("models_rumination/rum_unscaled_contemp.rda")
+load("models_na/na_unscaled_contemp.rda")
+load("models_pa/pa_unscaled_contemp.rda")
 
 rum_vals <- c(rum.sum.unscaled$p.coeff[1], rum.sum.unscaled$p.coeff[2]+rum.sum.unscaled$p.coeff[1])
 rum_sds <- c(rum.sum.unscaled$se[1], rum.sum.unscaled$se[3])
@@ -1471,6 +1519,8 @@ rq2_res_split <- data.frame(node = c(rep("Rumination",4), rep("Negative Affect",
                       intervention = c("mindfulness", "fantasizing"),
                       value = c(rum_vals, na_vals, pa_vals),
                       se = c(rum_sds, na_sds, pa_sds))
+
+write.csv(rq2_res_split, "rq2_split.csv")
 
 
 #with pattern

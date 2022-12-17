@@ -117,6 +117,12 @@ t.test(numbers[which((numbers$group=="HC") & (numbers$phase=="pre") & (numbers$i
 t.test(numbers[which((numbers$group=="HC") & (numbers$phase=="pre") & (numbers$intervention=="Fantasizing")),]$correct,
        numbers[which((numbers$group=="HC") & (numbers$phase=="peri") & (numbers$intervention=="Fantasizing")),]$correct)
 
+
+
+
+
+
+
 numbers_mean <- numbers %>%
   distinct(userID, gameSessionID, .keep_all = TRUE)
 
@@ -140,6 +146,33 @@ ggplot(meltDat[which((!is.na(meltDat$intervention) & (!is.na(meltDat$group)))),]
   scale_fill_manual(values=group.colors)
 
 dev.off()
+
+
+SE_sart <- summarySEwithin2(numbers_mean, measurevar = "meanRT", betweenvars = c("group"), withinvars = c("phase"), idvar = "subject", 
+                     na.rm = T)
+
+SE_sart <- drop_na(SE_sart)
+
+ggplot(SE_sart[which(SE_sart$phase=="pre"),], aes(y = meanRT, x=group, group=1), color = group) +
+  geom_line(color = "black", size=1, alpha = 0.15) +
+  geom_errorbar(aes(ymin = meanRT-se, ymax = meanRT+se,  color = c("#F8766D", "#619CFF")) ,width = 0.4, size=0.5) +
+  geom_point(size = 3, color = c( "#619CFF", "#F8766D"))+
+  ylim(575,660) +
+  single_plot_theme() +
+  ylab("Mean Response Time in ms") + 
+  xlab("Group") +
+  theme(legend.position="none", strip.text.x = element_text(size = 15),
+        strip.text.y = element_text(size =15)) +
+        # axis.text.x = element_blank(),
+        # axis.title.x = element_blank()) +
+  scale_fill_manual(values=group.colors)
+
+
+
+
+
+
+
 
 mean(meltDat[which(meltDat$group=="HC"),]$value, na.rm=T) #631.390
 mean(meltDat[which(meltDat$group=="rMDD"),]$value, na.rm=T) #613.380

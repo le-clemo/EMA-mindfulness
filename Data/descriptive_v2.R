@@ -4,7 +4,6 @@ rm(list = ls()) #clean all up
 
 
 source("C:/Users/cleme/Documents/Education/RUG/Thesis/EMA-mindfulness/Data/common_plot_theme.R")
-
 setwd("C:/Users/cleme/Documents/Education/RUG/Thesis/EMA-mindfulness/Data/ESM/mindcog_v202207")
 
 #setwd("~/Documents/RUG/Thesis/EMA-mindfulness/Data/ESM/mindcog_v202205")
@@ -28,6 +27,8 @@ library(broom)
 library(effectsize)
 library(languageR)
 library(ggthemes)
+library(ggpattern)
+library(Rmisc)
 library(tikzDevice)
 
 #read in data
@@ -914,22 +915,529 @@ ggplot(data = meltDat[which(meltDat$variable %in% c("satisfied", "wakeful", "ene
                                                                          axis.ticks.x=element_blank()) + scale_fill_manual(values=phase.colors)
 
 
+#####################################################################################################################
+colorado <- function(src, boulder) {
+  if (!is.factor(src)) src <- factor(src)                   # make sure it's a factor
+  src_levels <- levels(src)                                 # retrieve the levels in their order
+  brave <- boulder %in% src_levels                          # make sure everything we want to make bold is actually in the factor levels
+  if (all(brave)) {                                         # if so
+    b_pos <- purrr::map_int(boulder, ~which(.==src_levels)) # then find out where they are
+    b_vec <- rep("plain", length(src_levels))               # make'm all plain first
+    b_vec[b_pos] <- "bold"                                  # make our targets bold
+    b_vec                                                   # return the new vector
+  } else {
+    stop("All elements of 'boulder' must be in src")
+  }
+}
 
-### boxplots of rumination as 
-idVars <- c("subject", "group", "intervention", "phase", "assessmentDay")
+# standard_error <- function(x) sd(x, na.rm=T) / sqrt(length(x))
 
-meltDat <-  within( melt(data[, c(idVars, "ruminating", "sumNA", "sumPA"),], id.vars = idVars), {
+
+idVars <- c("group", "intervention") # "subject"
+
+# colnames(data)[colnames(data) == 'meanNA'] <- 'Negative Affect *'
+# colnames(data)[colnames(data) == 'meanPA'] <- 'Positive Affect'
+# colnames(data)[colnames(data) == 'ruminating'] <- 'Rumination *'
+
+baselineDat <- data[which(data$phase=="pre"),]
+
+meltDat <-  within( melt(baselineDat[, c(idVars, "ruminating", "meanNA", "meanPA"),], id.vars = idVars), {
+                                    variable<- gsub("\\_.*","",variable)
+                                    Mean<- ave(value, group, variable, FUN=function(x) mean(x,na.rm=T))
+                                    SD <- ave(value, group, variable, FUN=function(x) sd(x,na.rm=T))}) #subject
+
+
+meltDat <- meltDat[!duplicated(meltDat[c(1,3,5)]), ]
+
+meltDat[which(meltDat$variable=="ruminating"),]$variable <- "Rumination *"
+meltDat[which(meltDat$variable=="meanNA"),]$variable <- "Negative Affect *"
+meltDat[which(meltDat$variable=="meanPA"),]$variable <- "Positive Affect"
+
+meltDat$group <- factor(meltDat$group)
+meltDat$intervention <- factor(meltDat$intervention, levels = c("mindfulness", "fantasizing"))
+
+levels(meltDat$group) <- c("HC", "rMDD")
+levels(meltDat$intervention) <- c("Mindfulness", "Fantasizing")
+
+se_rum_c <- meltDat[which((meltDat$group=="HC") & (meltDat$variable=="Rumination *")),]$SD /
+  sqrt(length(unique(baselineDat[which((baselineDat$group=="controls")),]$subject)))
+se_rum_r <- meltDat[which((meltDat$group=="rMDD") & (meltDat$variable=="Rumination *")),]$SD /
+  sqrt(length(unique(baselineDat[which((baselineDat$group=="remitted")),]$subject)))
+se_na_c <- meltDat[which((meltDat$group=="HC") & (meltDat$variable=="Negative Affect *")),]$SD /
+  sqrt(length(unique(baselineDat[which((baselineDat$group=="controls")),]$subject)))
+se_na_r <- meltDat[which((meltDat$group=="rMDD") & (meltDat$variable=="Negative Affect *")),]$SD /
+  sqrt(length(unique(baselineDat[which((baselineDat$group=="remitted")),]$subject)))
+se_pa_c <- meltDat[which((meltDat$group=="HC") & (meltDat$variable=="Positive Affect")),]$SD /
+  sqrt(length(unique(baselineDat[which((baselineDat$group=="controls")),]$subject)))
+se_pa_r <- meltDat[which((meltDat$group=="rMDD") & (meltDat$variable=="Positive Affect")),]$SD /
+  sqrt(length(unique(baselineDat[which((baselineDat$group=="remitted")),]$subject)))
+
+meltDat$SE <- c(se_rum_c, se_rum_r, se_na_c, se_na_r, se_pa_c, se_pa_r)
+
+
+pdf(width = 10, height = 3.75,
+    file = "rq1_data.pdf")
+p<- ggplot(meltDat, aes(x=factor(variable, levels=c("Positive Affect", "Negative Affect *", "Rumination *")), y=Mean, fill=group)) + 
+  geom_bar(stat="identity", color="black", 
+           position=position_dodge()) + ylim(0,75) +
+  geom_errorbar(aes(ymin=Mean-SE, ymax=Mean+SE), width=.2,
+                position=position_dodge(.9)) +
+  coord_flip()
+
+#  geom_errorbar(aes(ymin=value-se, ymax=value+se), width=.2,
+#position=position_dodge(.9))  + 
+
+# Finished bar plot
+p+labs(x="", y = "")+
+  single_plot_theme() +
+  theme(legend.position=c(0.8,.9),
+        legend.background = element_rect("#D5E4EB"),
+        legend.direction = "vertical",
+        axis.text.y = element_text(face = colorado(meltDat$variable, c("Rumination *", "Positive Affect")))) +
+  scale_fill_manual(labels = c("HC", "rMDD"), values=c('#619CFF', '#F8766D'))
+# guides(fill=guide_legend(title="Group"))
+
+dev.off()
+
+
+
+#######################################################################################################################
+met.vars <- c("ruminating", "meanNA", "meanPA")
+
+#in addition we create a new list which includes both the changed and unchanged met.vars for scaling later on
+scale.vars <- c(rep(NA, length(met.vars)*3))
+i = 0
+for(v in met.vars){
+  new_var <- paste(v, "_diff", sep = "")
+  data[[new_var]] <- NA
+  
+  gam_var <- paste(v, "_gam", sep = "")
+  data[[gam_var]] <- NA
+  i = i+1
+  scale.vars[[i]] <- v
+  i = i+1
+  scale.vars[[i]] <- new_var
+  i = i+1
+  scale.vars[[i]] <- gam_var
+  
+  for(id in unique(data$subject)){
+    for(b in 1:2){
+      pre_rows <- which((data$subject == id) & (data$phase=="pre") & (data$block==b))
+      peri_rows <- which((data$subject == id) & (data$phase=="peri") & (data$block==b))
+      s_rows <- which((data$subject == id) & (data$block==b))
+      baselineMean <- mean(data[[v]][pre_rows], na.rm=TRUE)
+      
+      if(is.na(baselineMean)){
+        baselineMean <- 0
+      }
+      
+      data[[new_var]][s_rows] <- round(data[[v]][s_rows] - baselineMean, 2)
+      
+      data[[gam_var]][pre_rows] <- NA
+      data[[gam_var]][peri_rows] <- round(data[[v]][peri_rows] - baselineMean, 2)
+    }
+  }  
+}
+
+
+meltDat <-  within( melt(data[which(data$phase=="peri"),][, c(idVars, "ruminating_gam", "meanNA_gam", "meanPA_gam"),], id.vars = idVars), {
   variable<- gsub("\\_.*","",variable)
-  Mean<- ave(value, assessmentDay, variable, subject, FUN=function(x) mean(x,na.rm=T))})
-
-meltDat <- meltDat[!duplicated(meltDat[c(1,5,8)]), ]
-
+  Mean<- ave(value, group, intervention, variable, FUN=function(x) mean(x,na.rm=T))
+  SD <- ave(value, group, intervention, variable, FUN=function(x) sd(x,na.rm=T))}) #subject
 
 
+meltDat <- meltDat[!duplicated(meltDat[c(1,2,3,6)]), ]
+meltDat$group <- factor(meltDat$group)
+meltDat$intervention <- factor(meltDat$intervention)
+
+rq2_split <- read.csv("C:/Users/cleme/Documents/Education/RUG/Thesis/EMA-mindfulness/Data/rq2_split.csv")
+rq2_split[which(rq2_split$group=="remitted"),]$group <- "rMDD"
+rq2_split[which(rq2_split$group=="controls"),]$group <- "HC"
+rq2_split[which(rq2_split$intervention=="fantasizing"),]$intervention <- "Fantasizing"
+rq2_split[which(rq2_split$intervention=="mindfulness"),]$intervention <- "Mindfulness"
+names(rq2_split)[names(rq2_split) == 'node'] <- 'variable'
+
+meltDat$SE <- rq2_split$se
+
+se_list <- c(rep(NA,12))
+j <- 1
+for(var in c("ruminating", "meanNA", "meanPA")){
+  for(g in c("controls", "remitted")){
+    for(i in c("fantasizing", "mindfulness")){
+      se_list[j] <- meltDat[which((meltDat$variable==var) & (meltDat$group==g) & (meltDat$intervention==i)),]$SD /
+        sqrt(length(unique(data[which((data$group==g) & (data$phase=="peri")),]$subject)))
+      
+      j <- j + 1
+    }
+  }
+}
+
+levels(meltDat$group) <- c("HC", "rMDD")
+levels(meltDat$intervention) <- c("Fantasizing", "Mindfulness")
+meltDat[which(meltDat$variable=="ruminating"),]$variable <- "Rumination"
+meltDat[which(meltDat$variable=="meanNA"),]$variable <- "Negative Affect"
+meltDat[which(meltDat$variable=="meanPA"),]$variable <- "Positive Affect"
+
+
+meltDat <- merge(meltDat, rq2_split[, c("se", "group", "intervention", "variable")], by = c("variable", "group", "intervention"))
+
+meltDat$SE <- se_list
+
+pdf(width = 10, height = 3.75,
+    file = "rq2_gam_split_results.pdf")
+p<- ggplot(meltDat, aes(x=factor(variable, levels=c("Positive Affect", "Negative Affect", "Rumination")),
+                              y=Mean,
+                              fill=group, pattern = intervention)) + 
+  geom_bar_pattern(stat = "identity",
+                   position = position_dodge(), #preserve = "single"
+                   color = "black", 
+                   pattern_fill = "black",
+                   pattern_angle = 45,
+                   pattern_density = 0.1,
+                   pattern_spacing = 0.025,
+                   pattern_key_scale_factor = 0.2)+
+  ylim(-10,10) +
+  geom_errorbar(aes(ymin=Mean-se, ymax=Mean+se), width=.2,
+                position=position_dodge(.9))+
+  coord_flip()
+
+# Finished bar plot
+p+labs(x="", y = "")+
+  single_plot_theme() +
+  theme(legend.position=c(0.8,.9),
+        legend.background = element_rect("#D5E4EB"),
+        legend.direction = "horizontal") +
+  # guides(fill=guide_legend(title="Group X Intervention")) +
+  scale_fill_manual(labels = c("HC", "rMDD"),
+                    values=c('#619CFF', '#F8766D')) +
+  scale_pattern_manual(labels = c("Fantasizing", "Mindfulness"), values = c(Fantasizing = "stripe", Mindfulness = "none")) +
+  guides(pattern = guide_legend(override.aes = list(fill = "white")),
+         fill = guide_legend(override.aes = list(pattern = "none")))
+
+dev.off()
+
+#########################################################################################################################
+idVars = c("subject", "group", "intervention", "assessmentDay")
+meltDat <-  within(melt(baselineDat[, c(idVars, "ruminating", "meanNA", "meanPA"),], id.vars = idVars), {
+  variable<- gsub("\\_.*","",variable)
+  Mean<- ave(value, subject, group, assessmentDay, variable, FUN=function(x) mean(x,na.rm=T))}) #subject
+
+meltDat[which(meltDat$variable=="ruminating"),]$variable <- "Rumination *"
+meltDat[which(meltDat$variable=="meanNA"),]$variable <- "Negative Affect *"
+meltDat[which(meltDat$variable=="meanPA"),]$variable <- "Positive Affect"
+
+pdf(width = 10, height = 3.75,
+    file = "rq1_data.pdf")
+p<- ggplot(meltDat, aes(x=factor(variable, levels=c("Positive Affect", "Negative Affect *", "Rumination *")), y=Mean, fill=group)) + 
+  geom_boxplot() + ylim(0,100) +
+  coord_flip()
+
+#  geom_errorbar(aes(ymin=value-se, ymax=value+se), width=.2,
+#position=position_dodge(.9))  + 
+
+# Finished bar plot
+p+labs(x="", y = "")+
+  single_plot_theme() +
+  theme(legend.position=c(0.8,.9),
+        legend.background = element_rect("#D5E4EB"),
+        legend.direction = "vertical") +
+  # guides(fill=guide_legend(title="Group X Intervention")) +
+  scale_fill_manual(labels = c("HC", "rMDD"),
+                    values=c('#619CFF', '#F8766D')) +
+  scale_pattern_manual(labels = c("Fantasizing", "Mindfulness"), values = c(Fantasizing = "stripe", Mindfulness = "none")) +
+  guides(pattern = guide_legend(override.aes = list(fill = "white")),
+         fill = guide_legend(override.aes = list(pattern = "none")))
+
+dev.off()
 
 
 
+#########################################################################################################################
+idVars = c("subject", "group", "intervention", "assessmentDay")
+meltDat <-  within(melt(data[which(data$phase=="peri"),][, c(idVars, "ruminating_gam", "meanNA_gam", "meanPA_gam"),], id.vars = idVars), {
+  variable<- gsub("\\_.*","",variable)
+  Mean<- ave(value, subject, group, intervention, assessmentDay, variable, FUN=function(x) mean(x,na.rm=T))}) #subject
 
+meltDat[which(meltDat$variable=="ruminating"),]$variable <- "Rumination"
+meltDat[which(meltDat$variable=="meanNA"),]$variable <- "Negative Affect"
+meltDat[which(meltDat$variable=="meanPA"),]$variable <- "Positive Affect"
+
+pdf(width = 10, height = 3.75,
+    file = "rq2_data.pdf")
+p<- ggplot(meltDat, aes(x=factor(variable, levels=c("Positive Affect", "Negative Affect", "Rumination")),
+                        y=Mean, fill=group, linetype = factor(intervention))) + 
+  geom_boxplot() + ylim(-50,50)
+  # geom_bar_pattern(stat = "identity",
+  #                  position = position_dodge(), #preserve = "single"
+  #                  color = "black", 
+  #                  pattern_fill = "black",
+  #                  pattern_angle = 45,
+  #                  pattern_density = 0.1,
+  #                  pattern_spacing = 0.025,
+  #                  pattern_key_scale_factor = 0.2)+
+  # coord_flip()
+
+#  geom_errorbar(aes(ymin=value-se, ymax=value+se), width=.2,
+#position=position_dodge(.9))  + 
+
+# Finished bar plot
+p+labs(x="", y = "")+
+  single_plot_theme() +
+  theme(legend.position=c(0.8,.9),
+        legend.background = element_rect("#D5E4EB")) +
+        # legend.direction = "vertical") +
+        # axis.text.y = element_text(face = colorado(meltDat$variable, c("Rumination *", "Positive Affect")))) +
+  scale_fill_manual(labels = c("HC", "rMDD"), values=c('#619CFF', '#F8766D')) +
+  scale_linetype_manual(name = "Intervention", values = c("solid", "dotted"))
+# guides(fill=guide_legend(title="Group"))
+
+dev.off()
+
+
+################################# using Cousineau-Morey method ################################################
+# library(superb)
+# View(data %>%
+#   pivot_wider(id_cols = c(subject, group, intervention, phase),
+#               names_from = phaseBeepNum,
+#               values_from = ruminating))
+
+
+# set up a datatable
+cmDat <- setDT(data)
+# subj-specific pace
+cmDat[ , subj_rum := mean(ruminating, na.rm=T), by = .(subject)]
+# general mean across conditions
+cmDat[ , overall_rum := mean(ruminating, na.rm=T)]
+# pace controlled for subjective pace
+cmDat[ , rum_within := ruminating - subj_rum + overall_rum]
+# sanity check
+cmDat[ , check := mean(rum_within, na.rm=T), by = .(subject)]
+
+# subj-specific pace
+cmDat[ , subj_rum_gam := mean(ruminating_gam, na.rm=T), by = .(subject)]
+# general mean across conditions
+cmDat[ , overall_rum_gam := mean(ruminating_gam, na.rm=T)]
+# pace controlled for subjective pace
+cmDat[ , rum_within_gam := ruminating_gam - subj_rum_gam + overall_rum_gam]
+# sanity check
+cmDat[ , check := mean(rum_within_gam, na.rm=T), by = .(subject)]
+
+
+View(subset(cmDat, select = c("subject", "group", "intervention", "phase", "ruminating", "subj_rum", "overall_rum", "rum_within", "check")))
+
+muh_grob <- grid::rectGrob(
+  x=1:2, y=0, gp=gpar(
+    colour="#D5E4EB",fill="#D5E4EB"))
+
+
+group.colors = c(HC = "#619CFF", rMDD = "#F8766D")
+
+SE_rum1 <- summarySE(data[which((data$block==1)),], measurevar = "ruminating", groupvars = c("group", "phase"), 
+                   na.rm = T)
+
+SE_rum1$group <- factor(SE_rum1$group, levels = c("controls", "remitted"))
+levels(SE_rum1$group) <- c("HC", "rMDD")
+SE_rum1$phase <- factor(SE_rum1$phase, levels = c("pre", "peri"))
+levels(SE_rum1$phase) <- c("Pre", "Peri")
+
+p1 <- ggplot(SE_rum1[which(SE_rum1$phase=="Pre"),], aes(y =  ruminating, x=group, group=1), color = group) +
+  geom_line(color = c("black"), size=1, alpha = 0.15) +
+  geom_errorbar(aes(ymin = ruminating-se, ymax = ruminating+se),width = 0.5, color = rev(group.colors), size=0.5) +
+  geom_point(size = 3, color = rev(group.colors))+
+  ylim(5,25) +
+  single_plot_theme() +
+  ylab("Rumination") + 
+  # facet_grid(.~factor(group), scale = "free") +
+  theme(legend.position="none", strip.text.x = element_text(size = 15),
+        strip.text.y = element_text(size =15),
+        # axis.ticks.x = element_blank(),
+        axis.title.x = element_blank(),
+        axis.text.x = element_blank()) +
+  # coord_cartesian(clip='off') +
+  scale_fill_manual(values=rev(group.colors)) +
+  geom_text(
+    mapping = aes(x = 1.5, y = 13.4, label = "*"), size = 10
+  )
+  # scale_x_discrete(position = "top")
+  # annotation_custom(
+  #   grob=muh_grob, xmin = -0.2, xmax = 1, ymin = 29, ymax=33
+  # )
+
+
+SE_na1 <- summarySE(data[which((data$block==1)),], measurevar = "meanNA", groupvars = c("group", "phase"), 
+                     na.rm = T)
+
+SE_na1$group <- factor(SE_na1$group, levels = c("controls", "remitted"))
+levels(SE_na1$group) <- c("HC", "rMDD")
+SE_na1$phase <- factor(SE_na1$phase, levels = c("pre", "peri"))
+levels(SE_na1$phase) <- c("Pre", "Peri")
+
+p2 <- ggplot(SE_na1[which(SE_na1$phase=="Pre"),], aes(y =  meanNA, x=group, group=1), color = group) +
+  geom_line(color = "black", size=1, alpha = 0.15) +
+  geom_errorbar(aes(ymin = meanNA-se, ymax = meanNA+se),width = 0.5, color = rev(group.colors), size=0.5) +
+  geom_point(size = 3, color = rev(group.colors))+
+  ylim(5,25) +
+  single_plot_theme() +
+  ylab("Negative Affect") + 
+  # facet_grid(factor(intervention)~factor(group), scale = "free") +
+  theme(legend.position="none", strip.text.x = element_text(size = 15),
+        strip.text.y = element_text(size =15),
+        axis.text.x = element_blank(),
+        axis.title.x=element_blank()) +
+  scale_fill_manual(values=rev(group.colors)) +
+  geom_text(
+    mapping = aes(x = 1.5, y = 11.2, label = "*"), size = 10
+  )
+
+
+SE_pa1 <- summarySE(data[which((data$block==1)),], measurevar = "meanPA", groupvars = c("group", "phase"), 
+                    na.rm = T)
+
+SE_pa1$group <- factor(SE_pa1$group, levels = c("controls", "remitted"))
+levels(SE_pa1$group) <- c("HC", "rMDD")
+SE_pa1$phase <- factor(SE_pa1$phase, levels = c("pre", "peri"))
+levels(SE_pa1$phase) <- c("Pre", "Peri")
+
+p3 <- ggplot(SE_pa1[which(SE_pa1$phase=="Pre"),], aes(y =  meanPA, x=group, group=1), color = group) +
+  geom_line(color = "black", size=1, alpha = 0.15) +
+  geom_errorbar(aes(ymin = meanPA-se, ymax = meanPA+se),width = 0.5, color = rev(group.colors), size=0.5) +
+  geom_point(size = 3, color = rev(group.colors))+
+  ylim(50,70) +
+  single_plot_theme() +
+  ylab("Positive Affect") + 
+  xlab("Group") +
+  # facet_grid(factor(intervention)~factor(group), scale = "free") +
+  theme(legend.position="none", strip.text.x = element_text(size = 15),
+        strip.text.y = element_text(size =15),
+        axis.text.x = element_text(size=15)) +
+  scale_fill_manual(values=rev(group.colors))
+
+rq1_plot <- grid.arrange(p1, p2, p3, nrow=3)
+
+ggsave(rq1_plot, file="rq1_group_diff.pdf", width = 4, height = 10)
+
+
+
+############################################# RQ 2 ###############################################################
+# calculate SE by taking repeated measures into account
+group.colors <- c("#619CFF", "#F8766D")
+group.colors2 <- c("#619CFF", "#619CFF", "#F8766D", "#F8766D")
+peri_dat <- data[which(data$phase=="peri"),]
+
+source("summarySEwithin2.R")
+
+SE_rum2 <- summarySEwithin2(peri_dat, measurevar = "ruminating_gam", betweenvars = c("group"),
+                     withinvars = c("intervention"), idvar="subject", na.rm = T)
+
+SE_rum2$group <- factor(SE_rum2$group)
+levels(SE_rum2$group) <- c("HC", "rMDD")
+SE_rum2$intervention <- factor(SE_rum2$intervention)
+levels(SE_rum2$intervention) <- c("Fantasizing", "Mindfulness")
+
+
+dat_text <- data.frame(
+  label = c("*", "*", "*"),
+  group   = c("HC", "HC", "HC"),
+  x     = c(1, 1.5, 2),
+  y     = c(2.5, -0.15, -3.05)
+)
+
+p1 <- ggplot(SE_rum2, aes(y =  ruminating_gam, x=intervention, group=1,), color = group) +
+  geom_line(color = "black", size=1, alpha = 0.15) +
+  geom_errorbar(aes(ymin = ruminating_gam-ci, ymax = ruminating_gam+ci),width = 0.5, size=0.5, color = group.colors2) +
+  geom_point(size = 3, color = group.colors2)+
+  geom_hline(yintercept = 0, linetype="dashed", alpha = 0.5) +
+  # annotate("text", x = 4, y=2, label = "ship") +
+  ylim(-5,5) +
+  single_plot_theme() +
+  ylab("Rumination") + 
+  facet_grid(.~factor(group), scale = "free") +
+  theme(legend.position="none", strip.text.x = element_text(size = 15),
+        strip.text.y = element_text(size =15),
+        axis.text.x = element_blank(),
+        axis.title.x = element_blank()) +
+  scale_fill_manual(values=group.colors) +
+  geom_text(
+  data    = dat_text,
+  mapping = aes(x = x, y = y, label = label), size = 10
+)
+
+##na
+SE_na2 <- summarySEwithin2(peri_dat, measurevar = "meanNA_gam", betweenvars = c("group"),
+                            withinvars = c("intervention"), idvar="subject", na.rm = T)
+
+SE_na2$group <- factor(SE_na2$group)
+levels(SE_na2$group) <- c("HC", "rMDD")
+SE_na2$intervention <- factor(SE_na2$intervention)
+levels(SE_na2$intervention) <- c("Fantasizing", "Mindfulness")
+
+dat_text <- data.frame(
+  label = c("*", "*", "*", "*", "*", "*"),
+  group   = c("HC", "HC", "HC", "rMDD", "rMDD", "rMDD"),
+  x     = c(1, 1.5, 2, 1, 1.5, 2),
+  y     = c(0.25, -0.7, -1.6, 0.25, -0.6, -1.4)
+)
+
+p2 <- ggplot(SE_na2, aes(y =  meanNA_gam, x=intervention, group=1,), color = group) +
+  geom_line(color = "black", size=1, alpha = 0.15) +
+  geom_errorbar(aes(ymin = meanNA_gam-se, ymax = meanNA_gam+se),width = 0.5, size=0.5, color = group.colors2) +
+  geom_point(size = 3, color = group.colors2)+
+  geom_hline(yintercept = 0, linetype="dashed", alpha = 0.5) +
+  ylim(-5,5) +
+  single_plot_theme() +
+  ylab("Negative Affect") + 
+  facet_grid(.~factor(group), scale = "free") +
+  theme(legend.position="none",
+        strip.text = element_blank(),
+        axis.text.x = element_blank(),
+        axis.title.x = element_blank(),
+        strip.background = element_blank()) +
+  scale_fill_manual(values=group.colors) +
+  geom_text(
+    data    = dat_text,
+    mapping = aes(x = x, y = y, label = label), size = 10
+  )
+
+##pa
+SE_pa2 <- summarySEwithin2(peri_dat, measurevar = "meanPA_gam", betweenvars = c("group"),
+                           withinvars = c("intervention"), idvar="subject", na.rm = T)
+
+SE_pa2$group <- factor(SE_pa2$group)
+levels(SE_pa2$group) <- c("HC", "rMDD")
+SE_pa2$intervention <- factor(SE_pa2$intervention)
+levels(SE_pa2$intervention) <- c("Fantasizing", "Mindfulness")
+
+dat_text <- data.frame(
+  label = c("*", "*", "*", "*"),
+  group   = c("HC", "HC", "rMDD", "rMDD"),
+  x     = c(1.5, 2, 1.5, 2),
+  y     = c(0.3, 1.2, -1.7, -3.4)
+)
+
+p3 <- ggplot(SE_pa2, aes(y =  meanPA_gam, x=intervention, group=1,), color = group) +
+  geom_line(color = "black", size=1, alpha = 0.15) +
+  geom_errorbar(aes(ymin = meanPA_gam-se, ymax = meanPA_gam+se),width = 0.5, size=0.5, color = group.colors2) +
+  geom_point(size = 3, color = group.colors2)+
+  geom_hline(yintercept = 0, linetype="dashed", alpha = 0.5) +
+  ylim(-5,5) +
+  xlab("Intervention") +
+  single_plot_theme() +
+  ylab("Positive Affect") + 
+  facet_grid(.~factor(group), scale = "free") +
+  theme(legend.position="none",
+        strip.text.x = element_blank(),
+        strip.text.y = element_text(size =15),
+        axis.text.x = element_text(size=8),
+        strip.background = element_blank()) +
+  scale_fill_manual(values=group.colors) +
+  geom_text(
+    data    = dat_text,
+    mapping = aes(x = x, y = y, label = label), size = 10
+  )
+
+rq2_plot <- grid.arrange(p1, p2, p3, nrow=3)
+
+ggsave(rq2_plot, file="rq2.pdf", width = 4, height = 10)
 
 
 

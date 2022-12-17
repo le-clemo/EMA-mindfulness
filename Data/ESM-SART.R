@@ -102,6 +102,7 @@ for(v in met.vars){
   }  
 }
 
+
 # View(subset(data[which(data$subject=="s37"),],
 #             select = c("subject", "phase", "block", "ruminating", "ruminating_gam", "ruminating_diff", "beepNum")))
 
@@ -332,7 +333,7 @@ pc.base1 <- glmer(propCor_NoGo ~ group * gameNumSubject +
 
 summary(pc.base1)
 
-## ruminating
+## ruminating 
 
 rum.base1 <- lmer(ruminating ~ group * gameNumSubject + meanRT +
                      commissionError + distracted + meanNA + meanPA +
@@ -628,10 +629,10 @@ RT.peri11 <- lmer(meanRT_gam ~ intervention + gameNumSubjB +
 anova(RT.peri10, RT.peri11) #peri10 preferred
 
 
-summary(RT.peri10)
+summary(RT.peri9)
 
-param_tab <- parameters::model_parameters(RT.peri10, effects = "fixed")
-d <- t_to_d(param_tab$t[2:4], param_tab$df_error[2:4])
+param_tab <- parameters::model_parameters(RT.peri9, effects = "fixed")
+d <- t_to_d(param_tab$t[1:4], param_tab$df_error[1:4])
 interpret_cohens_d(d[1])
 
 
@@ -928,9 +929,8 @@ base.m3b <- lmer(responseTime ~ group * isGo + gameSessionID + factor(correct) +
 summary(base.m3b)
 
 param_tab <- parameters::model_parameters(base.m3, effects = "fixed")
-d <- t_to_d(param_tab$t[2:5], param_tab$df_error[2:5])
+d <- t_to_d(param_tab$t[1:5], param_tab$df_error[1:5])
 interpret_cohens_d(d[1])
-
 
 ## Go responseTimes
 
@@ -1029,16 +1029,23 @@ peri.m5 <- lmer(responseTime_gam ~ group + intervention + isGo + gameSessionID +
 
 anova(peri.m4, peri.m5) #m5 preferred
 
+numbers$group <- factor(numbers$group)
+numbers$intervention <- factor(numbers$intervention)
+
+rem_fant <- within(numbers, group <- relevel(group, ref = "remitted"))
+cont_mind <- within(numbers, intervention <- relevel(intervention, ref = "mindfulness"))
+rem_mind <- within(rem_fant, intervention <- relevel(intervention, ref = "mindfulness"))
+
 peri.m7 <- lmer(responseTime_gam ~ group + intervention + gameSessionID + intervention:gameSessionID +
                   (1 | subject),
-                data = numbers)
+                data = rem_mind)
 
 anova(peri.m7, peri.m5) #m7 preferred
 
 summary(peri.m7)
 
 param_tab <- parameters::model_parameters(peri.m7, effects = "fixed")
-d <- t_to_d(param_tab$t[2:5], param_tab$df_error[2:5])
+d <- t_to_d(param_tab$t[1:5], param_tab$df_error[1:5])
 interpret_cohens_d(d[1])
 
 ## Go responseTimes
@@ -1152,6 +1159,49 @@ summary(peri.NoGo.m11)
 param_tab <- parameters::model_parameters(peri.NoGo.m11, effects = "fixed")
 d <- t_to_d(param_tab$t[2:3], param_tab$df_error[2:3])
 interpret_cohens_d(d[1])
+
+SE_sart <- summarySEwithin2(numbers, measurevar = "responseTime_gam", betweenvars = c("group"), withinvars = c("intervention"), idvar = "userID", 
+                            na.rm = T)
+
+SE_sart$group <- factor(SE_sart$group, levels = c("controls", "remitted"))
+levels(SE_sart$group) <- c("HC", "rMDD")
+
+SE_sart$intervention <- factor(SE_sart$intervention, levels = c("fantasizing", "mindfulness"))
+levels(SE_sart$intervention) <- c("Fantasizing", "Mindfulness")
+
+SE_sart <- drop_na(SE_sart)
+
+dat_text <- data.frame(
+  label = c("*", "*", "*", "*"),
+  group   = c("HC", "HC", "rMDD", "rMDD"),
+  x     = c(1, 1.5, 1.5, 2),
+  y     = c(41.5, 16, -30, -41.5)
+)
+
+p1 <- ggplot(SE_sart, aes(y = responseTime_gam, x=intervention, group=1), color = group) +
+  geom_line(color = "black", size=1, alpha = 0.15) +
+  geom_errorbar(aes(ymin = responseTime_gam-se, ymax = responseTime_gam+se), color = c(group.colors2) ,width = 0.4, size=0.5) +
+  geom_point(size = 3, color = group.colors2)+
+  # ylim(575,660) +
+  single_plot_theme() +
+  ylab("Mean RT change in ms") + 
+  xlab("Intervention") +
+  geom_hline(yintercept = 0, linetype = "dashed", alpha = 0.5) +
+  facet_grid(.~factor(group), scale = "free") +
+  theme(legend.position="none", strip.text.x = element_text(size = 15),
+        strip.text.y = element_text(size =15),
+        axis.text.x = element_text(size=8)) +
+  # axis.text.x = element_blank(),
+  # axis.title.x = element_blank()) +
+  scale_fill_manual(values=group.colors) +
+  geom_text(
+    data    = dat_text,
+    mapping = aes(x = x, y = y, label = label), size = 10
+  )
+
+ggsave(p1, file="Sart.pdf", width = 4, height = 4)
+                   
+                   
 
 
 #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++

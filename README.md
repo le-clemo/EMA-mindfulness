@@ -8,7 +8,6 @@ Thesis at the University of Groningen (MSc. Computational Cognitive Science, 202
 
 ```
 Python, version 3.6+
-
 ```
 
 ### File structure
@@ -30,7 +29,7 @@ The hierarchicalClustering script was used to determine multicolinearity. The re
 
 Networks are created in the network_analysis_final script. Note: This file has not been cleaned up yet.
 
-##### created functions
+##### Created functions
 
 NetworkPermutationTest is a large function that either tests a network's stability or compares to networks. It is based on permutation testing.
 

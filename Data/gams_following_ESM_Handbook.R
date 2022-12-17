@@ -1,9 +1,8 @@
 rm(list = ls()) #clean all up
 
-source("C:/Users/cleme/Documents/Education/RUG/Thesis/EMA-mindfulness/Data/common_plot_theme.R")
 setwd("C:/Users/cleme/Documents/Education/RUG/Thesis/EMA-mindfulness/Data") #/ESM/mindcog_v202207
+source("./common_plot_theme.R")
 
-#setwd("~/Documents/RUG/Thesis/EMA-mindfulness/Data/")
 library(tidyverse)
 library(plyr)
 library(dplyr)
@@ -46,7 +45,7 @@ rescale.coefs <- function(beta,mu,sigma) {
 
 
 #read in data
-data <- read.csv('merged_data.csv') 
+data <- read.csv('mergedData/merged_data.csv') 
 
 data$group <- factor(data$group, levels = c("remitted", "controls"))
 data$intervention <- factor(data$intervention, levels = c("mindfulness", "fantasizing"))
@@ -634,47 +633,47 @@ plot_parametric(rum.gam, pred = list(group=c("remitted", "controls")),
 report_stats(rum.gam_unscaled)
 
 model1.acf <- acf_resid(rum.gam)
-
-par(mfrow = c(2,2))
-plot_smooth(rum.gam, plot_all = "group", view = "phaseBeepNum", legend = FALSE,
-            main ="", ylab = "Rumination", xlab = "Assessment Number")
-
-plot_smooth(rum.gam, plot_all = "group", view = "stickiness", legend = FALSE,
-            main ="", ylab = "", xlab = "Stickiness")
-
-plot_smooth(rum.gam, plot_all = "group", view = "sumPA",
-            main ="", ylab = "Rumination", xlab = "Positive Affect")
-
-plot_smooth(rum.gam, plot_all = "group", view = "sumNA", legend = FALSE,
-            main ="", ylab = "", xlab = "Negative Affect")
-
-
-plot_diff(rum.gam, view="phaseBeepNum", comp = list(group = c("controls", "remitted")),
-          main ="", ylab = "Rumination", xlab = "Assessment Number")
-
-plot_diff(rum.gam, view="stickiness", comp = list(group = c("controls", "remitted")),
-          main ="", ylab = "", xlab = "Stickiness")
-
-plot_diff(rum.gam, view="sumNA", comp = list(group = c("controls", "remitted")),
-          main ="", ylab = "Rumination", xlab = "Negative Affect")
-
-plot_diff(rum.gam, view="sumPA", comp = list(group = c("controls", "remitted")),
-          main ="", ylab = "", xlab = "Positive Affect")
-
-#plot_modelfit(rum.gam, view="phaseBeepNum", event = "subjB")
+# 
+# par(mfrow = c(2,2))
+# plot_smooth(rum.gam, plot_all = "group", view = "phaseBeepNum", legend = FALSE,
+#             main ="", ylab = "Rumination", xlab = "Assessment Number")
+# 
+# plot_smooth(rum.gam, plot_all = "group", view = "stickiness", legend = FALSE,
+#             main ="", ylab = "", xlab = "Stickiness")
+# 
+# plot_smooth(rum.gam, plot_all = "group", view = "sumPA",
+#             main ="", ylab = "Rumination", xlab = "Positive Affect")
+# 
+# plot_smooth(rum.gam, plot_all = "group", view = "sumNA", legend = FALSE,
+#             main ="", ylab = "", xlab = "Negative Affect")
+# 
+# 
+# plot_diff(rum.gam, view="phaseBeepNum", comp = list(group = c("controls", "remitted")),
+#           main ="", ylab = "Rumination", xlab = "Assessment Number")
+# 
+# plot_diff(rum.gam, view="stickiness", comp = list(group = c("controls", "remitted")),
+#           main ="", ylab = "", xlab = "Stickiness")
+# 
+# plot_diff(rum.gam, view="sumNA", comp = list(group = c("controls", "remitted")),
+#           main ="", ylab = "Rumination", xlab = "Negative Affect")
+# 
+# plot_diff(rum.gam, view="sumPA", comp = list(group = c("controls", "remitted")),
+#           main ="", ylab = "", xlab = "Positive Affect")
+# 
+# #plot_modelfit(rum.gam, view="phaseBeepNum", event = "subjB")
 
 param_tab <- parameters::model_parameters(rum.gam)
 d <- t_to_d(param_tab$t[1:2], param_tab$df_error[1:2])
 interpret_cohens_d(d[1])
 
 gam.check(rum.gam)
-
-par(mfrow = c(3,2))
-plot_smooth(rum.gam, view = "negMax", ylab = "Rumination", xlab = "Event Unpleasantness")
-plot_smooth(rum.gam, view = "posMax", ylab = "", xlab = "Event Pleasantness")
-plot_smooth(rum.gam, view = "distracted", ylab = "Rumination", xlab = "Distracted")
-plot_smooth(rum.gam, view = "sleepQuality", ylab = "", xlab = "Sleep Quality")
-plot_smooth(rum.gam, view = "companyPleasant", ylab = "Rumination", xlab = "Company Pleasantness")
+# 
+# par(mfrow = c(3,2))
+# plot_smooth(rum.gam, view = "negMax", ylab = "Rumination", xlab = "Event Unpleasantness")
+# plot_smooth(rum.gam, view = "posMax", ylab = "", xlab = "Event Pleasantness")
+# plot_smooth(rum.gam, view = "distracted", ylab = "Rumination", xlab = "Distracted")
+# plot_smooth(rum.gam, view = "sleepQuality", ylab = "", xlab = "Sleep Quality")
+# plot_smooth(rum.gam, view = "companyPleasant", ylab = "Rumination", xlab = "Company Pleasantness")
 
 
 #############################################################################################################
@@ -806,36 +805,36 @@ check_resid(na.gam_unscaled)
 plot(na.gam_unscaled$y, na.gam_unscaled$residuals)
 
 ar <- acf_resid(na.gam)
-
-report_stats(na.gam)
-
-par(mfrow = c(3,3))
-plot_smooth(na.gam, view = "negMax", ylab = "Rumination", xlab = "Event Unpleasantness")
-plot_smooth(na.gam, view = "posMax", ylab = "", xlab = "Event Pleasantness")
-plot_smooth(na.gam, view = "stickiness", ylab = "", xlab = "Stickiness")
-plot_smooth(na.gam, view = "listless", ylab = "Rumination", xlab = "Listless")
-plot_smooth(na.gam, view = "distracted", ylab = "", xlab = "Distracted")
-plot_smooth(na.gam, view = "sleepQuality", ylab = "", xlab = "Sleep Quality")
-plot_smooth(na.gam, view = "companyPleasant", ylab = "Rumination", xlab = "Company Pleasantness")
-
-
-
-par(mfrow = c(2,2))
-plot_smooth(na.gam, plot_all = "group", view = "phaseBeepNum", legend = FALSE,
-            main = "", ylab = "Negative Affect", xlab = "Assessment Number")
-plot_smooth(na.gam, plot_all = "group", view = "ruminating", legend = FALSE,
-            main = "", ylab = "", xlab = "Rumination")
-plot_smooth(na.gam, plot_all = "group", view = "sumPA",
-            main = "", ylab = "Negative Affect", xlab = "Positive Affect")
-
-
-
-plot_diff(na.gam, view="phaseBeepNum", comp = list(group = c("controls", "remitted")),
-          main = "", ylab = "Negative Affect", xlab = "Assessment Number")
-plot_diff(na.gam, view="ruminating", comp = list(group = c("controls", "remitted")),
-          main = "", ylab = "", xlab = "Rumination")
-plot_diff(na.gam, view="sumPA", comp = list(group = c("controls", "remitted")),
-          main = "", ylab = "Negative Affect", xlab = "Positive Affect")
+# 
+# report_stats(na.gam)
+# 
+# par(mfrow = c(3,3))
+# plot_smooth(na.gam, view = "negMax", ylab = "Rumination", xlab = "Event Unpleasantness")
+# plot_smooth(na.gam, view = "posMax", ylab = "", xlab = "Event Pleasantness")
+# plot_smooth(na.gam, view = "stickiness", ylab = "", xlab = "Stickiness")
+# plot_smooth(na.gam, view = "listless", ylab = "Rumination", xlab = "Listless")
+# plot_smooth(na.gam, view = "distracted", ylab = "", xlab = "Distracted")
+# plot_smooth(na.gam, view = "sleepQuality", ylab = "", xlab = "Sleep Quality")
+# plot_smooth(na.gam, view = "companyPleasant", ylab = "Rumination", xlab = "Company Pleasantness")
+# 
+# 
+# 
+# par(mfrow = c(2,2))
+# plot_smooth(na.gam, plot_all = "group", view = "phaseBeepNum", legend = FALSE,
+#             main = "", ylab = "Negative Affect", xlab = "Assessment Number")
+# plot_smooth(na.gam, plot_all = "group", view = "ruminating", legend = FALSE,
+#             main = "", ylab = "", xlab = "Rumination")
+# plot_smooth(na.gam, plot_all = "group", view = "sumPA",
+#             main = "", ylab = "Negative Affect", xlab = "Positive Affect")
+# 
+# 
+# 
+# plot_diff(na.gam, view="phaseBeepNum", comp = list(group = c("controls", "remitted")),
+#           main = "", ylab = "Negative Affect", xlab = "Assessment Number")
+# plot_diff(na.gam, view="ruminating", comp = list(group = c("controls", "remitted")),
+#           main = "", ylab = "", xlab = "Rumination")
+# plot_diff(na.gam, view="sumPA", comp = list(group = c("controls", "remitted")),
+#           main = "", ylab = "Negative Affect", xlab = "Positive Affect")
 
 #plot_modelfit(rum.gam, view="phaseBeepNum", event = "subjB")
 
@@ -949,49 +948,49 @@ save(pa.gam_unscaled, pa.sum.unscaled, file = "models_pa/pa_unscaled_contemp.rda
 load("models_pa/pa_unscaled_contemp.rda")
 
 ar <- acf_resid(pa.gam)
-
-report_stats(pa.gam)
-
-par(mfrow = c(3,2))
-plot_smooth(pa.gam, view = "sumNA", legend_plot_all = FALSE,
-            main = "", ylab = "Positive Affect", xlab = "Negative Affect")
-plot_smooth(pa.gam, view = "posMax",
-            main = "", ylab = "", xlab = "Event Pleasantness")
-plot_smooth(pa.gam, view = "listless",
-            main = "", ylab = "Positive Affect", xlab = "Listless")
-plot_smooth(pa.gam, view = "distracted",
-            main = "", ylab = "", xlab = "Distracted")
-plot_smooth(pa.gam, view = "sleepQuality",
-            main = "Positive Affect", ylab = "", xlab = "Sleep Quality")
-plot_smooth(pa.gam, view = "companyPleasant",
-            main = "", ylab = "", xlab = "Company Pleasantness")
-
-
-par(mfrow = c(2,2))
-plot_smooth(pa.gam, plot_all = "group", view = "phaseBeepNum", legend = FALSE,
-            main = "", ylab = "Positive Affect", xlab = "Assessment Number")
-
-plot_smooth(pa.gam, plot_all = "group", view = "ruminating", legend = FALSE,
-            main = "", ylab = "", xlab = "Rumination")
-
-plot_smooth(pa.gam, plot_all = "group", view = "negMax", legend = FALSE,
-            main = "", ylab = "Positive Affect", xlab = "Event Unpleasantness")
-
-plot_smooth(pa.gam, plot_all = "group", view = "posMax",
-            main = "", ylab = "", xlab = "Event Pleasantness")
-
-
-plot_diff(pa.gam, view="phaseBeepNum", comp = list(group = c("controls", "remitted")),
-          main = "", ylab = "Positive Affect", xlab = "Assessment Number")
-
-plot_diff(pa.gam, view="ruminating", comp = list(group = c("controls", "remitted")),
-          main = "", ylab = "", xlab = "Rumination")
-
-plot_diff(pa.gam, view="negMax", comp = list(group = c("controls", "remitted")),
-          main = "", ylab = "Positive Affect", xlab = "Event Unpleasantness")
-
-plot_diff(pa.gam, view="posMax", comp = list(group = c("controls", "remitted")),
-          main = "", ylab = "", xlab = "Event Pleasantness")
+# 
+# report_stats(pa.gam)
+# 
+# par(mfrow = c(3,2))
+# plot_smooth(pa.gam, view = "sumNA", legend_plot_all = FALSE,
+#             main = "", ylab = "Positive Affect", xlab = "Negative Affect")
+# plot_smooth(pa.gam, view = "posMax",
+#             main = "", ylab = "", xlab = "Event Pleasantness")
+# plot_smooth(pa.gam, view = "listless",
+#             main = "", ylab = "Positive Affect", xlab = "Listless")
+# plot_smooth(pa.gam, view = "distracted",
+#             main = "", ylab = "", xlab = "Distracted")
+# plot_smooth(pa.gam, view = "sleepQuality",
+#             main = "Positive Affect", ylab = "", xlab = "Sleep Quality")
+# plot_smooth(pa.gam, view = "companyPleasant",
+#             main = "", ylab = "", xlab = "Company Pleasantness")
+# 
+# 
+# par(mfrow = c(2,2))
+# plot_smooth(pa.gam, plot_all = "group", view = "phaseBeepNum", legend = FALSE,
+#             main = "", ylab = "Positive Affect", xlab = "Assessment Number")
+# 
+# plot_smooth(pa.gam, plot_all = "group", view = "ruminating", legend = FALSE,
+#             main = "", ylab = "", xlab = "Rumination")
+# 
+# plot_smooth(pa.gam, plot_all = "group", view = "negMax", legend = FALSE,
+#             main = "", ylab = "Positive Affect", xlab = "Event Unpleasantness")
+# 
+# plot_smooth(pa.gam, plot_all = "group", view = "posMax",
+#             main = "", ylab = "", xlab = "Event Pleasantness")
+# 
+# 
+# plot_diff(pa.gam, view="phaseBeepNum", comp = list(group = c("controls", "remitted")),
+#           main = "", ylab = "Positive Affect", xlab = "Assessment Number")
+# 
+# plot_diff(pa.gam, view="ruminating", comp = list(group = c("controls", "remitted")),
+#           main = "", ylab = "", xlab = "Rumination")
+# 
+# plot_diff(pa.gam, view="negMax", comp = list(group = c("controls", "remitted")),
+#           main = "", ylab = "Positive Affect", xlab = "Event Unpleasantness")
+# 
+# plot_diff(pa.gam, view="posMax", comp = list(group = c("controls", "remitted")),
+#           main = "", ylab = "", xlab = "Event Pleasantness")
 
 
 #plot_modelfit(rum.gam, view="phaseBeepNum", event = "subjB")
@@ -1101,64 +1100,64 @@ par(mfrow = c(2,2))
 # plot_smooth(rum.peri, plot_all = c("group"), view = "stickiness_gam", legend = FALSE, ylab = "", ylim = c(-3,3))
 # plot_smooth(rum.peri, plot_all = c("group"), view = "sumNA_gam", legend = FALSE, ylab = "Rumination", ylim = c(-3,3))
 # plot_smooth(rum.peri, plot_all = c("group"), view = "sumPA_gam", ylab = "", ylim = c(-3,3))
-
-plot_smooth(rum.peri.test, plot_all = c("intervention"), cond = list(group = "remitted"), view = "phaseBeepNum",
-            ylab = "Rumination", legend = F)
-plot_smooth(rum.peri.test, plot_all = c("intervention"), cond = list(group = "remitted"), view = "stickiness_gam",
-            ylab = "", legend = FALSE)
-plot_smooth(rum.peri.test, plot_all = c("intervention"), cond = list(group = "remitted"), view = "sumNA_gam",
-            ylab = "Rumination", legend = FALSE)
-plot_smooth(rum.peri.test, plot_all = c("intervention"), cond = list(group = "remitted"), view = "sumPA_gam",
-            ylab = "")
-
-plot_smooth(rum.peri, plot_all = c("intervention"), cond = list(group = "controls"), view = "phaseBeepNum",
-            ylab = "Rumination", legend = F)
-plot_smooth(rum.peri, plot_all = c("intervention"), cond = list(group = "controls"),
-            ylab = "", view = "stickiness_gam", legend = FALSE)
-plot_smooth(rum.peri, plot_all = c("intervention"), cond = list(group = "controls"),
-            ylab = "Rumination", view = "sumNA_gam", legend = FALSE)
-plot_smooth(rum.peri, plot_all = c("intervention"), cond = list(group = "controls"),
-            ylab = "", view = "sumPA_gam")
-
-
-par(mfrow = c(2,2))
-plot_diff(rum.peri, view="phaseBeepNum", comp = list(group = c("remitted", "remitted"), intervention = c("fantasizing", "mindfulness")),
-          ylab = "Rumination", main = "", xlab="Assessment Number")
-plot_diff(rum.peri, view="stickiness_gam", comp = list(group = c("remitted", "remitted"), intervention = c("fantasizing", "mindfulness")),
-          ylab = "", main = "", xlab = "Stickiness")
-plot_diff(rum.peri, view="sumNA_gam", comp = list(group = c("remitted", "remitted"), intervention = c("fantasizing", "mindfulness")),
-          ylab = "Rumination", main = "", xlab = "Negative Affect")
-plot_diff(rum.peri, view="sumPA_gam", comp = list(group = c("remitted", "remitted"), intervention = c("fantasizing", "mindfulness")),
-          ylab = "", main = "", xlab = "Positive Affect")
-
-plot_diff(rum.peri, view="phaseBeepNum", comp = list(group = c("controls", "controls"), intervention = c("fantasizing", "mindfulness")),
-          ylab = "Rumination", main = "", xlab = "Assessment Number")
-plot_diff(rum.peri, view="stickiness_gam", comp = list(group = c("controls", "controls"), intervention = c("fantasizing", "mindfulness")),
-          ylab = "", main = "", xlab = "Stickiness")
-plot_diff(rum.peri, view="sumNA_gam", comp = list(group = c("controls", "controls"), intervention = c("fantasizing", "mindfulness")),
-          ylab = "Rumination", main = "", xlab = "Negative Affect")
-plot_diff(rum.peri, view="sumPA_gam", comp = list(group = c("controls", "controls"), intervention = c("fantasizing", "mindfulness")),
-          ylab = "", main = "", xlab = "Positive Affect")
-
-
-par(mfrow=c(1,1))
-#plot the model based predicted differences between interventions (summed effects)
-plot_parametric(rum.peri, pred=list(intervention=c("mindfulness", "fantasizing")))
-#and between groups
-plot_parametric(rum.peri, pred=list(intervention=c("mindfulness", "fantasizing"), group=c("controls", "remitted")),
-                main ="", xlab = "Rumination")
-
-#plot_modelfit(rum.gam, view="phaseBeepNum", event = "subjB")
-
-#gam.check(rum.peri)
-
-
-par(mfrow = c(3,2))
-plot_smooth(rum.gam, view = "negMax", ylab = "Rumination", xlab = "Event Unpleasantness")
-plot_smooth(rum.gam, view = "posMax", ylab = "", xlab = "Event Pleasantness")
-plot_smooth(rum.gam, view = "distracted", ylab = "Rumination", xlab = "Distracted")
-plot_smooth(rum.gam, view = "sleepQuality", ylab = "", xlab = "Sleep Quality")
-plot_smooth(rum.gam, view = "companyPleasant", ylab = "Rumination", xlab = "Company Pleasantness")
+# 
+# plot_smooth(rum.peri.test, plot_all = c("intervention"), cond = list(group = "remitted"), view = "phaseBeepNum",
+#             ylab = "Rumination", legend = F)
+# plot_smooth(rum.peri.test, plot_all = c("intervention"), cond = list(group = "remitted"), view = "stickiness_gam",
+#             ylab = "", legend = FALSE)
+# plot_smooth(rum.peri.test, plot_all = c("intervention"), cond = list(group = "remitted"), view = "sumNA_gam",
+#             ylab = "Rumination", legend = FALSE)
+# plot_smooth(rum.peri.test, plot_all = c("intervention"), cond = list(group = "remitted"), view = "sumPA_gam",
+#             ylab = "")
+# 
+# plot_smooth(rum.peri, plot_all = c("intervention"), cond = list(group = "controls"), view = "phaseBeepNum",
+#             ylab = "Rumination", legend = F)
+# plot_smooth(rum.peri, plot_all = c("intervention"), cond = list(group = "controls"),
+#             ylab = "", view = "stickiness_gam", legend = FALSE)
+# plot_smooth(rum.peri, plot_all = c("intervention"), cond = list(group = "controls"),
+#             ylab = "Rumination", view = "sumNA_gam", legend = FALSE)
+# plot_smooth(rum.peri, plot_all = c("intervention"), cond = list(group = "controls"),
+#             ylab = "", view = "sumPA_gam")
+# 
+# 
+# par(mfrow = c(2,2))
+# plot_diff(rum.peri, view="phaseBeepNum", comp = list(group = c("remitted", "remitted"), intervention = c("fantasizing", "mindfulness")),
+#           ylab = "Rumination", main = "", xlab="Assessment Number")
+# plot_diff(rum.peri, view="stickiness_gam", comp = list(group = c("remitted", "remitted"), intervention = c("fantasizing", "mindfulness")),
+#           ylab = "", main = "", xlab = "Stickiness")
+# plot_diff(rum.peri, view="sumNA_gam", comp = list(group = c("remitted", "remitted"), intervention = c("fantasizing", "mindfulness")),
+#           ylab = "Rumination", main = "", xlab = "Negative Affect")
+# plot_diff(rum.peri, view="sumPA_gam", comp = list(group = c("remitted", "remitted"), intervention = c("fantasizing", "mindfulness")),
+#           ylab = "", main = "", xlab = "Positive Affect")
+# 
+# plot_diff(rum.peri, view="phaseBeepNum", comp = list(group = c("controls", "controls"), intervention = c("fantasizing", "mindfulness")),
+#           ylab = "Rumination", main = "", xlab = "Assessment Number")
+# plot_diff(rum.peri, view="stickiness_gam", comp = list(group = c("controls", "controls"), intervention = c("fantasizing", "mindfulness")),
+#           ylab = "", main = "", xlab = "Stickiness")
+# plot_diff(rum.peri, view="sumNA_gam", comp = list(group = c("controls", "controls"), intervention = c("fantasizing", "mindfulness")),
+#           ylab = "Rumination", main = "", xlab = "Negative Affect")
+# plot_diff(rum.peri, view="sumPA_gam", comp = list(group = c("controls", "controls"), intervention = c("fantasizing", "mindfulness")),
+#           ylab = "", main = "", xlab = "Positive Affect")
+# 
+# 
+# par(mfrow=c(1,1))
+# #plot the model based predicted differences between interventions (summed effects)
+# plot_parametric(rum.peri, pred=list(intervention=c("mindfulness", "fantasizing")))
+# #and between groups
+# plot_parametric(rum.peri, pred=list(intervention=c("mindfulness", "fantasizing"), group=c("controls", "remitted")),
+#                 main ="", xlab = "Rumination")
+# 
+# #plot_modelfit(rum.gam, view="phaseBeepNum", event = "subjB")
+# 
+# #gam.check(rum.peri)
+# 
+# 
+# par(mfrow = c(3,2))
+# plot_smooth(rum.gam, view = "negMax", ylab = "Rumination", xlab = "Event Unpleasantness")
+# plot_smooth(rum.gam, view = "posMax", ylab = "", xlab = "Event Pleasantness")
+# plot_smooth(rum.gam, view = "distracted", ylab = "Rumination", xlab = "Distracted")
+# plot_smooth(rum.gam, view = "sleepQuality", ylab = "", xlab = "Sleep Quality")
+# plot_smooth(rum.gam, view = "companyPleasant", ylab = "Rumination", xlab = "Company Pleasantness")
 
 
 param_tab <- parameters::model_parameters(rum.peri_unscaled)
@@ -1247,40 +1246,40 @@ param_tab_na <- parameters::model_parameters(na.peri.noGroup_unscaled)
 d <- t_to_d(param_tab_na$t[2], param_tab_na$df_error[2])
 interpret_cohens_d(d[1])
 
-
-par(mfrow = c(2,2))
-plot_diff(na.peri, view="phaseBeepNum", comp = list(group = c("remitted", "remitted"), intervention = c("fantasizing", "mindfulness")),
-          ylab = "Negative Affect", main = "", xlab = "Assessment Number")
-plot_diff(na.peri, view="ruminating_gam", comp = list(group = c("remitted", "remitted"), intervention = c("fantasizing", "mindfulness")),
-          ylab = "", main = "", xlab = "Rumination", ylim = c(-5,5))
-plot_diff(na.peri, view="sumPA_gam", comp = list(group = c("remitted", "remitted"), intervention = c("fantasizing", "mindfulness")),
-          ylab = "Negative Affect", main = "", xlab = "Positive Affect")
-
-
-par(mfrow = c(2,2))
-plot_diff(na.peri, view="phaseBeepNum", comp = list(group = c("controls", "controls"), intervention = c("fantasizing", "mindfulness")),
-          ylab = "Negative Affect", main = "", xlab = "Assessment Number")
-plot_diff(na.peri, view="ruminating_gam", comp = list(group = c("controls", "controls"), intervention = c("fantasizing", "mindfulness")),
-          ylab = "", main = "", xlab = "Rumination", ylim = c(-5,5))
-plot_diff(na.peri, view="sumPA_gam", comp = list(group = c("controls", "controls"), intervention = c("fantasizing", "mindfulness")),
-          ylab = "Negative Affect", main = "", xlab = "Positive Affect")
-
-
-par(mfrow=c(1,1))
-#plot the model based predicted differences between interventions (summed effects)
-plot_parametric(na.peri, pred=list(intervention=c("mindfulness", "fantasizing")))
-#and between groups
-plot_parametric(na.peri, pred=list(intervention=c("mindfulness", "fantasizing"), group=c("controls", "remitted")),
-                main ="", xlab = "Negative Affect")
-
-par(mfrow = c(3,3))
-plot_smooth(na.peri, view = "negMax_gam", legend_plot_all = FALSE, ylab = "Negative Affect", xlab = "Event Unpleasantness")
-plot_smooth(na.peri, view = "posMax_gam", ylab = "", xlab = "Event Pleasantness")
-plot_smooth(na.peri, view = "stickiness_gam", ylab = "", xlab = "Stickiness")
-plot_smooth(na.peri, view = "listless_gam", ylab = "Negative Affect", xlab = "Listless")
-plot_smooth(na.peri, view = "distracted_gam", ylab = "", xlab = "Distracted")
-plot_smooth(na.peri, view = "sleepQuality_gam", ylab = "", xlab = "Sleep Quality")
-plot_smooth(na.peri, view = "companyPleasant_gam", ylab = "Negative Affect", xlab = "Company Pleasantness")
+# 
+# par(mfrow = c(2,2))
+# plot_diff(na.peri, view="phaseBeepNum", comp = list(group = c("remitted", "remitted"), intervention = c("fantasizing", "mindfulness")),
+#           ylab = "Negative Affect", main = "", xlab = "Assessment Number")
+# plot_diff(na.peri, view="ruminating_gam", comp = list(group = c("remitted", "remitted"), intervention = c("fantasizing", "mindfulness")),
+#           ylab = "", main = "", xlab = "Rumination", ylim = c(-5,5))
+# plot_diff(na.peri, view="sumPA_gam", comp = list(group = c("remitted", "remitted"), intervention = c("fantasizing", "mindfulness")),
+#           ylab = "Negative Affect", main = "", xlab = "Positive Affect")
+# 
+# 
+# par(mfrow = c(2,2))
+# plot_diff(na.peri, view="phaseBeepNum", comp = list(group = c("controls", "controls"), intervention = c("fantasizing", "mindfulness")),
+#           ylab = "Negative Affect", main = "", xlab = "Assessment Number")
+# plot_diff(na.peri, view="ruminating_gam", comp = list(group = c("controls", "controls"), intervention = c("fantasizing", "mindfulness")),
+#           ylab = "", main = "", xlab = "Rumination", ylim = c(-5,5))
+# plot_diff(na.peri, view="sumPA_gam", comp = list(group = c("controls", "controls"), intervention = c("fantasizing", "mindfulness")),
+#           ylab = "Negative Affect", main = "", xlab = "Positive Affect")
+# 
+# 
+# par(mfrow=c(1,1))
+# #plot the model based predicted differences between interventions (summed effects)
+# plot_parametric(na.peri, pred=list(intervention=c("mindfulness", "fantasizing")))
+# #and between groups
+# plot_parametric(na.peri, pred=list(intervention=c("mindfulness", "fantasizing"), group=c("controls", "remitted")),
+#                 main ="", xlab = "Negative Affect")
+# 
+# par(mfrow = c(3,3))
+# plot_smooth(na.peri, view = "negMax_gam", legend_plot_all = FALSE, ylab = "Negative Affect", xlab = "Event Unpleasantness")
+# plot_smooth(na.peri, view = "posMax_gam", ylab = "", xlab = "Event Pleasantness")
+# plot_smooth(na.peri, view = "stickiness_gam", ylab = "", xlab = "Stickiness")
+# plot_smooth(na.peri, view = "listless_gam", ylab = "Negative Affect", xlab = "Listless")
+# plot_smooth(na.peri, view = "distracted_gam", ylab = "", xlab = "Distracted")
+# plot_smooth(na.peri, view = "sleepQuality_gam", ylab = "", xlab = "Sleep Quality")
+# plot_smooth(na.peri, view = "companyPleasant_gam", ylab = "Negative Affect", xlab = "Company Pleasantness")
 
 ######################################################################################################################
 
@@ -1356,50 +1355,50 @@ save(pa.peri.noGroup_unscaled, pa.peri.noGroup.unscaled, file = "models_pa/pa_un
 
 load("models_pa/pa_unscaled_peri_noGroup.rda")
 
-
-par(mfrow = c(2,2))
-#remitted
-plot_diff(pa.peri, view="phaseBeepNum", comp = list(group = c("remitted", "remitted"), intervention = c("fantasizing", "mindfulness")),
-          ylab = "Positive Affect", main = "", xlab = "Assessment Number")
-
-plot_diff(pa.peri, view="ruminating_gam", comp = list(group = c("remitted", "remitted"), intervention = c("fantasizing", "mindfulness")),
-          ylab = "", main = "", xlab = "Rumination")
-
-plot_diff(pa.peri, view="negMax_gam", comp = list(group = c("remitted", "remitted"), intervention = c("fantasizing", "mindfulness")),
-          ylab = "Positive Affect", main = "", xlab = "Event Unpleasantness")
-
-plot_diff(pa.peri, view="posMax_gam", comp = list(group = c("remitted", "remitted"), intervention = c("fantasizing", "mindfulness")),
-          ylab = "", main = "", xlab = "Event Pleasantness")
-
-
-#controls
-plot_diff(pa.peri, view="phaseBeepNum", comp = list(group = c("controls", "controls"), intervention = c("fantasizing", "mindfulness")),
-          ylab = "Positive Affect", main = "", xlab = "Assessment Number")
-
-plot_diff(pa.peri, view="ruminating_gam", comp = list(group = c("controls", "controls"), intervention = c("fantasizing", "mindfulness")),
-          ylab = "", main = "", xlab = "Rumination")
-
-plot_diff(pa.peri, view="negMax_gam", comp = list(group = c("controls", "controls"), intervention = c("fantasizing", "mindfulness")),
-          ylab = "Positive Affect", main = "", xlab = "Event Unpleasantness")
-
-plot_diff(pa.peri, view="posMax_gam", comp = list(group = c("controls", "controls"), intervention = c("fantasizing", "mindfulness")),
-          ylab = "", main = "", xlab = "Event Pleasantness")
-
-
-#summed effects
-plot_parametric(pa.peri, pred=list(intervention=c("mindfulness", "fantasizing"), group=c("controls", "remitted")),
-                main ="", xlab = "Positive Affect")
-
-
-#single smooths
-par(mfrow = c(3,2))
-plot_smooth(pa.peri, view = "sumNA_gam", ylab = "Positive Affect", xlab = "Negative Affect")
-plot_smooth(pa.peri, view = "stickiness_gam", ylab = "", xlab = "Stickiness")
-plot_smooth(pa.peri, view = "listless_gam", ylab = "Positive Affect", xlab = "Listless")
-plot_smooth(pa.peri, view = "distracted_gam", ylab = "", xlab = "Distracted")
-plot_smooth(pa.peri, view = "sleepQuality_gam", ylab = "Positive Affect", xlab = "Sleep Quality")
-plot_smooth(pa.peri, view = "companyPleasant_gam", ylab = "", xlab = "Company Pleasantness")
-
+# 
+# par(mfrow = c(2,2))
+# #remitted
+# plot_diff(pa.peri, view="phaseBeepNum", comp = list(group = c("remitted", "remitted"), intervention = c("fantasizing", "mindfulness")),
+#           ylab = "Positive Affect", main = "", xlab = "Assessment Number")
+# 
+# plot_diff(pa.peri, view="ruminating_gam", comp = list(group = c("remitted", "remitted"), intervention = c("fantasizing", "mindfulness")),
+#           ylab = "", main = "", xlab = "Rumination")
+# 
+# plot_diff(pa.peri, view="negMax_gam", comp = list(group = c("remitted", "remitted"), intervention = c("fantasizing", "mindfulness")),
+#           ylab = "Positive Affect", main = "", xlab = "Event Unpleasantness")
+# 
+# plot_diff(pa.peri, view="posMax_gam", comp = list(group = c("remitted", "remitted"), intervention = c("fantasizing", "mindfulness")),
+#           ylab = "", main = "", xlab = "Event Pleasantness")
+# 
+# 
+# #controls
+# plot_diff(pa.peri, view="phaseBeepNum", comp = list(group = c("controls", "controls"), intervention = c("fantasizing", "mindfulness")),
+#           ylab = "Positive Affect", main = "", xlab = "Assessment Number")
+# 
+# plot_diff(pa.peri, view="ruminating_gam", comp = list(group = c("controls", "controls"), intervention = c("fantasizing", "mindfulness")),
+#           ylab = "", main = "", xlab = "Rumination")
+# 
+# plot_diff(pa.peri, view="negMax_gam", comp = list(group = c("controls", "controls"), intervention = c("fantasizing", "mindfulness")),
+#           ylab = "Positive Affect", main = "", xlab = "Event Unpleasantness")
+# 
+# plot_diff(pa.peri, view="posMax_gam", comp = list(group = c("controls", "controls"), intervention = c("fantasizing", "mindfulness")),
+#           ylab = "", main = "", xlab = "Event Pleasantness")
+# 
+# 
+# #summed effects
+# plot_parametric(pa.peri, pred=list(intervention=c("mindfulness", "fantasizing"), group=c("controls", "remitted")),
+#                 main ="", xlab = "Positive Affect")
+# 
+# 
+# #single smooths
+# par(mfrow = c(3,2))
+# plot_smooth(pa.peri, view = "sumNA_gam", ylab = "Positive Affect", xlab = "Negative Affect")
+# plot_smooth(pa.peri, view = "stickiness_gam", ylab = "", xlab = "Stickiness")
+# plot_smooth(pa.peri, view = "listless_gam", ylab = "Positive Affect", xlab = "Listless")
+# plot_smooth(pa.peri, view = "distracted_gam", ylab = "", xlab = "Distracted")
+# plot_smooth(pa.peri, view = "sleepQuality_gam", ylab = "Positive Affect", xlab = "Sleep Quality")
+# plot_smooth(pa.peri, view = "companyPleasant_gam", ylab = "", xlab = "Company Pleasantness")
+# 
 
 ############################################## Plotting main results ##############################################################
 ### RQ1
@@ -1423,7 +1422,7 @@ rq1_res <- data.frame(node = c(rep("Rumination",2), rep("Negative Affect",2), re
 
 # Default bar plot
 pdf(width = 10, height = 3.75,
-    file = "rq1_gam_results.pdf")
+    file = "Figures/rq1_gam_results.pdf")
 p<- ggplot(rq1_res, aes(x=factor(node, levels=c("Positive Affect", "Negative Affect", "Rumination")), y=value, fill=group)) + 
   geom_bar(stat="identity", color="black", 
            position=position_dodge()) + ylim(0,65) +
@@ -1457,7 +1456,7 @@ rq2_res <- data.frame(node = c(rep("Rumination",2), rep("Negative Affect",2), re
 
 # Default bar plot
 pdf(width = 10, height = 3.75,
-    file = "rq2_gam_results.pdf")
+    file = "Figures/rq2_gam_results.pdf")
 p<- ggplot(rq2_res, aes(x=factor(node, levels=c("Positive Affect", "Negative Affect", "Rumination")),
                         y=value, fill= intervention, pattern = intervention)) + 
   geom_bar_pattern(stat = "identity",
@@ -1525,7 +1524,7 @@ write.csv(rq2_res_split, "rq2_split.csv")
 
 #with pattern
 pdf(width = 10, height = 3.75,
-    file = "rq2_gam_split_results.pdf")
+    file = "Figures/rq2_gam_split_results.pdf")
 p<- ggplot(rq2_res_split, aes(x=factor(node, levels=c("Positive Affect", "Negative Affect", "Rumination")),
                         y=value,
                         fill=group, pattern = intervention)) + 

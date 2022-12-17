@@ -2,8 +2,8 @@ rm(list = ls()) #clean all up
 
 
 # load permutation test function (placed in .../EMA-mindfulness/Data)
-source("C:/Users/cleme/Documents/Education/RUG/Thesis/EMA-mindfulness/Data/NetworkPermutationTest.R")
-setwd("C:/Users/cleme/Documents/Education/RUG/Thesis/EMA-mindfulness/Data/ESM/mindcog_v202207")
+setwd("C:/Users/cleme/Documents/Education/RUG/Thesis/EMA-mindfulness/Data")
+source("./NetworkPermutationTest.R")
 
 #setwd("~/Documents/RUG/Thesis/EMA-mindfulness/Data/ESM/mindcog_v202207")
 library(psychonetrics)
@@ -34,7 +34,7 @@ packageVersion("mlVAR") #0.5
 packageVersion("qgraph") #1.9.1
 
 #read in data
-data <- read.csv('preprocessed_data.csv') 
+data <- read.csv('ESM/mindcog_v202207/preprocessed_data.csv') 
 
 #Pick response rate cut-off value
 cutOff <- 0.5
@@ -369,7 +369,7 @@ for(g in c("controls", "remitted")){
 L <- averageLayout(cont.nets[[1]], cont.nets[[2]], temp.nets[[1]], temp.nets[[2]])
 
 pdf(width=12, height=4,
-    file = "baseline_contemp_nets.pdf")
+    file = "Figures/baseline_contemp_nets.pdf")
 layout(matrix(c(1,1,1,1,1,2,2,2,2,2,2), nc=11, byrow = TRUE)) # 40% vs 60% widths
 
 n1 <- qgraph(cont.nets[[2]], layout = L, theme='colorblind', negDashed=FALSE, diag=T, #title=paste("Controls: Temporal - Baseline")
@@ -406,7 +406,7 @@ print(centralityTable(n2, weighted = TRUE, labels = nodeVars))
 print(sum(abs(cont.nets[[2]][which(upper.tri(cont.nets[[2]]))])))
 
 pdf(width=12, height=4,
-    file = "baseline_temp_nets.pdf")
+    file = "Figures/baseline_temp_nets.pdf")
 layout(matrix(c(1,1,1,1,1,2,2,2,2,2,2), nc=11, byrow = TRUE)) # 40% vs 60% widths
 n3 <- qgraph(temp.nets[[2]], layout = L, theme='colorblind', negDashed=FALSE, diag=T, #title=paste("Controls: Temporal - Baseline")
              groups=groups_list, legend.cex=1, legend=F, nodeNames = nodeVars, labels=c(1:length(nodeVars)),
@@ -552,7 +552,7 @@ for(i in c("mindfulness", "fantasizing")){
     L <- averageLayout(preCont, periCont,preTemp, periTemp)
     
     pdf(width=12, height=4,
-        file = paste("contemporaneous_", i, ".pdf", sep = ""))
+        file = paste("Figures/contemporaneous_", i, ".pdf", sep = ""))
     layout(matrix(c(1,1,1,1,1,2,2,2,2,2,2), nc=11, byrow = TRUE)) # 40% vs 60% widths
     n1 <- qgraph(preCont, layout = L, #title=paste("mlVAR: Contemporaneous network", g, i, "Baseline", sep = " - "),
                  theme='colorblind', negDashed=FALSE, diag=T, #title=paste("Controls: Temporal - Baseline")
@@ -570,7 +570,7 @@ for(i in c("mindfulness", "fantasizing")){
     # L <- averageLayout(preTemp, periTemp)
     
     pdf(width=12, height=4,
-        file = paste("temporal_", i, ".pdf", sep = ""))
+        file = paste("Figures/temporal_", i, ".pdf", sep = ""))
     layout(matrix(c(1,1,1,1,1,2,2,2,2,2,2), nc=11, byrow = TRUE)) # 40% vs 60% widths
     
     n3 <- qgraph(preTemp, layout = L, #title=paste("mlVAR: Temporal network", g, i, "Baseline", sep = " - "),

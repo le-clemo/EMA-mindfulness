@@ -25,8 +25,8 @@ packageVersion("itsadug") #2.4
 packageVersion("mgcv") # 1.8.31
 
 #read in data
-data <- read.csv('merged_data.csv') 
-numbers <- read.csv("sart_w_thoughtProbes.csv")
+data <- read.csv('mergedData/merged_data.csv') 
+numbers <- read.csv("SART/sart_w_thoughtProbes.csv")
 
 
 ###########################################################################################################
@@ -1199,7 +1199,7 @@ p1 <- ggplot(SE_sart, aes(y = responseTime_gam, x=intervention, group=1), color 
     mapping = aes(x = x, y = y, label = label), size = 10
   )
 
-ggsave(p1, file="Sart.pdf", width = 4, height = 4)
+ggsave(p1, file="Figures/Sart.pdf", width = 4, height = 4)
                    
                    
 

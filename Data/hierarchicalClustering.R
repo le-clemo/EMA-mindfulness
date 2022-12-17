@@ -1,8 +1,7 @@
 rm(list = ls()) #clean all up
 
-setwd("C:/Users/cleme/Documents/Education/RUG/Thesis/EMA-mindfulness/Data/ESM/mindcog_v202207")
+setwd("C:/Users/cleme/Documents/Education/RUG/Thesis/EMA-mindfulness/Data")
 
-#setwd("~/Documents/RUG/Thesis/EMA-mindfulness/Data/ESM/mindcog_v202207")
 library(tidyverse)
 library(plyr)
 library(dplyr)
@@ -14,7 +13,7 @@ library(languageR)
 library(Hmisc)
 
 #read in data
-data <- read.csv('preprocessed_data.csv') 
+data <- read.csv('ESM/mindcog_v202207/preprocessed_data.csv') 
 
 #Pick response rate cut-off value
 cutOff <- 0.5
@@ -88,7 +87,7 @@ collin.fnc(dat_clust[,-c(3, 4)])$cnumber #~29.06 --> problematic collinearity
 varCors <- round(varclus(as.matrix(dat_clust[,-c(3, 4)]))$sim, 2)
 
 pdf(width = 10, height = 6,
-    file = "hierarchicalClustering.pdf")
+    file = "Figures/hierarchicalClustering.pdf")
 plot(varclus(as.matrix(dat_clust[,-c(3, 4)])))
 dev.off()
 
